@@ -9,7 +9,7 @@
   height: auto;
   display: block;
   margin: 0 auto;
-  margin-top: 0px;
+  margin-top: -5px;
 }
 
 .mb-form {
@@ -25,7 +25,7 @@
   align-items: center;
   flex-direction: column;
   padding-bottom: 30px;
-  margin-top: -20px;
+  margin-top: -30px;
 }
 
 .mb-form-title {
@@ -87,7 +87,7 @@ button {
   margin: 0 auto;
   width: 90%;
   height: 50px;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 400;
   color: var(--card-bg);
   background-color: var(--primary-purple);
@@ -101,6 +101,7 @@ button {
   align-items: center;
   margin-top: 40px;
   font-size: 18px;
+  margin-bottom: 30px;
   
 }
 
@@ -108,4 +109,10 @@ button {
   text-decoration: none;
   color: var(--primary-purple);
   margin-left: 5px;
+}
+
+.error-message {
+  display: block;
+  margin: 0 auto;
+  color: var(--error);
 }

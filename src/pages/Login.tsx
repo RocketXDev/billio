@@ -39,22 +39,42 @@ function Login() {
                 <div className="mb-wrapper">
                     <img className="mb-logo" src="./logo.png" alt="" />
                     <div className="mb-form">
-                        <img className="mb-form-logo" src="./login_logo.png"></img>
+                        <img className="mb-form-logo" 
+                            alt="Login Illustration" 
+                            src="./login_logo.png">
+                        </img>
                         <div className="mb-form-title">Login</div>
-                        <form action="">
+                        <form onSubmit={handleLogin}>
                             <div className="input-block">
-                                <label htmlFor="">Email</label>
-                                <input type="text" />
+                                <label htmlFor="email">Email</label>
+                                <input 
+                                    id="email"
+                                    type="email"
+                                    value={email} 
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    required
+                                />
                             </div>
                             <div className="input-block">
-                                <label htmlFor="">Password</label>
-                                <input type="text" />
+                                <label htmlFor="password">Password</label>
+                                <input 
+                                    id="password"
+                                    type="password"
+                                    value={password} 
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required 
+                                />
                             </div>
                             <div className="mb-fp-link">Forgot Password?</div>
-                            <button>Login</button>
+                            {message && (
+                                <p className="error-message">
+                                    {message}
+                                </p>
+                            )}
+                            <button type="submit" disabled={loading}>{loading ? "Logging in..." : "Login"}</button>
                         </form>
                     </div>
-                    <div className="mb-signup">Don't have an account? <a href="./signup">Sign Up</a></div>
+                    <div className="mb-signup">Don't have an account? <Link to="/signup">Sign Up</Link></div>
                 </div>
             </div>
         </>

@@ -35,8 +35,8 @@ function Signup() {
             return;
         }
 
-        setMessage("Check your email to verify your account before logging in.");
         setLoading(false);
+        navigate("/verify-email");
     }
 
     return (

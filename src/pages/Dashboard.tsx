@@ -120,10 +120,26 @@ function Dashboard() {
     window.location.href = "/login";
   }
 
+  // if (loading) {
+  //   return (
+  //     <div className="min-h-screen bg-[#F7F8FC] flex items-center justify-center">
+  //       <p>Loading Billio...</p>
+  //     </div>
+  //   );
+  // }
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F7F8FC] flex items-center justify-center">
-        <p>Loading Billio...</p>
+      <div className="loading-screen">
+        <div className="billio-loader">
+          <div className="billio-loader-glow"></div>
+
+          <img
+            className="billio-loader-logo"
+            src="/logo.png"
+            alt="Billio"
+          />
+        </div>
       </div>
     );
   }

@@ -1,6 +1,7 @@
 import { useState} from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 import "../App.css"
 
 function Login() {
@@ -11,6 +12,9 @@ function Login() {
 
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("");
+
+    const [showPassword, setShowPassword] = useState(false);
+    const [resetMode, setResetMode] = useState(false);
 
     async function handleLogin(e:React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -31,6 +35,29 @@ function Login() {
         setLoading(true);
         navigate("/dashboard");
 
+    }
+
+    async function handleForgotPassword() {
+        if (!email) {
+            setMessage("Please enter your email first.");
+            return;
+        }
+
+        setLoading(true);
+        setMessage("");
+
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/update-password`,
+        });
+
+        if (error) {
+            setMessage(error.message);
+            setLoading(false);
+            return;
+        }
+
+        setMessage("Password reset email sent. Check your inbox.");
+        setLoading(false);
     }
 
     return (
@@ -57,15 +84,26 @@ function Login() {
                             </div>
                             <div className="input-block">
                                 <label htmlFor="password">Password</label>
-                                <input 
+
+                                <div className="password-wrapper">
+                                    <input
                                     id="password"
-                                    type="password"
-                                    value={password} 
+                                    type={showPassword ? "text" : "password"}
+                                    value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    required 
-                                />
+                                    required
+                                    />
+
+                                    <button
+                                    type="button"
+                                    className="password-toggle"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    >
+                                    {showPassword ? <FaEyeSlash /> : <FaEye />}
+                                    </button>
+                                </div>
                             </div>
-                            <div className="mb-fp-link">Forgot Password?</div>
+                            <div onClick={handleForgotPassword} className="mb-fp-link">Forgot Password?</div>
                             {message && (
                                 <p className="error-message">
                                     {message}

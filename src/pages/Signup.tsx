@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { supabase } from "../lib/supabaseClient";
 
 function Signup() {
@@ -11,6 +12,7 @@ function Signup() {
     const [email, setEmail] = useState("");
     const [role, setRole] = useState<"coach" | "student">("coach");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     
     async function handleSignup(e: any) {
         e.preventDefault();
@@ -106,14 +108,25 @@ function Signup() {
                         </div>
 
                         <div className="input-block">
-                        <label htmlFor="password">Password</label>
-                        <input
-                            id="password"
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                        />
+                            <label htmlFor="password">Password</label>
+
+                            <div className="password-wrapper">
+                                <input
+                                id="password"
+                                type={showPassword ? "text" : "password"}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                />
+
+                                <button
+                                type="button"
+                                className="password-toggle"
+                                onClick={() => setShowPassword(!showPassword)}
+                                >
+                                {showPassword ? <FaEyeSlash /> : <FaEye />}
+                                </button>
+                            </div>
                         </div>
 
                         {message && <p className="error-message">{message}</p>}

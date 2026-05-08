@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import ProtectedRoute from './pages/ProtectedRoute';
 import EmailConfirmed from "./pages/EmailConfirmed";
 import VerifyEmail from "./pages/VerifyEmail";
+import UpdatePassword from "./pages/UpdatePassword";
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
       <Route path="/signup" element={<Signup />} />
       <Route path="/email-confirmed" element={<EmailConfirmed />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/update-password" element={<UpdatePassword />} />
 
       <Route
         path="dashboard"

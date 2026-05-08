@@ -17,78 +17,26 @@ function Signup() {
         setLoading(true);
         setMessage("");
 
-        const {data: authData, error: authError} = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
             email,
-            password
-        })
-
-        if (authError) {
-            setMessage(authError.message);
-            setLoading(false);
-            return;
-        }
-
-        const user = authData.user;
-
-        if (!user) {
-            setMessage("Check your email to confirm your account.");
-            setLoading(false);
-            return;
-        }
-
-        const { data: profileData, error: profileError } = await supabase
-            .from("profiles")
-            .insert({
-                user_id: user.id,
+            password,
+            options: {
+            emailRedirectTo: `${window.location.origin}/email-confirmed`,
+            data: {
                 full_name: fullName,
-                email,
-                role,
-            })
-            .select()
-            .single();
-    
-        if (profileError) {
-            setMessage(profileError.message);
+                role: role,
+            },
+            },
+        });
+
+        if (error) {
+            setMessage(error.message);
             setLoading(false);
             return;
         }
 
-        if (role === "coach") {
-            const { error: coachError } = await supabase.from("coaches").insert({
-                profile_id: profileData.id,
-                full_name: fullName,
-                active: true,
-                setup_completed: false
-            });
-
-            if (coachError) {
-                setMessage(coachError.message);
-                setLoading(false);
-                return;
-            }
-
-            navigate("/dashboard");
-        }
-
-        if (role === "student") {
-            const { error: studentError } = await supabase.from("students").insert({
-                profile_id: profileData.id,
-                student_name: fullName,
-                setup_completed: false,
-                active: true
-            });
-
-            if (studentError) {
-                setMessage(studentError.message);
-                setLoading(false);
-                return;
-            }
-
-            navigate("/dashboard");
-        }
-
+        setMessage("Check your email to verify your account before logging in.");
         setLoading(false);
-    
     }
 
     return (

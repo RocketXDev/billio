@@ -1,6 +1,7 @@
 import { useState} from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
+import "../App.css"
 
 function Login() {
     const navigate = useNavigate();
@@ -33,50 +34,31 @@ function Login() {
     }
 
     return (
-        <div className="min-h-screen bg-[#F7F8FC] flex items-center justify-center px-4">
-            <div className="w-full max-w-md bg-white rounded-3xl shadow-sm p-6">
-                <h1 className="text-3xl font-bold text-[#0F172A]">Welcome back</h1>
-                <p className="text-[#64748B] mt-2">
-                Log in to manage your lessons.
-                </p>
-
-                <form onSubmit={handleLogin} className="mt-6 space-y-4">
-                <input
-                    className="w-full rounded-2xl border p-3"
-                    placeholder="Email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                />
-
-                <input
-                    className="w-full rounded-2xl border p-3"
-                    placeholder="Password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                />
-
-                {message && <p className="text-sm text-red-500">{message}</p>}
-
-                <button
-                    className="w-full rounded-2xl bg-[#4F46E5] text-white py-3 font-semibold"
-                    disabled={loading}
-                >
-                    {loading ? "Logging in..." : "Log in"}
-                </button>
-                </form>
-
-                <p className="text-sm text-[#64748B] mt-4">
-                New to Billio?{" "}
-                <Link to="/signup" className="text-[#4F46E5] font-semibold">
-                    Create account
-                </Link>
-                </p>
+        <>
+            <div className="mb">
+                <div className="mb-wrapper">
+                    <img className="mb-logo" src="./logo.png" alt="" />
+                    <div className="mb-form">
+                        <img className="mb-form-logo" src="./login_logo.png"></img>
+                        <div className="mb-form-title">Login</div>
+                        <form action="">
+                            <div className="input-block">
+                                <label htmlFor="">Email</label>
+                                <input type="text" />
+                            </div>
+                            <div className="input-block">
+                                <label htmlFor="">Password</label>
+                                <input type="text" />
+                            </div>
+                            <div className="mb-fp-link">Forgot Password?</div>
+                            <button>Login</button>
+                        </form>
+                    </div>
+                    <div className="mb-signup">Don't have an account? <a href="./signup">Sign Up</a></div>
+                </div>
             </div>
-        </div>
+        </>
+        
     );
 }
 

@@ -92,87 +92,96 @@ function Signup() {
     }
 
     return (
-        <div className="min-h-screen bg-[#F7F8FC] flex items-center justify-center px-4">
-            <div className="w-full max-w-md bg-white rounded-3xl shadow-sm p-6">
-            <h1 className="text-3xl font-bold text-[#0F172A]">
-                Create Billio account
-            </h1>
+        <>
+            <div className="mb">
+                <div className="mb-wrapper">
+                    <img className="mb-logo" src="/logo.png" alt="Billio logo" />
 
-            <p className="text-[#64748B] mt-2">
-                Start tracking lessons and billing faster.
-            </p>
+                    <div className="mb-form">
+                    <img
+                        className="mb-form-logo"
+                        src="/signup_logo.png"
+                        alt="Signup illustration"
+                    />
 
-            <form onSubmit={handleSignup} className="mt-6 space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                <button
-                    type="button"
-                    onClick={() => setRole("coach")}
-                    className={`rounded-2xl p-3 font-semibold ${
-                    role === "coach"
-                        ? "bg-[#4F46E5] text-white"
-                        : "bg-[#F7F8FC] text-[#64748B]"
-                    }`}
-                >
-                    Coach
-                </button>
+                    <div className="mb-form-title">Sign Up</div>
 
-                <button
-                    type="button"
-                    onClick={() => setRole("student")}
-                    className={`rounded-2xl p-3 font-semibold ${
-                    role === "student"
-                        ? "bg-[#4F46E5] text-white"
-                        : "bg-[#F7F8FC] text-[#64748B]"
-                    }`}
-                >
-                    Student
-                </button>
+                    <form onSubmit={handleSignup}>
+                        <div className="role-toggle">
+                        <div
+                            className={`role-slider ${
+                            role === "student" ? "role-slider-right" : ""
+                            }`}
+                        />
+
+                        <button
+                            type="button"
+                            className={`role-option ${
+                            role === "coach" ? "role-option-active" : ""
+                            }`}
+                            onClick={() => setRole("coach")}
+                        >
+                            Coach
+                        </button>
+
+                        <button
+                            type="button"
+                            className={`role-option ${
+                            role === "student" ? "role-option-active" : ""
+                            }`}
+                            onClick={() => setRole("student")}
+                        >
+                            Student
+                        </button>
+                        </div>
+
+                        <div className="input-block">
+                        <label htmlFor="fullName">Full Name</label>
+                        <input
+                            id="fullName"
+                            type="text"
+                            value={fullName}
+                            onChange={(e) => setFullName(e.target.value)}
+                            required
+                        />
+                        </div>
+
+                        <div className="input-block">
+                        <label htmlFor="email">Email</label>
+                        <input
+                            id="email"
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                        />
+                        </div>
+
+                        <div className="input-block">
+                        <label htmlFor="password">Password</label>
+                        <input
+                            id="password"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                        />
+                        </div>
+
+                        {message && <p className="error-message">{message}</p>}
+
+                        <button type="submit" disabled={loading}>
+                        {loading ? "Creating..." : "Create Account"}
+                        </button>
+                    </form>
+                    </div>
+
+                    <div className="mb-signup">
+                    Already have an account? <Link to="/login">Login</Link>
+                    </div>
                 </div>
-
-                <input
-                className="w-full rounded-2xl border p-3"
-                placeholder="Full name"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required
-                />
-
-                <input
-                className="w-full rounded-2xl border p-3"
-                placeholder="Email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                />
-
-                <input
-                className="w-full rounded-2xl border p-3"
-                placeholder="Password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                />
-
-                {message && <p className="text-sm text-red-500">{message}</p>}
-
-                <button
-                className="w-full rounded-2xl bg-[#4F46E5] text-white py-3 font-semibold"
-                disabled={loading}
-                >
-                {loading ? "Creating..." : "Create account"}
-                </button>
-            </form>
-
-            <p className="text-sm text-[#64748B] mt-4">
-                Already have an account?{" "}
-                <Link to="/login" className="text-[#4F46E5] font-semibold">
-                Log in
-                </Link>
-            </p>
             </div>
-        </div>
+        </>
     );
 }
 

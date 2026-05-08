@@ -1,4 +1,4 @@
-/* LOGIN */
+/* LOGIN & SIGNUP */
 
 .mb {
   width: 100%;
@@ -99,9 +99,9 @@ button {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: 40px;
+  margin-top: 30px;
   font-size: 18px;
-  margin-bottom: 30px;
+  margin-bottom: 40px;
   
 }
 
@@ -115,4 +115,51 @@ button {
   display: block;
   margin: 0 auto;
   color: var(--error);
+}
+
+.role-toggle {
+  position: relative;
+  width: 100%;
+  height: 52px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  background-color: var(--input-bg);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.role-slider {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  width: calc(50% - 5px);
+  height: calc(100% - 10px);
+  background-color: var(--primary-purple);
+  border-radius: 10px;
+  transition: transform 0.25s ease;
+  z-index: 1;
+}
+
+.role-slider-right {
+  transform: translateX(100%);
+}
+
+.role-option {
+  position: relative;
+  z-index: 2;
+  width: 50%;
+  height: 100%;
+  margin: 0;
+  background: transparent;
+  color: var(--secondary-text);
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  transition: color 0.25s ease;
+}
+
+.role-option-active {
+  color: var(--card-bg);
 }

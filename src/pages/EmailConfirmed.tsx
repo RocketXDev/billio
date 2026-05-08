@@ -15,12 +15,12 @@ function EmailConfirmed() {
 
           <div className="mb-form-title">Email Verified</div>
 
-          <p style={{ textAlign: "center", color: "#64748B", fontSize: "16px" }}>
+          <p className="mb-form-descr">
             Your email has been verified. You can now log in to Billio.
           </p>
 
-          <Link to="/login" style={{ width: "100%" }}>
-            <button type="button">Go to Login</button>
+          <Link className="mb-redirect-btn" to="/login">
+            <button className="mb-btn-confirm" type="button">Go to Login</button>
           </Link>
         </div>
       </div>

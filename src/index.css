@@ -25,11 +25,16 @@ body,
 #root {
   width: 100%;
   min-height: 100%;
+  overscroll-behavior-y: none;
+  overscroll-behavior-x: none;
 }
 
 
 body {
-  min-height: 100vh;
+  position: fixed;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
   background: var(--main-bg);
 }
 

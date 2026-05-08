@@ -9,7 +9,7 @@
   height: auto;
   display: block;
   margin: 0 auto;
-  margin-top: 20px;
+  margin-top: 0px;
 }
 
 .mb-form {
@@ -29,7 +29,7 @@
 }
 
 .mb-form-title {
-  font-size: 40px;
+  font-size: 35px;
   font-weight: 600;
   letter-spacing: -0.6px;
   margin-top: -50px;
@@ -37,7 +37,7 @@
 }
 
 .mb-form-logo {
-  width: 500px;
+  width: 450px;
 }
 
 form {
@@ -60,7 +60,7 @@ form > .input-block > input {
   border: 1px solid var(--border);
   background-color: var(--input-bg);
   outline: none !important;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 400;
   padding: 15px;
 }
@@ -77,7 +77,7 @@ form > .input-block > label {
 .mb-fp-link {
   align-self: flex-end;
   color: var(--primary-purple);
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   letter-spacing: -0.5px;
   margin-top: -10px;

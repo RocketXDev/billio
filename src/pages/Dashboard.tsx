@@ -14,10 +14,14 @@ import {
 
 function Dashboard() {
   const [fullName, setFullName] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [role, setRole] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadDashboard() {
+      setLoading(true);
+
       const { data: sessionData } = await supabase.auth.getSession();
       const user = sessionData.session?.user;
 
@@ -26,14 +30,84 @@ function Dashboard() {
         return;
       }
 
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const metadataFullName = user.user_metadata.full_name || "New User";
+      const metadataRole = user.user_metadata.role || "coach";
 
-      if (data) {
-        setFullName(data.full_name);
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .upsert(
+          {
+            user_id: user.id,
+            full_name: metadataFullName,
+            email: user.email,
+            role: metadataRole,
+          },
+          {
+            onConflict: "user_id",
+          }
+        )
+        .select()
+        .single();
+
+      if (profileError) {
+        console.log("Profile upsert error:", profileError);
+        setLoading(false);
+        return;
+      }
+
+      setFullName(profileData.full_name);
+      setRole(profileData.role);
+
+      if (profileData.role === "coach") {
+        const { data: coachData, error: coachLookupError } = await supabase
+          .from("coaches")
+          .select("*")
+          .eq("profile_id", profileData.id)
+          .maybeSingle();
+
+        if (coachLookupError) {
+          console.log("Coach lookup error:", coachLookupError);
+        }
+
+        if (!coachData) {
+          const { error: coachInsertError } = await supabase
+            .from("coaches")
+            .insert({
+              profile_id: profileData.id,
+              active: true,
+              setup_completed: false,
+            });
+
+          if (coachInsertError) {
+            console.log("Coach insert error:", coachInsertError);
+          }
+        }
+      }
+
+      if (profileData.role === "student") {
+        const { data: studentData, error: studentLookupError } = await supabase
+          .from("students")
+          .select("*")
+          .eq("profile_id", profileData.id)
+          .maybeSingle();
+
+        if (studentLookupError) {
+          console.log("Student lookup error:", studentLookupError);
+        }
+
+        if (!studentData) {
+          const { error: studentInsertError } = await supabase
+            .from("students")
+            .insert({
+              profile_id: profileData.id,
+              student_name: profileData.full_name,
+              active: true,
+            });
+
+          if (studentInsertError) {
+            console.log("Student insert error:", studentInsertError);
+          }
+        }
       }
 
       setLoading(false);
@@ -52,7 +126,7 @@ function Dashboard() {
       <div className="loading-screen">
         <div className="billio-loader">
           <div className="billio-loader-glow"></div>
-          <img className="billio-loader-logo" src="/logo_icon.png" alt="Billio" />
+          <img className="billio-loader-logo" src="/logo.png" alt="Billio" />
         </div>
       </div>
     );
@@ -63,7 +137,13 @@ function Dashboard() {
       <div className="mb-dashboard-wrapper">
         <header className="mb-dashboard-header">
           <div className="mb-dashboard-left">
-            <FaBars className="mb-dashboard-menu" />
+            <button
+              type="button"
+              className="dashboard-menu-btn"
+              onClick={() => setMenuOpen(true)}
+            >
+              <FaBars className="dashboard-menu" />
+            </button>
             <img className="mb-dashboard-logo" src="/logo.png" alt="Billio" />
           </div>
 
@@ -224,9 +304,6 @@ function Dashboard() {
             </div>
           </section>
 
-          {/* <button onClick={handleLogout} className="dashboard-logout">
-            Log out
-          </button> */}
         </div>
       </div>
 
@@ -256,6 +333,42 @@ function Dashboard() {
           <span>More</span>
         </div>
       </nav>
+
+      {menuOpen && (
+        <div className="menu-overlay" onClick={() => setMenuOpen(false)}>
+          <div className="side-menu" onClick={(e) => e.stopPropagation()}>
+            <div className="side-menu-header">
+              <img src="/logo.png" alt="Billio" />
+              <button type="button" onClick={() => setMenuOpen(false)}>
+                ×
+              </button>
+            </div>
+
+            <div className="side-menu-user">
+              <div className="side-menu-avatar">
+                {fullName ? fullName.charAt(0).toUpperCase() : "B"}
+              </div>
+
+              <div>
+                <strong>{fullName || "Billio User"}</strong>
+                <span>Coach account</span>
+              </div>
+            </div>
+
+            <nav className="side-menu-links">
+              <a>Dashboard</a>
+              <a>Lessons</a>
+              <a>Students</a>
+              <a>Invoices</a>
+              <a>Settings</a>
+            </nav>
+
+            <button className="side-menu-logout" onClick={handleLogout}>
+              Log out
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );

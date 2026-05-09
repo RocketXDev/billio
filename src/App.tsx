@@ -6,6 +6,8 @@ import ProtectedRoute from './pages/ProtectedRoute';
 import EmailConfirmed from "./pages/EmailConfirmed";
 import VerifyEmail from "./pages/VerifyEmail";
 import UpdatePassword from "./pages/UpdatePassword";
+import ForgotPassword from "./pages/ForgotPassword";
+import PasswordUpdated from "./pages/PasswordUpdated";
 
 function App() {
   return (
@@ -16,6 +18,8 @@ function App() {
       <Route path="/email-confirmed" element={<EmailConfirmed />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/update-password" element={<UpdatePassword />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/password-updated" element={<PasswordUpdated />} />
 
       <Route
         path="dashboard"

@@ -37,28 +37,6 @@ function Login() {
 
     }
 
-    async function handleForgotPassword() {
-        if (!email) {
-            setMessage("Please enter your email first.");
-            return;
-        }
-
-        setLoading(true);
-        setMessage("");
-
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${window.location.origin}/update-password`,
-        });
-
-        if (error) {
-            setMessage(error.message);
-            setLoading(false);
-            return;
-        }
-
-        setMessage("Password reset email sent. Check your inbox.");
-        setLoading(false);
-    }
 
     return (
         <>
@@ -103,7 +81,9 @@ function Login() {
                                     </button>
                                 </div>
                             </div>
-                            <div onClick={handleForgotPassword} className="mb-fp-link">Forgot Password?</div>
+                            <Link to="/forgot-password" className="mb-fp-link">
+                                Forgot Password?
+                            </Link>
                             {message && (
                                 <p className="error-message">
                                     {message}

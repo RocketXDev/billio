@@ -38,7 +38,7 @@ function UpdatePassword() {
             alt="Update password"
           />
 
-          <div className="mb-form-title">New Password</div>
+          <div className="mb-form-title">Reset Password</div>
 
           <form onSubmit={handleUpdatePassword}>
             <div className="input-block">

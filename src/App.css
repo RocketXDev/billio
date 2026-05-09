@@ -117,6 +117,12 @@ button {
   color: var(--error);
 }
 
+.verify-message {
+  margin-top: -10px;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
 .role-toggle {
   position: relative;
   width: 100%;
@@ -175,6 +181,10 @@ button {
 .mb-redirect-btn {
   width: 100%;
   text-decoration: none;
+}
+
+.mb-redirect-btn > button {
+  width: 100%;
 }
 
 .mb-btn-confirm {

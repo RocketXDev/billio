@@ -9,7 +9,7 @@ function EmailConfirmed() {
         <div className="mb-form">
           <img
             className="mb-form-logo"
-            src="/login_logo.png"
+            src="/confirm_logo.png"
             alt="Email confirmed"
           />
 

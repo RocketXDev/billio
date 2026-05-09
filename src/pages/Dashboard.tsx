@@ -1,15 +1,23 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import {
+  FaBars,
+  FaBell,
+  FaPlus,
+  FaChevronRight,
+  FaHome,
+  FaCalendarAlt,
+  FaUsers,
+  FaFileInvoiceDollar,
+  FaEllipsisH,
+} from "react-icons/fa";
 
 function Dashboard() {
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function setupUserProfile() {
-      setLoading(true);
-
+    async function loadDashboard() {
       const { data: sessionData } = await supabase.auth.getSession();
       const user = sessionData.session?.user;
 
@@ -18,101 +26,20 @@ function Dashboard() {
         return;
       }
 
-      let { data: profileData, error: profileError } = await supabase
+      const { data } = await supabase
         .from("profiles")
         .select("*")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (profileError) {
-        console.log("Profile lookup error:", profileError);
-        setLoading(false);
-        return;
-      }
-
-      if (!profileData) {
-        const metadataFullName = user.user_metadata.full_name || "New User";
-        const metadataRole = user.user_metadata.role || "coach";
-
-        const { data: newProfile, error: createProfileError } = await supabase
-          .from("profiles")
-          .insert({
-            user_id: user.id,
-            full_name: metadataFullName,
-            email: user.email,
-            role: metadataRole,
-          })
-          .select()
-          .single();
-
-        if (createProfileError) {
-          console.log("Create profile error:", createProfileError);
-          setLoading(false);
-          return;
-        }
-
-        profileData = newProfile;
-      }
-
-      setFullName(profileData.full_name);
-      setRole(profileData.role);
-
-      if (profileData.role === "coach") {
-        const { data: coachData, error: coachLookupError } = await supabase
-          .from("coaches")
-          .select("*")
-          .eq("profile_id", profileData.id)
-          .maybeSingle();
-
-        if (coachLookupError) {
-          console.log("Coach lookup error:", coachLookupError);
-        }
-
-        if (!coachData) {
-          const { error: createCoachError } = await supabase
-            .from("coaches")
-            .insert({
-              profile_id: profileData.id,
-              active: true,
-              setup_completed: false,
-            });
-
-          if (createCoachError) {
-            console.log("Create coach error:", createCoachError);
-          }
-        }
-      }
-
-      if (profileData.role === "student") {
-        const { data: studentData, error: studentLookupError } = await supabase
-          .from("students")
-          .select("*")
-          .eq("profile_id", profileData.id)
-          .maybeSingle();
-
-        if (studentLookupError) {
-          console.log("Student lookup error:", studentLookupError);
-        }
-
-        if (!studentData) {
-          const { error: createStudentError } = await supabase
-            .from("students")
-            .insert({
-              profile_id: profileData.id,
-              student_name: profileData.full_name,
-              active: true,
-            });
-
-          if (createStudentError) {
-            console.log("Create student error:", createStudentError);
-          }
-        }
+      if (data) {
+        setFullName(data.full_name);
       }
 
       setLoading(false);
     }
 
-    setupUserProfile();
+    loadDashboard();
   }, []);
 
   async function handleLogout() {
@@ -120,113 +47,216 @@ function Dashboard() {
     window.location.href = "/login";
   }
 
-  // if (loading) {
-  //   return (
-  //     <div className="min-h-screen bg-[#F7F8FC] flex items-center justify-center">
-  //       <p>Loading Billio...</p>
-  //     </div>
-  //   );
-  // }
-
   if (loading) {
     return (
       <div className="loading-screen">
         <div className="billio-loader">
           <div className="billio-loader-glow"></div>
-
-          <img
-            className="billio-loader-logo"
-            src="/logo.png"
-            alt="Billio"
-          />
+          <img className="billio-loader-logo" src="/logo_icon.png" alt="Billio" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen w-full bg-[#F7F8FC] px-4 py-6">
-      <div className="mx-auto max-w-md">
-        <div className="mb-6">
-          <p className="text-sm text-[#64748B]">Welcome back</p>
-          <h1 className="text-3xl font-bold text-[#0F172A]">
-            {fullName || "User"}
-          </h1>
-          <p className="mt-1 text-sm capitalize text-[#64748B]">
-            {role} dashboard
+    <div className="mb-dashboard">
+      <div className="mb-dashboard-wrapper">
+        <header className="mb-dashboard-header">
+          <div className="mb-dashboard-left">
+            <FaBars className="mb-dashboard-menu" />
+            <img className="mb-dashboard-logo" src="/logo.png" alt="Billio" />
+          </div>
+
+          <div className="mb-dashboard-bell">
+            <FaBell />
+            <span>3</span>
+          </div>
+        </header>
+        <div className="mb-dashboard-body">
+          <p className="dashboard-welcome">
+            Welcome back{fullName ? `, ${fullName.split(" ")[0]}` : ""} 👋
           </p>
-        </div>
 
-        <button className="mb-6 w-full rounded-3xl bg-[#4F46E5] py-5 text-lg font-bold text-white shadow-lg">
-          + Add Lesson
-        </button>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-3xl bg-white p-4 shadow-sm">
-            <p className="text-sm text-[#64748B]">Today</p>
-            <h2 className="mt-2 text-2xl font-bold text-[#0F172A]">0</h2>
-            <p className="text-xs text-[#94A3B8]">lessons</p>
-          </div>
-
-          <div className="rounded-3xl bg-white p-4 shadow-sm">
-            <p className="text-sm text-[#64748B]">This Week</p>
-            <h2 className="mt-2 text-2xl font-bold text-[#0F172A]">$0</h2>
-            <p className="text-xs text-[#94A3B8]">earned</p>
-          </div>
-
-          <div className="rounded-3xl bg-white p-4 shadow-sm">
-            <p className="text-sm text-[#64748B]">Unbilled</p>
-            <h2 className="mt-2 text-2xl font-bold text-[#0F172A]">0</h2>
-            <p className="text-xs text-[#94A3B8]">sessions</p>
-          </div>
-
-          <div className="rounded-3xl bg-white p-4 shadow-sm">
-            <p className="text-sm text-[#64748B]">Clients</p>
-            <h2 className="mt-2 text-2xl font-bold text-[#0F172A]">0</h2>
-            <p className="text-xs text-[#94A3B8]">active</p>
-          </div>
-        </div>
-
-        <div className="mt-8">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-[#0F172A]">
-              Today’s Lessons
-            </h2>
-            <button className="text-sm font-semibold text-[#4F46E5]">
-              View all
-            </button>
-          </div>
-
-          <div className="rounded-3xl bg-white p-5 text-center shadow-sm">
-            <p className="text-sm text-[#64748B]">No lessons added yet.</p>
-            <p className="mt-1 text-xs text-[#94A3B8]">
-              Tap “Add Lesson” to start tracking.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-6 rounded-3xl bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-[#64748B]">Weekly Billing</p>
-              <h2 className="mt-1 text-xl font-bold text-[#0F172A]">
-                Nothing to bill yet
-              </h2>
+          <button className="add-lesson-card">
+            <div className="add-circle">
+              <FaPlus />
             </div>
 
-            <button className="rounded-2xl bg-[#F7F8FC] px-4 py-2 text-sm font-semibold text-[#4F46E5]">
-              Review
-            </button>
-          </div>
+            <div className="add-text">
+              <h2>Add Lesson</h2>
+              <p>Log a lesson in seconds</p>
+            </div>
+
+            <FaChevronRight className="add-arrow" />
+          </button>
+
+          <section className="stat-card">
+            <div className="card-header">
+              <h3>Today</h3>
+              <button>View calendar</button>
+            </div>
+
+            <div className="today-stats">
+              <div>
+                <strong className="purple">3</strong>
+                <p>Lessons<br />Today</p>
+              </div>
+
+              <span className="divider" />
+
+              <div>
+                <strong>$300</strong>
+                <p>Earned</p>
+              </div>
+
+              <span className="divider" />
+
+              <div>
+                <strong className="orange">1</strong>
+                <p>Upcoming</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="stat-card">
+            <h3>This Week</h3>
+
+            <div className="week-stats">
+              <div>
+                <strong className="purple">$1,240</strong>
+                <p>Earnings</p>
+              </div>
+
+              <span className="divider" />
+
+              <div>
+                <strong>18</strong>
+                <p>Lessons</p>
+              </div>
+
+              <span className="divider" />
+
+              <div>
+                <strong className="orange">6</strong>
+                <p>Unbilled</p>
+              </div>
+
+              <span className="divider" />
+
+              <div>
+                <strong className="red">3</strong>
+                <p>Invoices<br />Pending</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="dashboard-section">
+            <h3>Upcoming</h3>
+
+            <div className="lesson-list">
+              <div className="lesson-row">
+                <div className="lesson-time">
+                  <strong>10:00 AM</strong>
+                  <span>Today</span>
+                </div>
+
+                <div className="lesson-info">
+                  <strong>Anna Petrova</strong>
+                  <span>Freestyle • 45 min</span>
+                  <span>World Ice Arena</span>
+                </div>
+
+                <div className="lesson-status green">In 18 min</div>
+                <FaChevronRight className="row-arrow" />
+              </div>
+
+              <div className="lesson-row">
+                <div className="lesson-time">
+                  <strong>11:00 AM</strong>
+                  <span>Today</span>
+                </div>
+
+                <div className="lesson-info">
+                  <strong>Maya Chen</strong>
+                  <span>Spins • 30 min</span>
+                  <span>World Ice Arena</span>
+                </div>
+
+                <div className="lesson-status purple-bg">In 1h 18m</div>
+                <FaChevronRight className="row-arrow" />
+              </div>
+
+              <div className="lesson-row last">
+                <div className="lesson-time">
+                  <strong>12:00 PM</strong>
+                  <span>Today</span>
+                </div>
+
+                <div className="lesson-info">
+                  <strong>Alex Kim</strong>
+                  <span>Jumps • 45 min</span>
+                  <span>Summit Rink</span>
+                </div>
+
+                <div className="lesson-status purple-bg">In 2h 18m</div>
+                <FaChevronRight className="row-arrow" />
+              </div>
+            </div>
+          </section>
+
+          <section className="dashboard-section">
+            <div className="section-title-row">
+              <h3>Recent Invoices</h3>
+              <button>View all</button>
+            </div>
+
+            <div className="invoice-card">
+              <div className="invoice-avatar">AP</div>
+
+              <div className="invoice-info">
+                <strong>Anna Petrova</strong>
+                <span>May 12 – May 18</span>
+              </div>
+
+              <strong className="invoice-price">$225</strong>
+              <span className="invoice-status">Sent</span>
+              <FaChevronRight className="row-arrow" />
+            </div>
+          </section>
+
+          {/* <button onClick={handleLogout} className="dashboard-logout">
+            Log out
+          </button> */}
+        </div>
+      </div>
+
+      <nav className="bottom-nav">
+        <div className="nav-item active">
+          <FaHome />
+          <span>Dashboard</span>
         </div>
 
-        <button
-          onClick={handleLogout}
-          className="mt-8 w-full rounded-2xl bg-white py-3 font-semibold text-[#0F172A] shadow-sm"
-        >
-          Log out
-        </button>
-      </div>
+        <div className="nav-item">
+          <FaCalendarAlt />
+          <span>Lessons</span>
+        </div>
+
+        <div className="nav-item">
+          <FaUsers />
+          <span>Students</span>
+        </div>
+
+        <div className="nav-item">
+          <FaFileInvoiceDollar />
+          <span>Invoices</span>
+        </div>
+
+        <div className="nav-item">
+          <FaEllipsisH />
+          <span>More</span>
+        </div>
+      </nav>
+
     </div>
   );
 }

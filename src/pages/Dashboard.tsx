@@ -10,6 +10,7 @@ import {
   FaUsers,
   FaFileInvoiceDollar,
   FaEllipsisH,
+  FaTrash
 } from "react-icons/fa";
 
 function Dashboard() {
@@ -17,6 +18,8 @@ function Dashboard() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [role, setRole] = useState("");
   const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   useEffect(() => {
     async function loadDashboard() {
@@ -58,6 +61,47 @@ function Dashboard() {
       setFullName(profileData.full_name);
       setRole(profileData.role);
 
+      // Create onboarding notification only once
+      const { error: onboardingNotificationError } = await supabase
+        .from("notifications")
+        .upsert(
+          {
+            profile_id: profileData.id,
+            title: "Finish setting up Billio",
+            message:
+              "Complete your coach setup so Billio can calculate lesson rates and billing correctly.",
+            type: "onboarding",
+            is_read: false,
+          },
+          {
+            onConflict: "profile_id,type",
+            ignoreDuplicates: true,
+          }
+        );
+
+      if (onboardingNotificationError) {
+        console.log(
+          "Onboarding notification error:",
+          onboardingNotificationError
+        );
+      }
+
+      // Load notifications
+      const { data: notificationData, error: notificationError } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("profile_id", profileData.id)
+        .order("created_at", { ascending: false });
+
+      if (notificationError) {
+        console.log("Notification load error:", notificationError);
+      }
+
+      if (notificationData) {
+        setNotifications(notificationData);
+      }
+
+      // Create coach profile if role is coach
       if (profileData.role === "coach") {
         const { data: coachData, error: coachLookupError } = await supabase
           .from("coaches")
@@ -84,6 +128,7 @@ function Dashboard() {
         }
       }
 
+      // Create student profile if role is student
       if (profileData.role === "student") {
         const { data: studentData, error: studentLookupError } = await supabase
           .from("students")
@@ -114,11 +159,47 @@ function Dashboard() {
     }
 
     loadDashboard();
-  }, []);
+  },[]);
 
   async function handleLogout() {
     await supabase.auth.signOut();
     window.location.href = "/login";
+  }
+
+  async function markNotificationAsRead(notificationId: string) {
+    const { error } = await supabase
+      .from("notifications")
+      .update({ is_read: true })
+      .eq("id", notificationId);
+
+    if (error) {
+      console.log("Mark notification read error:", error);
+      return;
+    }
+
+    setNotifications((prev) =>
+      prev.map((notification) =>
+        notification.id === notificationId
+          ? { ...notification, is_read: true }
+          : notification
+      )
+    );
+  }
+
+  async function deleteNotification(notificationId: string) {
+    const { error } = await supabase
+      .from("notifications")
+      .delete()
+      .eq("id", notificationId);
+
+    if (error) {
+      console.log("Delete notification error:", error);
+      return;
+    }
+
+    setNotifications((prev) =>
+      prev.filter((notification) => notification.id !== notificationId)
+    );
   }
 
   if (loading) {
@@ -147,10 +228,19 @@ function Dashboard() {
             <img className="mb-dashboard-logo" src="/logo.png" alt="Billio" />
           </div>
 
-          <div className="mb-dashboard-bell">
+          <button
+            type="button"
+            className="dashboard-bell"
+            onClick={() => setNotificationsOpen(true)}
+          >
             <FaBell />
-            <span>3</span>
-          </div>
+            {notifications.filter((n) => !n.is_read).length > 0 && (
+              <span>{notifications.filter((n) => !n.is_read).length > 99
+                ? "99+"
+                : notifications.filter((n) => !n.is_read).length
+              }</span>
+            )}
+          </button>
         </header>
         <div className="mb-dashboard-body">
           <p className="dashboard-welcome">
@@ -366,6 +456,53 @@ function Dashboard() {
             <button className="side-menu-logout" onClick={handleLogout}>
               Log out
             </button>
+          </div>
+        </div>
+      )}
+
+      {notificationsOpen && (
+        <div className="menu-overlay" onClick={() => setNotificationsOpen(false)}>
+          <div className="notification-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="notification-header">
+              <h3>Notifications</h3>
+              <button type="button" onClick={() => setNotificationsOpen(false)}>
+                ×
+              </button>
+            </div>
+
+            {notifications.length === 0 ? (
+              <p className="empty-notifications">No notifications yet.</p>
+            ) : (
+              <div className="notification-list">
+                {notifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className={`notification-item ${
+                      notification.is_read ? "read" : "unread"
+                    }`}
+                    onClick={() => markNotificationAsRead(notification.id)}
+                  >
+                    <strong>{notification.title}</strong>
+                    <p>{notification.message}</p>
+                    <div className="notification-bottom">
+                      <span>
+                        {new Date(notification.created_at).toLocaleDateString()}
+                      </span>
+                      <button
+                        type="button"
+                        className="notification-delete"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteNotification(notification.id);
+                        }}
+                      >
+                        <FaTrash/>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

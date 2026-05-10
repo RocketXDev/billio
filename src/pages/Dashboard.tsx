@@ -244,6 +244,11 @@ function Dashboard() {
   async function handleSaveOnboarding(e: any) {
   e.preventDefault();
 
+  if (!defaultHourlyRate || Number(defaultHourlyRate) <= 0) {
+  alert("Please enter your hourly rate before finishing setup.");
+  return;
+  }
+
   if (!coachId) return;
 
   const { data, error } = await supabase
@@ -599,7 +604,7 @@ function Dashboard() {
 
             <img
               className="onboarding-image"
-              src="/login_logo.png"
+              src="/onboarding_logo.png"
               alt="Coach onboarding"
             />
 

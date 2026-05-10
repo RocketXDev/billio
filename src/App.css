@@ -1093,7 +1093,7 @@ button {
 .onboarding-card {
   width: 100%;
   max-width: 430px;
-  max-height: 95vh;
+  max-height: 94vh;
 
   background: var(--card-bg);
   border: 1px solid var(--border);
@@ -1125,9 +1125,9 @@ button {
 }
 
 .onboarding-image {
-  width: 260px;
+  width: 350px;
   display: block;
-  margin: 8px auto 0;
+  margin: -10px auto 0;
 }
 
 .onboarding-card h2 {
@@ -1135,7 +1135,7 @@ button {
   font-size: 28px;
   font-weight: 700;
   text-align: center;
-  margin: -5px 0 10px;
+  margin: -15px 0 10px;
   letter-spacing: -0.7px;
 }
 

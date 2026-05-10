@@ -15,11 +15,18 @@ import {
 
 function Dashboard() {
   const [fullName, setFullName] = useState("");
+  const [profileId, setProfileId] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [role, setRole] = useState("");
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [coachId, setCoachId] = useState("");
+  const [visibleName, setVisibleName] = useState("");
+  const [defaultHourlyRate, setDefaultHourlyRate] = useState("");
+  const [bio, setBio] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
 
   useEffect(() => {
     async function loadDashboard() {
@@ -60,6 +67,7 @@ function Dashboard() {
 
       setFullName(profileData.full_name);
       setRole(profileData.role);
+      setProfileId(profileData.id);
 
       // Create onboarding notification only once
       const { error: onboardingNotificationError } = await supabase
@@ -114,16 +122,43 @@ function Dashboard() {
         }
 
         if (!coachData) {
-          const { error: coachInsertError } = await supabase
-            .from("coaches")
-            .insert({
-              profile_id: profileData.id,
-              active: true,
-              setup_completed: false,
-            });
+        const { data: newCoach, error: coachInsertError } = await supabase
+          .from("coaches")
+          .insert({
+            profile_id: profileData.id,
+            active: true,
+            setup_completed: false,
+          })
+          .select()
+          .single();
 
-          if (coachInsertError) {
-            console.log("Coach insert error:", coachInsertError);
+        if (coachInsertError) {
+          console.log("Coach insert error:", coachInsertError);
+        }
+
+        if (newCoach) {
+          setCoachId(newCoach.id);
+          setShowOnboarding(true);
+        }
+        } else {
+          setCoachId(coachData.id);
+
+          if (!coachData.setup_completed) {
+            setShowOnboarding(true);
+          } else {
+            // cleanup onboarding notification if setup already completed
+            await supabase
+              .from("notifications")
+              .delete()
+              .eq("profile_id", profileData.id)
+              .eq("type", "onboarding");
+
+            // remove locally too
+            setNotifications((prev) =>
+              prev.filter(
+                (notification) => notification.type !== "onboarding"
+              )
+            );
           }
         }
       }
@@ -166,11 +201,15 @@ function Dashboard() {
     window.location.href = "/login";
   }
 
-  async function markNotificationAsRead(notificationId: string) {
+  async function markNotificationAsRead(notification: any) {
+    if (notification.type === "onboarding") {
+      setShowOnboarding(true);
+    }
+
     const { error } = await supabase
       .from("notifications")
       .update({ is_read: true })
-      .eq("id", notificationId);
+      .eq("id", notification.id);
 
     if (error) {
       console.log("Mark notification read error:", error);
@@ -178,10 +217,10 @@ function Dashboard() {
     }
 
     setNotifications((prev) =>
-      prev.map((notification) =>
-        notification.id === notificationId
-          ? { ...notification, is_read: true }
-          : notification
+      prev.map((item) =>
+        item.id === notification.id
+          ? { ...item, is_read: true }
+          : item
       )
     );
   }
@@ -200,6 +239,48 @@ function Dashboard() {
     setNotifications((prev) =>
       prev.filter((notification) => notification.id !== notificationId)
     );
+  }
+
+  async function handleSaveOnboarding(e: any) {
+  e.preventDefault();
+
+  if (!coachId) return;
+
+  const { data, error } = await supabase
+    .from("coaches")
+    .update({
+      visible_name: visibleName,
+      default_hourly_rate: Number(defaultHourlyRate),
+      bio: bio || null,
+      phone_number: phoneNumber,
+      setup_completed: true,
+    })
+    .eq("id", coachId)
+    .select();
+
+  if (error) {
+    console.log("Onboarding save error:", error);
+    return;
+  }
+
+  await supabase
+    .from("notifications")
+    .delete()
+    .eq("profile_id", profileId)
+    .eq("type", "onboarding");
+
+  // remove onboarding notification locally
+  setNotifications((prev) =>
+    prev.filter(
+      (notification) => notification.type !== "onboarding"
+    )
+  );
+
+  setShowOnboarding(false);
+  }
+
+  async function handleSkipOnboarding() {
+    setShowOnboarding(false);
   }
 
   if (loading) {
@@ -480,7 +561,7 @@ function Dashboard() {
                     className={`notification-item ${
                       notification.is_read ? "read" : "unread"
                     }`}
-                    onClick={() => markNotificationAsRead(notification.id)}
+                    onClick={() => markNotificationAsRead(notification)}
                   >
                     <strong>{notification.title}</strong>
                     <p>{notification.message}</p>
@@ -503,6 +584,111 @@ function Dashboard() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {showOnboarding && (
+        <div className="onboarding-overlay">
+          <div className="onboarding-card">
+            <img
+              className="onboarding-logo"
+              src="/logo.png"
+              alt="Billio logo"
+            />
+
+            <img
+              className="onboarding-image"
+              src="/login_logo.png"
+              alt="Coach onboarding"
+            />
+
+            <h2>Set up your coaching profile</h2>
+
+            <p>
+              Add a few details so Billio can help calculate lessons and billing
+              faster.
+            </p>
+
+            <form
+              onSubmit={handleSaveOnboarding}
+              className="onboarding-form"
+            >
+              <div className="input-block">
+                <label htmlFor="visibleName">
+                  Visible Coach Name
+                </label>
+
+                <input
+                  id="visibleName"
+                  type="text"
+                  value={visibleName}
+                  onChange={(e) => setVisibleName(e.target.value)}
+                  placeholder="Example: Artem Markelov"
+                  required
+                />
+              </div>
+
+              <div className="input-block">
+                <label htmlFor="defaultHourlyRate">
+                  Default Hourly Rate
+                </label>
+
+                <div className="currency-input">
+                  <span>$</span>
+
+                  <input
+                    id="defaultHourlyRate"
+                    type="number"
+                    value={defaultHourlyRate}
+                    onChange={(e) => setDefaultHourlyRate(e.target.value)}
+                    placeholder="100"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="input-block">
+                <label htmlFor="phoneNumber">
+                  Phone Number
+                </label>
+
+                <input
+                  id="phoneNumber"
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="(555) 555-5555"
+                  required
+                />
+              </div>
+
+              <div className="input-block">
+                <label htmlFor="bio">
+                  Bio (Optional)
+                </label>
+
+                <textarea
+                  id="bio"
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  placeholder="Tell students a little about yourself..."
+                  rows={4}
+                />
+              </div>
+
+              <button type="submit">
+                Finish Setup
+              </button>
+
+              <button
+                type="button"
+                className="onboarding-skip"
+                onClick={handleSkipOnboarding}
+              >
+                Skip for now
+              </button>
+            </form>
           </div>
         </div>
       )}

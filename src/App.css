@@ -1075,3 +1075,138 @@ button {
   background: #fecaca;
   transform: scale(1.05);
 }
+
+/* ONBOARDING */
+.onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--main-bg);
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  padding: 20px;
+}
+
+.onboarding-card {
+  width: 100%;
+  max-width: 430px;
+  max-height: 95vh;
+
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 32px;
+
+  padding: 24px 22px 28px;
+
+  overflow-y: auto;
+
+  animation: onboardingSlideUp 0.3s ease forwards;
+}
+
+@keyframes onboardingSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(35px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.onboarding-logo {
+  width: 150px;
+  display: block;
+  margin: 0 auto;
+}
+
+.onboarding-image {
+  width: 260px;
+  display: block;
+  margin: 8px auto 0;
+}
+
+.onboarding-card h2 {
+  color: var(--main-text);
+  font-size: 28px;
+  font-weight: 700;
+  text-align: center;
+  margin: -5px 0 10px;
+  letter-spacing: -0.7px;
+}
+
+.onboarding-card p {
+  color: var(--secondary-text);
+  font-size: 15px;
+  line-height: 1.6;
+  text-align: center;
+  margin: 0 0 22px;
+}
+
+.onboarding-form {
+  gap: 16px;
+}
+
+.onboarding-skip {
+  background: transparent;
+  color: var(--secondary-text);
+  box-shadow: none;
+  margin-top: -4px;
+  font-size: 16px;
+}
+
+.currency-input {
+  position: relative;
+  width: 100%;
+}
+
+.currency-input span {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+
+  color: var(--main-text);
+  font-size: 16px;
+  font-weight: 500;
+
+  pointer-events: none;
+}
+
+.currency-input input {
+  padding-left: 34px !important;
+  height: 50px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background-color: var(--input-bg);
+  outline: none !important;
+  font-size: 16px;
+  font-weight: 400;
+  padding: 15px;
+  width: 100%;
+}
+
+textarea {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+
+  padding: 14px 15px;
+
+  font-size: 16px;
+  font-family: inherit;
+
+  resize: none;
+  outline: none;
+
+  min-height: 110px;
+}
+
+textarea:focus {
+  background-color: var(--border);
+}

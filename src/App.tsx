@@ -8,6 +8,7 @@ import VerifyEmail from "./pages/VerifyEmail";
 import UpdatePassword from "./pages/UpdatePassword";
 import ForgotPassword from "./pages/ForgotPassword";
 import PasswordUpdated from "./pages/PasswordUpdated";
+import Lessons from "./pages/Lessons";
 
 function App() {
   return (
@@ -29,6 +30,18 @@ function App() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/lessons"
+        element={
+          <ProtectedRoute>
+            <Lessons />
+          </ProtectedRoute>
+        }
+      />
+
+
+
+
     </Routes>
   );
 }

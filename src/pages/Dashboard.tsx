@@ -489,12 +489,12 @@ function Dashboard() {
           <span>Dashboard</span>
         </div>
 
-        <div className="nav-item">
+        <div className="nav-item" onClick={() => (window.location.href = "/lessons")}>
           <FaCalendarAlt />
           <span>Lessons</span>
         </div>
 
-        <div className="nav-item">
+         <div className="nav-item">
           <FaUsers />
           <span>Students</span>
         </div>

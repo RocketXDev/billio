@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   FaHome,
   FaBars,
@@ -13,49 +13,138 @@ import {
   FaClock,
   FaMapMarkerAlt,
 } from "react-icons/fa";
+import { supabase } from "../lib/supabaseClient";
 
 function Lessons() {
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [showAddLesson, setShowAddLesson] = useState(false);
+  const [lessons, setLessons] = useState<any[]>([]);
+  const [coachId, setCoachId] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const lessons = [
-    {
-      id: 1,
-      student: "Anna Petrova",
-      type: "Freestyle",
-      dateLabel: "Tomorrow",
-      date: "May 9",
-      time: "10:00 AM",
-      duration: "45 min",
-      place: "World Ice Arena",
-      status: "scheduled",
-      rate: "$75",
-    },
-    {
-      id: 2,
-      student: "Maya Chen",
-      type: "Spins",
-      dateLabel: "This Week",
-      date: "May 11",
-      time: "11:30 AM",
-      duration: "30 min",
-      place: "Summit Rink",
-      status: "scheduled",
-      rate: "$50",
-    },
-    {
-      id: 3,
-      student: "Alex Kim",
-      type: "Jumps",
-      dateLabel: "5/9",
-      date: "May 9",
-      time: "2:00 PM",
-      duration: "60 min",
-      place: "World Ice Arena",
-      status: "completed",
-      rate: "$100",
-    },
-  ];
+  // Form States
+  const [studentName, setStudentName] = useState("");
+  const [lessonDate, setLessonDate] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [durationMinutes, setDurationMinutes] = useState("30");
+  const [lessonType, setLessonType] = useState("");
+  const [hourlyRate, setHourlyRate] = useState("");
+  const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    async function loadLessons() {
+      setLoading(true);
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData.session?.user;
+
+      if (!user) {
+        window.location.href = "/login";
+        return;
+      }
+
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (profileError) {
+        console.log("Profile error:", profileError);
+        setLoading(false);
+        return;
+      }
+
+      const { data: coachData, error: coachError } = await supabase
+        .from("coaches")
+        .select("id")
+        .eq("profile_id", profileData.id)
+        .single();
+
+      if (coachError) {
+        console.log("Coach error:", coachError);
+        setLoading(false);
+        return;
+      }
+
+      setCoachId(coachData.id);
+
+      const { data: lessonData, error: lessonError } = await supabase
+        .from("lessons")
+        .select("*")
+        .eq("coach_id", coachData.id)
+        .order("lesson_date", { ascending: true })
+        .order("start_time", { ascending: true });
+
+      if (lessonError) {
+        console.log("Lessons error:", lessonError);
+        setLoading(false);
+        return;
+      }
+
+      setLessons(lessonData || []);
+      setLoading(false);
+    }
+
+    loadLessons();
+  }, []);
+
+  async function handleCreateLesson(e: any) {
+    e.preventDefault();
+
+    if (!coachId) return;
+
+    const { data: studentData, error: studentError } = await supabase
+      .from("students")
+      .insert({
+        student_name: studentName,
+        active: true,
+      })
+      .select()
+      .single();
+
+    if (studentError) {
+      console.log("Student create error:", studentError);
+      return;
+    }
+
+    const calculatedRate =
+      Number(hourlyRate) * (Number(durationMinutes) / 60);
+
+    const { data: lessonData, error: lessonError } = await supabase
+      .from("lessons")
+      .insert({
+        coach_id: coachId,
+        student_id: studentData.id,
+        lesson_date: lessonDate,
+        start_time: startTime,
+        duration_minutes: Number(durationMinutes),
+        lesson_type: lessonType,
+        hourly_rate: Number(hourlyRate),
+        rate: calculatedRate,
+        status: "scheduled",
+        billed: false,
+        notes: notes || null,
+      })
+      .select()
+      .single();
+
+    if (lessonError) {
+      console.log("Lesson create error:", lessonError);
+      return;
+    }
+
+    setLessons((prev) => [...prev, lessonData]);
+
+    setStudentName("");
+    setLessonDate("");
+    setStartTime("");
+    setDurationMinutes("30");
+    setLessonType("");
+    setHourlyRate("");
+    setNotes("");
+    setShowAddLesson(false);
+  }
 
   const groupedLessons = lessons.reduce((groups: any, lesson) => {
     if (!groups[lesson.dateLabel]) {
@@ -109,41 +198,50 @@ function Lessons() {
             </div>
 
             {viewMode === "list" && (
-            <div className="lessons-list-view">
-                {Object.keys(groupedLessons).map((group) => (
-                <section key={group} className="lesson-group">
-                    <div className="lesson-group-title">
-                    <h2>{group}</h2>
-                    <span>{groupedLessons[group].length} lessons</span>
-                    </div>
+              <div className="lessons-list-view">
+                <section className="lesson-group">
+                  <div className="lesson-group-title">
+                    <h2>Upcoming Lessons</h2>
+                    <span>{lessons.length} lessons</span>
+                  </div>
 
+                  {lessons.length === 0 ? (
+                    <p className="empty-lessons">
+                      No lessons yet. Tap + to add one.
+                    </p>
+                  ) : (
                     <div className="lesson-group-card">
-                    {groupedLessons[group].map((lesson: any) => (
+                      {lessons.map((lesson) => (
                         <div key={lesson.id} className="lesson-page-row">
-                        <div className="lesson-page-time">
-                            <strong>{lesson.time}</strong>
-                            <span>{lesson.date}</span>
-                        </div>
+                          <div className="lesson-page-time">
+                            <strong>{lesson.start_time}</strong>
+                            <span>{lesson.lesson_date}</span>
+                          </div>
 
-                        <div className="lesson-page-info">
-                            <strong>{lesson.student}</strong>
-                            <span>{lesson.type} • {lesson.duration}</span>
+                          <div className="lesson-page-info">
+                            <strong>
+                              {lesson.lesson_type || "Lesson"}
+                            </strong>
+
                             <span>
-                            <FaMapMarkerAlt /> {lesson.place}
+                              {lesson.duration_minutes} min • $
+                              {lesson.rate}
                             </span>
-                        </div>
 
-                        <div
+                            <span>{lesson.status}</span>
+                          </div>
+
+                          <div
                             className={`lesson-page-status ${lesson.status}`}
-                        >
+                          >
                             {lesson.status}
+                          </div>
                         </div>
-                        </div>
-                    ))}
+                      ))}
                     </div>
+                  )}
                 </section>
-                ))}
-            </div>
+              </div>
             )}
 
             {viewMode === "calendar" && (
@@ -260,40 +358,86 @@ function Lessons() {
               </button>
             </div>
 
-            <form className="add-lesson-form">
+            <form onSubmit={handleCreateLesson} className="add-lesson-form">
               <div className="input-block">
-                <label>Student</label>
-                <input type="text" placeholder="Student name" />
-              </div>
-
-              <div className="input-block">
-                <label>Date</label>
-                <input type="date" />
-              </div>
-
-              <div className="input-block">
-                <label>Time</label>
-                <input type="time" />
-              </div>
-
-              <div className="duration-options">
-                <button type="button">20 min</button>
-                <button type="button">30 min</button>
-                <button type="button">45 min</button>
-                <button type="button">60 min</button>
+                <label htmlFor="studentName">Student Name</label>
+                <input
+                  id="studentName"
+                  type="text"
+                  placeholder="Anna Petrova"
+                  value={studentName}
+                  onChange={(e) => setStudentName(e.target.value)}
+                  required
+                />
               </div>
 
               <div className="input-block">
-                <label>Lesson Type</label>
-                <input type="text" placeholder="Freestyle, jumps, choreography..." />
+                <label htmlFor="lessonDate">Lesson Date</label>
+                <input
+                  id="lessonDate"
+                  type="date"
+                  value={lessonDate}
+                  onChange={(e) => setLessonDate(e.target.value)}
+                  required
+                />
               </div>
 
               <div className="input-block">
-                <label>Place</label>
-                <input type="text" placeholder="World Ice Arena" />
+                <label htmlFor="startTime">Start Time</label>
+                <input
+                  id="startTime"
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  required
+                />
               </div>
 
-              <button type="button" className="save-lesson-btn">
+              <div className="input-block">
+                <label htmlFor="durationMinutes">Duration</label>
+                <input
+                  id="durationMinutes"
+                  type="number"
+                  value={durationMinutes}
+                  onChange={(e) => setDurationMinutes(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="input-block">
+                <label htmlFor="lessonType">Lesson Type</label>
+                <input
+                  id="lessonType"
+                  type="text"
+                  placeholder="Freestyle, jumps, choreography..."
+                  value={lessonType}
+                  onChange={(e) => setLessonType(e.target.value)}
+                />
+              </div>
+
+              <div className="input-block">
+                <label htmlFor="hourlyRate">Hourly Rate</label>
+                <input
+                  id="hourlyRate"
+                  type="number"
+                  placeholder="100"
+                  value={hourlyRate}
+                  onChange={(e) => setHourlyRate(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="input-block">
+                <label htmlFor="notes">Notes</label>
+                <textarea
+                  id="notes"
+                  placeholder="Optional lesson notes..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+              </div>
+
+              <button type="submit" className="save-lesson-btn">
                 Save Lesson
               </button>
             </form>

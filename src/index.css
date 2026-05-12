@@ -21,6 +21,10 @@
   font-family: 'Poppins', sans-serif;
 }
 
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 html,
 body,
 #root {

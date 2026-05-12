@@ -1577,7 +1577,6 @@ textarea:focus {
 
 .add-lesson-sheet {
   width: 100%;
-  max-width: 520px;
   max-height: 92vh;
   background: var(--card-bg);
   border-top-left-radius: 32px;

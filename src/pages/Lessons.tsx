@@ -94,18 +94,66 @@ function Lessons() {
 
     if (!coachId) return;
 
-    const { data: studentData, error: studentError } = await supabase
-      .from("students")
-      .insert({
-        student_name: studentName,
-        active: true,
-      })
-      .select()
-      .single();
+    const cleanStudentName = studentName.trim();
 
-    if (studentError) {
-      console.log("Student create error:", studentError);
+    if (!cleanStudentName) {
+      alert("Please enter a student name.");
       return;
+    }
+
+    const { data: existingLinks, error: existingStudentError } = await supabase
+      .from("coach_students")
+      .select(`
+        student_id,
+        students (
+          id,
+          student_name
+        )
+      `)
+      .eq("coach_id", coachId);
+
+    if (existingStudentError) {
+      console.log("Student lookup error:", existingStudentError);
+      return;
+    }
+
+    const existingLink = existingLinks?.find((link: any) => {
+      return (
+        link.students?.student_name?.trim().toLowerCase() ===
+        cleanStudentName.toLowerCase()
+      );
+    });
+
+    let finalStudentId = existingLink?.student_id;
+
+    if (!finalStudentId) {
+      const { data: newStudent, error: newStudentError } = await supabase
+        .from("students")
+        .insert({
+          student_name: cleanStudentName,
+          active: true,
+        })
+        .select()
+        .single();
+
+      if (newStudentError) {
+        console.log("Student create error:", newStudentError);
+        return;
+      }
+
+      finalStudentId = newStudent.id;
+
+      const { error: linkError } = await supabase
+        .from("coach_students")
+        .insert({
+          coach_id: coachId,
+          student_id: finalStudentId,
+        });
+
+      if (linkError) {
+        console.log("Coach-student link error:", linkError);
+        return;
+      }
     }
 
     const calculatedRate =
@@ -115,11 +163,11 @@ function Lessons() {
       .from("lessons")
       .insert({
         coach_id: coachId,
-        student_id: studentData.id,
+        student_id: finalStudentId,
         lesson_date: lessonDate,
         start_time: startTime,
         duration_minutes: Number(durationMinutes),
-        lesson_type: lessonType,
+        lesson_type: lessonType || null,
         hourly_rate: Number(hourlyRate),
         rate: calculatedRate,
         status: "scheduled",
@@ -154,6 +202,28 @@ function Lessons() {
     groups[lesson.dateLabel].push(lesson);
     return groups;
   }, {});
+
+  function formatMoney(amount: any) {
+    return Number(amount || 0).toLocaleString("en-US", {
+      currency: "USD",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  function formatTime(time: string) {
+    if (!time) return "";
+
+    const [hourString, minuteString] = time.split(":");
+    const date = new Date();
+    date.setHours(Number(hourString), Number(minuteString), 0);
+
+    return date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  }
 
   return (
     <div className="lessons-page">
@@ -214,7 +284,7 @@ function Lessons() {
                       {lessons.map((lesson) => (
                         <div key={lesson.id} className="lesson-page-row">
                           <div className="lesson-page-time">
-                            <strong>{lesson.start_time}</strong>
+                            <strong>{formatTime(lesson.start_time)}</strong>
                             <span>{lesson.lesson_date}</span>
                           </div>
 
@@ -225,7 +295,7 @@ function Lessons() {
 
                             <span>
                               {lesson.duration_minutes} min • $
-                              {lesson.rate}
+                              {formatMoney(lesson.rate)}
                             </span>
 
                             <span>{lesson.status}</span>

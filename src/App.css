@@ -63,6 +63,8 @@ form > .input-block > input {
   font-size: 16px;
   font-weight: 400;
   padding: 15px;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 form > .input-block > input:focus {
@@ -556,7 +558,7 @@ button {
   display: grid;
   grid-template-columns: 92px 1fr auto 12px;
   align-items: center;
-  gap: 5px;
+  gap: 12px;
   padding: 18px 0;
   border-bottom: 1px solid var(--border);
 }
@@ -579,7 +581,7 @@ button {
 }
 
 .lesson-info {
-  margin-left: -8px;
+  margin-left: -3px;
 }
 
 .lesson-info strong {
@@ -1656,6 +1658,26 @@ textarea:focus {
 
 .add-lesson-form {
   gap: 16px;
+}
+
+.add-lesson-form,
+.add-lesson-form .input-block {
+  width: 100%;
+  min-width: 0;
+}
+
+.add-lesson-form input,
+.add-lesson-form textarea {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.add-lesson-form input[type="date"],
+.add-lesson-form input[type="time"] {
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .duration-options {

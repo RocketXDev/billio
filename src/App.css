@@ -1711,6 +1711,73 @@ textarea:focus {
   min-width: 0;
 }
 
+.student-search-block {
+  position: relative;
+}
+
+.student-suggestions {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+
+  width: 100%;
+  max-height: 220px;
+  overflow-y: auto;
+
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+
+  box-shadow:
+    0 10px 25px rgba(15, 23, 42, 0.08),
+    0 4px 10px rgba(15, 23, 42, 0.04);
+
+  z-index: 50;
+
+  animation: studentDropdownIn 0.15s ease;
+}
+
+@keyframes studentDropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.student-suggestion {
+  width: 100%;
+  margin: 0;
+  padding: 14px 16px;
+
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+
+  background: transparent;
+  color: var(--main-text);
+
+  text-align: left;
+  font-size: 15px;
+  font-weight: 500;
+
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.student-suggestion:last-child {
+  border-bottom: none;
+}
+
+.student-suggestion:hover,
+.student-suggestion:active {
+  background: #eef2ff;
+  color: var(--primary-purple);
+}
+
 .add-lesson-form input,
 .add-lesson-form textarea {
   width: 100%;

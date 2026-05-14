@@ -34,6 +34,8 @@ function Lessons() {
   // Lesson specific states
   const [showEditLesson, setShowEditLesson] = useState(false);
   const [editingLesson, setEditingLesson] = useState<any>(null);
+  const [coachStudents, setCoachStudents] = useState<any[]>([]);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadLessons() {
@@ -134,6 +136,9 @@ function Lessons() {
     });
 
     let finalStudentId = existingLink?.student_id;
+    if (selectedStudentId) {
+      finalStudentId = selectedStudentId;
+    }
 
     if (!finalStudentId) {
       const { data: newStudent, error: newStudentError } = await supabase
@@ -199,6 +204,7 @@ function Lessons() {
     setLessons((prev) => [...prev, lessonData]);
 
     setStudentName("");
+    setSelectedStudentId(null);
     setLessonDate("");
     setStartTime("");
     setDurationMinutes("30");
@@ -373,6 +379,63 @@ function Lessons() {
     setShowAddLesson(true);
   }
 
+  const sortedLessons = [...lessons].sort((a, b) => {
+    const dateA = new Date(`${a.lesson_date}T${a.start_time}`);
+    const dateB = new Date(`${b.lesson_date}T${b.start_time}`);
+
+    return dateB.getTime() - dateA.getTime();
+  });
+
+  const currentLessons = sortedLessons.filter(
+    (lesson) => getLessonStatus(lesson) === "current"
+  );
+
+  const upcomingLessons = sortedLessons.filter(
+    (lesson) => getLessonStatus(lesson) === "upcoming"
+  );
+
+  const pastLessons = sortedLessons.filter(
+    (lesson) => getLessonStatus(lesson) === "past"
+  );
+
+  const studentMatches =
+    studentName.trim().length > 0
+      ? coachStudents.filter((link: any) =>
+          link.students?.student_name
+            ?.toLowerCase()
+            .includes(studentName.trim().toLowerCase())
+        )
+      : [];
+
+  async function loadCoachStudents() {
+    if (!coachId) return;
+
+    const { data, error } = await supabase
+      .from("coach_students")
+      .select(`
+        student_id,
+        students (
+          id,
+          student_name
+        )
+      `)
+      .eq("coach_id", coachId);
+
+    if (error) {
+      console.log("Load students error:", error);
+      return;
+    }
+
+    setCoachStudents(data || []);
+  }
+
+  async function openAddLesson() {
+    await pullDefaultRate();
+    await loadCoachStudents();
+    setShowAddLesson(true);
+  }
+  
+
   return (
     <div className="lessons-page">
       <div className="lessons-wrapper">
@@ -383,10 +446,7 @@ function Lessons() {
                     <button
                         type="button"
                         className="lessons-add-btn"
-                        onClick={async () => {
-                          await pullDefaultRate();
-                          setShowAddLesson(true);
-                        }}
+                        onClick={() => openAddLesson()}
                     >
                         <FaPlus />
                     </button>
@@ -420,55 +480,69 @@ function Lessons() {
 
             {viewMode === "list" && (
               <div className="lessons-list-view">
-                <section className="lesson-group">
-                  <div className="lesson-group-title">
-                    <h2>Upcoming Lessons</h2>
-                    <span>{lessons.length} lessons</span>
-                  </div>
+                {lessons.length === 0 ? (
+                  <p className="empty-lessons">No lessons yet. Tap + to add one.</p>
+                ) : (
+                  <>
+                    {[
+                      { title: "Current Lessons", items: currentLessons },
+                      { title: "Upcoming Lessons", items: upcomingLessons },
+                      { title: "Past Lessons", items: pastLessons },
+                    ].map(
+                      (group) =>
+                        group.items.length > 0 && (
+                          <section className="lesson-group" key={group.title}>
+                            <div className="lesson-group-title">
+                              <h2>{group.title}</h2>
+                              <span>
+                                {group.items.length}{" "}
+                                {group.items.length === 1 ? "lesson" : "lessons"}
+                              </span>
+                            </div>
 
-                  {lessons.length === 0 ? (
-                    <p className="empty-lessons">
-                      No lessons yet. Tap + to add one.
-                    </p>
-                  ) : (
-                    <div className="lesson-group-card">
-                      {lessons.map((lesson) => (
-                        <div key={lesson.id} className="lesson-page-row">
-                          <div className="lesson-page-time">
-                            <strong>{formatTime(lesson.start_time)}</strong>
-                            <span>{lesson.lesson_date}</span>
-                          </div>
+                            <div className="lesson-group-card">
+                              {group.items.map((lesson) => (
+                                <div key={lesson.id} className="lesson-page-row">
+                                  <div className="lesson-page-time">
+                                    <strong>{formatTime(lesson.start_time)}</strong>
+                                    <span>{lesson.lesson_date}</span>
+                                  </div>
 
-                          <div className="lesson-page-info">
-                            <strong>
-                              {lesson.students?.student_name || "Student"}
-                            </strong>
-                            <span>
-                              {lesson.duration_minutes} min • $
-                              {formatMoney(lesson.rate)}
-                            </span>
-                          </div>
+                                  <div className="lesson-page-info">
+                                    <strong>
+                                      {lesson.students?.student_name || "Student"}
+                                    </strong>
+                                    <span>
+                                      {lesson.duration_minutes} min •{" "}$
+                                      {formatMoney(lesson.rate)}
+                                    </span>
+                                  </div>
 
-                          <span
-                            className={`lesson-page-status ${getLessonStatus(lesson)}`}
-                          >
-                            {getLessonStatus(lesson)}
-                          </span>
-                          <button
-                              type="button"
-                              className="lesson-edit-btn"
-                              onClick={() => openEditLesson(lesson)}
-                            >
-                              <FaEdit />
-                            </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </section>
+                                  <span
+                                    className={`lesson-page-status ${getLessonStatus(
+                                      lesson
+                                    )}`}
+                                  >
+                                    {getLessonStatus(lesson)}
+                                  </span>
+
+                                  <button
+                                    type="button"
+                                    className="lesson-edit-btn"
+                                    onClick={() => openEditLesson(lesson)}
+                                  >
+                                    <FaEdit />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </section>
+                        )
+                    )}
+                  </>
+                )}
               </div>
             )}
-
             {viewMode === "calendar" && (
             <div className="calendar-view">
                 <div className="calendar-top">
@@ -586,17 +660,43 @@ function Lessons() {
               </button>
             </div>
 
-            <form onSubmit={handleCreateLesson} className="add-lesson-form">
-              <div className="input-block">
+            <form onSubmit={handleCreateLesson} autoComplete="off" className="add-lesson-form">
+              <div className="input-block student-search-block">
                 <label htmlFor="studentName">Student Name</label>
+
                 <input
                   id="studentName"
                   type="text"
-                  placeholder="Anna Petrova"
                   value={studentName}
-                  onChange={(e) => setStudentName(e.target.value)}
+                  onChange={(e) => {
+                    setStudentName(e.target.value);
+                    setSelectedStudentId(null);
+                  }}
+                  placeholder="Enter student name"
                   required
+                   autoComplete="new-password"
+                    autoCorrect="off"
+                    autoCapitalize="words"
+                    spellCheck={false}
                 />
+
+                {studentMatches.length > 0 && !selectedStudentId && (
+                  <div className="student-suggestions">
+                    {studentMatches.map((link: any) => (
+                      <button
+                        key={link.student_id}
+                        type="button"
+                        className="student-suggestion"
+                        onClick={() => {
+                          setStudentName(link.students.student_name);
+                          setSelectedStudentId(link.student_id);
+                        }}
+                      >
+                        {link.students.student_name}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="input-block">
@@ -691,7 +791,7 @@ function Lessons() {
               </button>
             </div>
 
-            <form onSubmit={handleUpdateLesson} className="add-lesson-form">
+            <form autoComplete="off" onSubmit={handleUpdateLesson} className="add-lesson-form">
               <div className="input-block">
                 <label htmlFor="editStudentName">Student Name</label>
                 <input

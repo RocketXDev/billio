@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import {
   FaHome,
-  FaBars,
   FaFileInvoiceDollar,
   FaEllipsisH,
   FaUsers,
@@ -11,7 +10,8 @@ import {
   FaCalendarAlt,
   FaList,
   FaClock,
-  FaMapMarkerAlt,
+  FaEdit,
+  FaTrash,
 } from "react-icons/fa";
 import { supabase } from "../lib/supabaseClient";
 
@@ -30,6 +30,10 @@ function Lessons() {
   const [lessonType, setLessonType] = useState("");
   const [hourlyRate, setHourlyRate] = useState("");
   const [notes, setNotes] = useState("");
+
+  // Lesson specific states
+  const [showEditLesson, setShowEditLesson] = useState(false);
+  const [editingLesson, setEditingLesson] = useState<any>(null);
 
   useEffect(() => {
     async function loadLessons() {
@@ -71,7 +75,12 @@ function Lessons() {
 
       const { data: lessonData, error: lessonError } = await supabase
         .from("lessons")
-        .select("*")
+        .select(`
+          *,
+          students (
+            student_name
+          )
+        `)
         .eq("coach_id", coachData.id)
         .order("lesson_date", { ascending: true })
         .order("start_time", { ascending: true });
@@ -174,7 +183,12 @@ function Lessons() {
         billed: false,
         notes: notes || null,
       })
-      .select()
+      .select(`
+        *,
+        students (
+          student_name
+        )
+      `)
       .single();
 
     if (lessonError) {
@@ -225,6 +239,140 @@ function Lessons() {
     });
   }
 
+  function openEditLesson(lesson: any) {
+  setEditingLesson(lesson);
+
+  setStudentName(lesson.students?.student_name || "");
+  setLessonDate(lesson.lesson_date || "");
+  setStartTime(lesson.start_time?.slice(0, 5) || "");
+  setDurationMinutes(String(lesson.duration_minutes || "30"));
+  setLessonType(lesson.lesson_type || "");
+  setHourlyRate(String(lesson.hourly_rate || ""));
+  setNotes(lesson.notes || "");
+
+  setShowEditLesson(true);
+  }
+
+  function closeEditLesson() {
+    setShowEditLesson(false);
+    setEditingLesson(null);
+
+    setStudentName("");
+    setLessonDate("");
+    setStartTime("");
+    setDurationMinutes("30");
+    setLessonType("");
+    setHourlyRate("");
+    setNotes("");
+  }
+
+  async function handleUpdateLesson(e: any) {
+    e.preventDefault();
+
+    if (!editingLesson || !coachId) return;
+
+    const calculatedRate =
+      Number(hourlyRate) * (Number(durationMinutes) / 60);
+
+    const { data, error } = await supabase
+      .from("lessons")
+      .update({
+        lesson_date: lessonDate,
+        start_time: startTime,
+        duration_minutes: Number(durationMinutes),
+        lesson_type: lessonType || null,
+        hourly_rate: Number(hourlyRate),
+        rate: calculatedRate,
+        notes: notes || null,
+      })
+      .eq("id", editingLesson.id)
+      .eq("coach_id", coachId)
+      .select(`
+        *,
+        students (
+          student_name
+        )
+      `)
+      .single();
+
+    if (error) {
+      console.log("Update lesson error:", error);
+      return;
+    }
+
+    setLessons((prev) =>
+      prev.map((lesson) => (lesson.id === editingLesson.id ? data : lesson))
+    );
+
+    closeEditLesson();
+  }
+
+  async function handleDeleteLesson(lessonId: string) {
+
+    const { error } = await supabase
+      .from("lessons")
+      .delete()
+      .eq("id", lessonId)
+      .eq("coach_id", coachId);
+
+    if (error) {
+      console.log("Delete lesson error:", error);
+      return;
+    }
+
+    setLessons((prev) => prev.filter((lesson) => lesson.id !== lessonId));
+    setShowEditLesson(false);
+  }
+
+  function getLessonStatus(lesson: any) {
+    if (!lesson.lesson_date || !lesson.start_time) {
+      return "upcoming";
+    }
+
+    const lessonStart = new Date(
+      `${lesson.lesson_date}T${lesson.start_time}`
+    );
+
+    const lessonEnd = new Date(lessonStart);
+    lessonEnd.setMinutes(
+      lessonEnd.getMinutes() + Number(lesson.duration_minutes || 0)
+    );
+
+    const now = new Date();
+
+    if (now < lessonStart) {
+      return "upcoming";
+    }
+
+    if (now >= lessonStart && now <= lessonEnd) {
+      return "current";
+    }
+
+    return "past";
+  }
+  async function pullDefaultRate() {
+    if (!coachId) return;
+
+    const { data, error } = await supabase
+      .from("coaches")
+      .select("default_hourly_rate")
+      .eq("id", coachId)
+      .single();
+
+    if (error) {
+      console.log("Default rate fetch error:", error);
+      setHourlyRate("");
+    } else {
+      setHourlyRate(
+        data?.default_hourly_rate
+          ? String(data.default_hourly_rate)
+          : ""
+      );
+    }
+
+    setShowAddLesson(true);
+  }
+
   return (
     <div className="lessons-page">
       <div className="lessons-wrapper">
@@ -235,7 +383,10 @@ function Lessons() {
                     <button
                         type="button"
                         className="lessons-add-btn"
-                        onClick={() => setShowAddLesson(true)}
+                        onClick={async () => {
+                          await pullDefaultRate();
+                          setShowAddLesson(true);
+                        }}
                     >
                         <FaPlus />
                     </button>
@@ -290,22 +441,26 @@ function Lessons() {
 
                           <div className="lesson-page-info">
                             <strong>
-                              {lesson.lesson_type || "Lesson"}
+                              {lesson.students?.student_name || "Student"}
                             </strong>
-
                             <span>
                               {lesson.duration_minutes} min • $
                               {formatMoney(lesson.rate)}
                             </span>
-
-                            <span>{lesson.status}</span>
                           </div>
 
-                          <div
-                            className={`lesson-page-status ${lesson.status}`}
+                          <span
+                            className={`lesson-page-status ${getLessonStatus(lesson)}`}
                           >
-                            {lesson.status}
-                          </div>
+                            {getLessonStatus(lesson)}
+                          </span>
+                          <button
+                              type="button"
+                              className="lesson-edit-btn"
+                              onClick={() => openEditLesson(lesson)}
+                            >
+                              <FaEdit />
+                            </button>
                         </div>
                       ))}
                     </div>
@@ -419,8 +574,11 @@ function Lessons() {
       </div>
 
       {showAddLesson && (
-        <div className="add-lesson-overlay">
-          <div className="add-lesson-sheet">
+        <div className="add-lesson-overlay" onClick={() => {
+          setShowAddLesson(false);
+          setShowEditLesson(false);
+        }}>
+          <div className="add-lesson-sheet" onClick={(e) => e.stopPropagation()}>
             <div className="add-lesson-header">
               <h2>Add Lesson</h2>
               <button type="button" onClick={() => setShowAddLesson(false)}>
@@ -467,9 +625,11 @@ function Lessons() {
                 <label htmlFor="durationMinutes">Duration</label>
                 <input
                   id="durationMinutes"
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={durationMinutes}
-                  onChange={(e) => setDurationMinutes(e.target.value)}
+                  onChange={(e) => setDurationMinutes(e.target.value.replace(/\D/g, ""))}
                   required
                 />
               </div>
@@ -489,11 +649,15 @@ function Lessons() {
                 <label htmlFor="hourlyRate">Hourly Rate</label>
                 <input
                   id="hourlyRate"
-                  type="number"
-                  placeholder="100"
-                  value={hourlyRate}
-                  onChange={(e) => setHourlyRate(e.target.value)}
-                  required
+                  type="text"
+                  inputMode="decimal"
+                  value={hourlyRate ? `$${hourlyRate}` : ""}
+                  onChange={(e) =>
+                    setHourlyRate(
+                      e.target.value.replace(/[^0-9.]/g, "")
+                    )
+                  }
+                  placeholder="$100"
                 />
               </div>
 
@@ -509,6 +673,116 @@ function Lessons() {
 
               <button type="submit" className="save-lesson-btn">
                 Save Lesson
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+      {showEditLesson && editingLesson && (
+        <div className="add-lesson-overlay" onClick={() => {
+          setShowAddLesson(false);
+          setShowEditLesson(false);
+        }}>
+          <div className="add-lesson-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="add-lesson-header">
+              <h2>Edit Lesson</h2>
+              <button type="button" onClick={closeEditLesson}>
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateLesson} className="add-lesson-form">
+              <div className="input-block">
+                <label htmlFor="editStudentName">Student Name</label>
+                <input
+                  id="editStudentName"
+                  type="text"
+                  value={studentName}
+                  disabled
+                />
+              </div>
+
+              <div className="input-block">
+                <label htmlFor="editLessonDate">Lesson Date</label>
+                <input
+                  id="editLessonDate"
+                  type="date"
+                  value={lessonDate}
+                  onChange={(e) => setLessonDate(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="input-block">
+                <label htmlFor="editStartTime">Start Time</label>
+                <input
+                  id="editStartTime"
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="input-block">
+                <label htmlFor="editDurationMinutes">Duration</label>
+                <input
+                  id="editDurationMinutes"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={durationMinutes}
+                  onChange={(e) => setDurationMinutes(e.target.value.replace(/\D/g, ""))}
+                  required
+                />
+              </div>
+
+              <div className="input-block">
+                <label htmlFor="editLessonType">Lesson Type</label>
+                <input
+                  id="editLessonType"
+                  type="text"
+                  value={lessonType}
+                  onChange={(e) => setLessonType(e.target.value)}
+                />
+              </div>
+
+              <div className="input-block">
+                <label htmlFor="editHourlyRate">Hourly Rate</label>
+                <input
+                  id="hourlyRate"
+                  type="text"
+                  inputMode="decimal"
+                  value={hourlyRate ? `$${hourlyRate}` : ""}
+                  onChange={(e) =>
+                    setHourlyRate(
+                      e.target.value.replace(/[^0-9.]/g, "")
+                    )
+                  }
+                  placeholder="$100"
+                />
+              </div>
+
+              <div className="input-block">
+                <label htmlFor="editNotes">Notes</label>
+                <textarea
+                  id="editNotes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+              </div>
+
+              <button type="submit" className="save-lesson-btn">
+                Save Changes
+              </button>
+
+              <button
+                type="button"
+                className="delete-lesson-btn"
+                onClick={() => handleDeleteLesson(editingLesson.id)}
+              >
+                <FaTrash />
+                Delete Lesson
               </button>
             </form>
           </div>

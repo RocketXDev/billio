@@ -629,7 +629,7 @@ function Dashboard() {
                   type="text"
                   value={visibleName}
                   onChange={(e) => setVisibleName(e.target.value)}
-                  placeholder="Example: Artem Markelov"
+                  placeholder="Example: John Cool"
                   required
                 />
               </div>

@@ -14,6 +14,7 @@ import {
   FaTrash,
 } from "react-icons/fa";
 import { supabase } from "../lib/supabaseClient";
+import { useNavigate } from "react-router-dom";
 
 function Lessons() {
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
@@ -36,6 +37,8 @@ function Lessons() {
   const [editingLesson, setEditingLesson] = useState<any>(null);
   const [coachStudents, setCoachStudents] = useState<any[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     async function loadLessons() {
@@ -619,18 +622,18 @@ function Lessons() {
             )}
         </div>
 
-        <nav className="bottom-nav" onClick={() => (window.location.href = "/dashboard")}>
-            <div className="nav-item">
+        <nav className="bottom-nav">
+            <div className="nav-item" onClick={() => navigate("/dashboard")}>
                 <FaHome />
                 <span>Dashboard</span>
             </div>
     
-            <div className="nav-item active" onClick={() => (window.location.href = "/lessons")}>
+            <div className="nav-item active" onClick={() => navigate("/lessons")}>
                 <FaCalendarAlt />
                 <span>Lessons</span>
             </div>
     
-                <div className="nav-item">
+                <div className="nav-item" onClick={() => navigate("/students")}>
                 <FaUsers />
                 <span>Students</span>
             </div>

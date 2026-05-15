@@ -12,6 +12,7 @@ import {
   FaEllipsisH,
   FaTrash
 } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 
 function Dashboard() {
   const [fullName, setFullName] = useState("");
@@ -27,6 +28,8 @@ function Dashboard() {
   const [defaultHourlyRate, setDefaultHourlyRate] = useState("");
   const [bio, setBio] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     async function loadDashboard() {
@@ -423,7 +426,7 @@ function Dashboard() {
                 </div>
 
                 <div className="lesson-status green">In 18 min</div>
-                <FaChevronRight className="row-arrow" />
+                <FaChevronRight className="row-arrow"/>
               </div>
 
               <div className="lesson-row">
@@ -484,17 +487,17 @@ function Dashboard() {
       </div>
 
       <nav className="bottom-nav">
-        <div className="nav-item active">
+        <div className="nav-item active" onClick={() => navigate("/dashboard")}>
           <FaHome />
           <span>Dashboard</span>
         </div>
 
-        <div className="nav-item" onClick={() => (window.location.href = "/lessons")}>
+        <div className="nav-item" onClick={() => navigate("/lessons")}>
           <FaCalendarAlt />
           <span>Lessons</span>
         </div>
 
-         <div className="nav-item">
+         <div className="nav-item" onClick={() => navigate("/students")}>
           <FaUsers />
           <span>Students</span>
         </div>

@@ -1212,7 +1212,7 @@ textarea:focus {
 
 /* LESSONS PAGE */
 
-.lessons-page {
+.lessons-page, .students-page {
   width: 100%;
   min-height: 100vh;
   background: var(--main-bg);
@@ -1236,18 +1236,18 @@ textarea:focus {
   color: #dc2626;
 }
 
-.lessons-wrapper {
+.lessons-wrapper, .students-wrapper {
   width: 100%;
   max-width: 520px;
   margin: 0 auto;
   
 }
 
-.lessons-body {
+.lessons-body, .students-body {
   padding: 30px 18px 0;
 }
 
-.lessons-header {
+.lessons-header, .students-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -1255,7 +1255,7 @@ textarea:focus {
   margin-bottom: 22px;
 }
 
-.lessons-header-add {
+.lessons-header-add, .students-header-add {
   padding: 0px 5px;
   display: flex;
   width: 100%;
@@ -1270,7 +1270,7 @@ textarea:focus {
   margin: 0 0 4px;
 }
 
-.lessons-header h1 {
+.lessons-header h1, .students-header h1 {
   color: var(--main-text);
   font-size: 30px;
   font-weight: 700;
@@ -1278,7 +1278,7 @@ textarea:focus {
   letter-spacing: -1px;
 }
 
-.lessons-add-btn {
+.lessons-add-btn, .students-add-btn {
   width: 45px;
   height: 45px;
   margin: 0;
@@ -1352,7 +1352,7 @@ textarea:focus {
   color: white;
 }
 
-.empty-lessons {
+.empty-lessons, .students-empty {
   padding: 24px 10px;
   text-align: center;
   color: var(--secondary-text);
@@ -1361,37 +1361,37 @@ textarea:focus {
   background: transparent;
 }
 
-.lesson-group {
+.lesson-group, .students-group {
   margin-bottom: 26px;
 }
 
-.lesson-group-title {
+.lesson-group-title, .students-group-title {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 13px;
 }
 
-.lesson-group-title h2 {
+.lesson-group-title h2, .students-group-title h2 {
   color: var(--main-text);
   font-size: 20px;
   font-weight: 650;
   margin: 0;
 }
 
-.lesson-group-title span {
+.lesson-group-title span, .students-group-title span {
   color: var(--secondary-text);
   font-size: 14px;
 }
 
-.lesson-group-card {
+.lesson-group-card, .students-group-card {
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 22px;
   padding: 0 16px;
 }
 
-.lesson-page-row {
+.lesson-page-row, .students-row {
   display: grid;
   grid-template-columns: 82px 1fr auto auto;
   gap: 12px;
@@ -1399,9 +1399,7 @@ textarea:focus {
   padding: 18px 0;
   border-bottom: 1px solid var(--border);
 }
-
-
-.lesson-edit-btn {
+.lesson-edit-btn, .students-edit-btn {
   width: 38px;
   height: 38px;
   margin: 0;
@@ -1414,19 +1412,18 @@ textarea:focus {
   font-size: 15px;
 }
 
-.delete-lesson-btn {
-  width: 90%;
-  margin-top: 4px;
-  background: #fee2e2;
-  color: #dc2626;
+.students-edit-btn {
+  width: 38px;
+  height: 38px;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  background: #eef2ff;
+  color: var(--primary-purple);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-}
-
-.delete-lesson-btn:hover {
-  background: #fecaca;
+  font-size: 13px;
 }
 
 .lesson-page-row:last-child {
@@ -1447,14 +1444,14 @@ textarea:focus {
   margin-top: 4px;
 }
 
-.lesson-page-info strong {
+.lesson-page-info strong, .students-info strong {
   display: block;
   color: var(--main-text);
   font-size: 16px;
   font-weight: 650;
 }
 
-.lesson-page-info span {
+.lesson-page-info span, .students-info span {
   display: flex;
   align-items: center;
   gap: 5px;
@@ -1645,7 +1642,7 @@ textarea:focus {
 
 /* ADD LESSON SHEET */
 
-.add-lesson-overlay {
+.add-lesson-overlay, .students-add-overlay {
   position: fixed;
   inset: 0;
   z-index: 300;
@@ -1655,7 +1652,7 @@ textarea:focus {
   justify-content: center;
 }
 
-.add-lesson-sheet {
+.add-lesson-sheet, .students-add-sheet {
   width: 100%;
   max-height: 88vh;
   background: var(--card-bg);
@@ -1677,21 +1674,21 @@ textarea:focus {
   }
 }
 
-.add-lesson-header {
+.add-lesson-header, .students-add-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
 }
 
-.add-lesson-header h2 {
+.add-lesson-header h2, .students-add-header h2 {
   color: var(--main-text);
   font-size: 28px;
   font-weight: 700;
   margin: 0;
 }
 
-.add-lesson-header button {
+.add-lesson-header button, .students-add-header button {
   width: 40px;
   height: 40px;
   margin: 0;
@@ -1701,7 +1698,7 @@ textarea:focus {
   font-size: 26px;
 }
 
-.add-lesson-form {
+.add-lesson-form, .studetns-add-form {
   gap: 16px;
 }
 
@@ -1719,21 +1716,16 @@ textarea:focus {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
-
   width: 100%;
   max-height: 220px;
   overflow-y: auto;
-
   background: white;
   border: 1px solid var(--border);
   border-radius: 16px;
-
   box-shadow:
     0 10px 25px rgba(15, 23, 42, 0.08),
     0 4px 10px rgba(15, 23, 42, 0.04);
-
   z-index: 50;
-
   animation: studentDropdownIn 0.15s ease;
 }
 
@@ -1753,18 +1745,14 @@ textarea:focus {
   width: 100%;
   margin: 0;
   padding: 14px 16px;
-
   border: none;
   border-bottom: 1px solid var(--border);
   border-radius: 0;
-
   background: transparent;
   color: var(--main-text);
-
   text-align: left;
   font-size: 15px;
   font-weight: 500;
-
   transition: background 0.15s ease, color 0.15s ease;
 }
 
@@ -1831,7 +1819,108 @@ textarea:focus {
   font-weight: 650;
 }
 
-.save-lesson-btn {
+.save-lesson-btn, .studnets-save-btn {
   margin-top: 6px;
 }
 
+.delete-lesson-btn, .students-delete-btn {
+  width: 90%;
+  margin-top: 4px;
+  background: #fee2e2;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.delete-lesson-btn:hover, .students-delete-btn:hover {
+  background: #fecaca;
+}
+
+/* STUDENTS */
+.students-row-arrow {
+  font-size: 14px;
+  color: var(--secondary-text);
+}
+
+.students-row:last-child {
+  border-bottom: none;
+}
+
+.students-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #eef2ff;
+  color: var(--primary-purple);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.student-active-button {
+  width: 100%;
+  height: auto;
+  margin: 0;
+  padding: 16px;
+
+  border-radius: 16px;
+  border: 1px solid var(--border);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+
+  text-align: left;
+  transition: 0.2s ease;
+}
+
+.student-active-button div:first-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.student-active-button strong {
+  color: var(--main-text);
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.student-active-button span {
+  color: var(--secondary-text);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.student-active-button.active {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+
+.student-active-button.inactive {
+  background: var(--input-bg);
+  border-color: var(--border);
+}
+
+.student-active-pill {
+  min-width: 76px;
+  padding: 7px 10px;
+  border-radius: 999px;
+
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.student-active-button.active .student-active-pill {
+  background: var(--primary-purple);
+  color: white;
+}
+
+.student-active-button.inactive .student-active-pill {
+  background: white;
+  color: var(--secondary-text);
+}

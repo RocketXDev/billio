@@ -9,6 +9,7 @@ import UpdatePassword from "./pages/UpdatePassword";
 import ForgotPassword from "./pages/ForgotPassword";
 import PasswordUpdated from "./pages/PasswordUpdated";
 import Lessons from "./pages/Lessons";
+import Students from "./pages/Students";
 
 function App() {
   return (
@@ -23,7 +24,7 @@ function App() {
       <Route path="/password-updated" element={<PasswordUpdated />} />
 
       <Route
-        path="dashboard"
+        path="/dashboard"
         element={
           <ProtectedRoute>
             <Dashboard />
@@ -35,6 +36,14 @@ function App() {
         element={
           <ProtectedRoute>
             <Lessons />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/students"
+        element={
+          <ProtectedRoute>
+            <Students />
           </ProtectedRoute>
         }
       />

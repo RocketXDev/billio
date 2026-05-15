@@ -233,11 +233,6 @@ function Students() {
     closeEditStudent();
   }
   async function handleDeleteStudent(studentId: string) {
-    const confirmDelete = window.confirm(
-        "Delete this student? This will remove the student from your list."
-    );
-
-    if (!confirmDelete || !coachId) return;
 
     const { error: linkError } = await supabase
         .from("coach_students")

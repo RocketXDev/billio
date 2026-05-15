@@ -10,6 +10,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import PasswordUpdated from "./pages/PasswordUpdated";
 import Lessons from "./pages/Lessons";
 import Students from "./pages/Students";
+import ComingSoon from "./pages/ComingSoon";
 
 function App() {
   return (
@@ -47,9 +48,32 @@ function App() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/invoices"
+        element={
+          <ProtectedRoute>
+            <ComingSoon />
+          </ProtectedRoute>
+        }
+      />
 
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <ComingSoon />
+          </ProtectedRoute>
+        }
+      />
 
-
+      <Route
+        path="/more"
+        element={
+          <ProtectedRoute>
+            <ComingSoon />
+          </ProtectedRoute>
+        }
+      />
 
     </Routes>
   );

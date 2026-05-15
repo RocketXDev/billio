@@ -364,12 +364,12 @@ function Students() {
             <span>Students</span>
           </div>
 
-          <div className="nav-item">
+          <div className="nav-item" onClick={() => navigate("/invoices")}>
             <FaFileInvoiceDollar />
             <span>Invoices</span>
           </div>
 
-          <div className="nav-item">
+          <div className="nav-item" onClick={() => navigate("/settings")}>
             <FaEllipsisH />
             <span>More</span>
           </div>

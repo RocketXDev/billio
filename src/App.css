@@ -672,6 +672,21 @@ button {
   font-weight: 600;
 }
 
+.dashboard-row-edit-btn {
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--secondary-text);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+
 .dashboard-logout {
   margin-top: 28px;
   width: 100%;
@@ -1923,4 +1938,65 @@ textarea:focus {
 .student-active-button.inactive .student-active-pill {
   background: white;
   color: var(--secondary-text);
+}
+
+/* COMING SOON */
+.coming-soon-page {
+  width: 100%;
+  min-height: 100vh;
+  background: var(--main-bg);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 24px;
+}
+
+.coming-soon-card {
+  width: 100%;
+  max-width: 420px;
+
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+
+  padding: 42px 28px;
+
+  text-align: center;
+}
+
+.coming-soon-icon {
+  width: 74px;
+  height: 74px;
+  margin: 0 auto 22px;
+
+  border-radius: 50%;
+  background: #eef2ff;
+  color: var(--primary-purple);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 28px;
+}
+
+.coming-soon-card h1 {
+  color: var(--main-text);
+  font-size: 30px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.coming-soon-card p {
+  color: var(--secondary-text);
+  font-size: 16px;
+  line-height: 1.6;
+  margin-bottom: 28px;
+}
+
+.coming-soon-btn {
+  width: 100%;
+  gap: 10px;
 }

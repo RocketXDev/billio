@@ -29,6 +29,22 @@ function Dashboard() {
   const [bio, setBio] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
 
+  //Lessons and other functions
+  const [lessons, setLessons] = useState<any[]>([]);
+  const [coachStudents, setCoachStudents] = useState<any[]>([]);
+  const [showAddLesson, setShowAddLesson] = useState(false);
+  const [studentName, setStudentName] = useState("");
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [lessonDate, setLessonDate] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [durationMinutes, setDurationMinutes] = useState("30");
+  const [lessonType, setLessonType] = useState("");
+  const [hourlyRate, setHourlyRate] = useState("");
+  const [notes, setNotes] = useState("");
+
+  const [showEditLesson, setShowEditLesson] = useState(false);
+  const [editingLesson, setEditingLesson] = useState<any>(null);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -142,9 +158,13 @@ function Dashboard() {
         if (newCoach) {
           setCoachId(newCoach.id);
           setShowOnboarding(true);
+          await loadDashboardLessons(newCoach.id);
+          await loadCoachStudents(newCoach.id);
         }
         } else {
           setCoachId(coachData.id);
+          await loadDashboardLessons(coachData.id);
+          await loadCoachStudents(coachData.id);
 
           if (!coachData.setup_completed) {
             setShowOnboarding(true);
@@ -291,6 +311,351 @@ function Dashboard() {
     setShowOnboarding(false);
   }
 
+  async function loadDashboardLessons(currentCoachId: string) {
+    const { data, error } = await supabase
+      .from("lessons")
+      .select(`
+        *,
+        students (
+          student_name
+        )
+      `)
+      .eq("coach_id", currentCoachId)
+      .order("lesson_date", { ascending: true })
+      .order("start_time", { ascending: true });
+
+    if (error) {
+      console.log("Dashboard lessons error:", error);
+      return;
+    }
+
+    setLessons(data || []);
+  }
+
+  async function loadCoachStudents(currentCoachId: string) {
+    const { data, error } = await supabase
+      .from("coach_students")
+      .select(`
+        student_id,
+        students (
+          id,
+          student_name
+        )
+      `)
+      .eq("coach_id", currentCoachId);
+
+    if (error) {
+      console.log("Dashboard students error:", error);
+      return;
+    }
+
+    setCoachStudents(data || []);
+  }
+
+  async function pullDefaultRate() {
+    if (!coachId) return;
+
+    const { data, error } = await supabase
+      .from("coaches")
+      .select("default_hourly_rate")
+      .eq("id", coachId)
+      .single();
+
+    if (error) {
+      console.log("Default rate fetch error:", error);
+      setHourlyRate("");
+      return;
+    }
+
+    setHourlyRate(data?.default_hourly_rate ? String(data.default_hourly_rate) : "");
+  }
+
+  async function openAddLesson() {
+    await pullDefaultRate();
+    await loadCoachStudents(coachId);
+    setShowAddLesson(true);
+  }
+
+  function formatTime(time: string) {
+    if (!time) return "";
+
+    const [hourString, minuteString] = time.split(":");
+    const date = new Date();
+    date.setHours(Number(hourString), Number(minuteString), 0);
+
+    return date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  }
+
+  function formatMoney(amount: any) {
+    return Number(amount || 0).toLocaleString("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+  async function handleCreateLesson(e: any) {
+    e.preventDefault();
+
+    if (!coachId) return;
+
+    const cleanStudentName = studentName.trim();
+
+    if (!cleanStudentName) {
+      alert("Please enter a student name.");
+      return;
+    }
+
+    let finalStudentId = selectedStudentId;
+
+    if (!finalStudentId) {
+      const existingLink = coachStudents.find((link: any) =>
+        link.students?.student_name?.trim().toLowerCase() ===
+        cleanStudentName.toLowerCase()
+      );
+
+      finalStudentId = existingLink?.student_id;
+    }
+
+    if (!finalStudentId) {
+      const { data: newStudent, error: newStudentError } = await supabase
+        .from("students")
+        .insert({
+          student_name: cleanStudentName,
+          active: true,
+        })
+        .select()
+        .single();
+
+      if (newStudentError) {
+        console.log("Student create error:", newStudentError);
+        return;
+      }
+
+      finalStudentId = newStudent.id;
+
+      const { error: linkError } = await supabase
+        .from("coach_students")
+        .insert({
+          coach_id: coachId,
+          student_id: finalStudentId,
+        });
+
+      if (linkError) {
+        console.log("Coach-student link error:", linkError);
+        return;
+      }
+    }
+
+    const calculatedRate = Number(hourlyRate) * (Number(durationMinutes) / 60);
+
+    const { error: lessonError } = await supabase.from("lessons").insert({
+      coach_id: coachId,
+      student_id: finalStudentId,
+      lesson_date: lessonDate,
+      start_time: startTime,
+      duration_minutes: Number(durationMinutes),
+      lesson_type: lessonType || null,
+      hourly_rate: Number(hourlyRate),
+      rate: calculatedRate,
+      status: "scheduled",
+      billed: false,
+      notes: notes || null,
+    });
+
+    if (lessonError) {
+      console.log("Lesson create error:", lessonError);
+      return;
+    }
+
+    await loadDashboardLessons(coachId);
+
+    setStudentName("");
+    setSelectedStudentId(null);
+    setLessonDate("");
+    setStartTime("");
+    setDurationMinutes("30");
+    setLessonType("");
+    setHourlyRate("");
+    setNotes("");
+    setShowAddLesson(false);
+  }
+
+  function openEditLesson(lesson: any) {
+    setEditingLesson(lesson);
+
+    setStudentName(lesson.students?.student_name || "");
+    setLessonDate(lesson.lesson_date || "");
+    setStartTime(lesson.start_time?.slice(0, 5) || "");
+    setDurationMinutes(String(lesson.duration_minutes || "30"));
+    setLessonType(lesson.lesson_type || "");
+    setHourlyRate(String(lesson.hourly_rate || ""));
+    setNotes(lesson.notes || "");
+
+    setShowEditLesson(true);
+  }
+
+  function closeEditLesson() {
+    setShowEditLesson(false);
+    setEditingLesson(null);
+
+    setStudentName("");
+    setSelectedStudentId(null);
+    setLessonDate("");
+    setStartTime("");
+    setDurationMinutes("30");
+    setLessonType("");
+    setHourlyRate("");
+    setNotes("");
+  }
+
+  async function handleUpdateLesson(e: any) {
+    e.preventDefault();
+
+    if (!editingLesson || !coachId) return;
+
+    const calculatedRate =
+      Number(hourlyRate) * (Number(durationMinutes) / 60);
+
+    const { data, error } = await supabase
+      .from("lessons")
+      .update({
+        lesson_date: lessonDate,
+        start_time: startTime,
+        duration_minutes: Number(durationMinutes),
+        lesson_type: lessonType || null,
+        hourly_rate: Number(hourlyRate),
+        rate: calculatedRate,
+        notes: notes || null,
+      })
+      .eq("id", editingLesson.id)
+      .eq("coach_id", coachId)
+      .select(`
+        *,
+        students (
+          student_name
+        )
+      `)
+      .single();
+
+    if (error) {
+      console.log("Update dashboard lesson error:", error);
+      return;
+    }
+
+    setLessons((prev) =>
+      prev.map((lesson) =>
+        lesson.id === editingLesson.id ? data : lesson
+      )
+    );
+
+    closeEditLesson();
+  }
+
+  async function handleDeleteLesson(lessonId: string) {
+
+    const { error } = await supabase
+      .from("lessons")
+      .delete()
+      .eq("id", lessonId)
+      .eq("coach_id", coachId);
+
+    if (error) {
+      console.log("Delete dashboard lesson error:", error);
+      return;
+    }
+
+    setLessons((prev) =>
+      prev.filter((lesson) => lesson.id !== lessonId)
+    );
+
+    closeEditLesson();
+  }
+
+  function getLocalToday() {
+    const now = new Date();
+
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  }
+
+  const today = getLocalToday();
+
+  const todayLessons = lessons.filter(
+    (lesson) => lesson.lesson_date === today
+  );
+
+  const upcomingTodayLessons = todayLessons
+  .filter((lesson) => getLessonStatus(lesson) === "upcoming")
+  .sort((a, b) => {
+    const dateA = new Date(`${a.lesson_date}T${a.start_time}`);
+    const dateB = new Date(`${b.lesson_date}T${b.start_time}`);
+
+    return dateA.getTime() - dateB.getTime();
+  });
+
+  const todayEarnings = todayLessons.reduce(
+    (total, lesson) => total + Number(lesson.rate || 0),
+    0
+  );
+
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+
+  const weekLessons = lessons.filter((lesson) => {
+    const lessonDate = new Date(`${lesson.lesson_date}T00:00:00`);
+    return lessonDate >= weekStart && lessonDate <= weekEnd;
+  });
+
+  const weekEarnings = weekLessons.reduce(
+    (total, lesson) => total + Number(lesson.rate || 0),
+    0
+  );
+  const weekUnbilledLessons = weekLessons.filter(
+  (lesson) => lesson.billed !== true
+  );
+
+  const weekPendingInvoices = weekLessons.filter(
+    (lesson) => lesson.status === "pending"
+  );
+  function getLessonStatus(lesson: any) {
+    if (!lesson.lesson_date || !lesson.start_time) {
+      return "upcoming";
+    }
+
+    const lessonStart = new Date(
+      `${lesson.lesson_date}T${lesson.start_time}`
+    );
+
+    const lessonEnd = new Date(lessonStart);
+
+    lessonEnd.setMinutes(
+      lessonEnd.getMinutes() + Number(lesson.duration_minutes || 0)
+    );
+
+    const now = new Date();
+
+    if (now < lessonStart) {
+      return "upcoming";
+    }
+
+    if (now >= lessonStart && now <= lessonEnd) {
+      return "current";
+    }
+
+    return "past";
+  }
+
   if (loading) {
     return (
       <div className="loading-screen">
@@ -336,7 +701,7 @@ function Dashboard() {
             Welcome back{fullName ? `, ${fullName.split(" ")[0]}` : ""} 👋
           </p>
 
-          <button className="add-lesson-card">
+          <button className="add-lesson-card" onClick={openAddLesson}>
             <div className="add-circle">
               <FaPlus />
             </div>
@@ -352,26 +717,30 @@ function Dashboard() {
           <section className="stat-card">
             <div className="card-header">
               <h3>Today</h3>
-              <button>View calendar</button>
+              <button onClick={() => navigate("/lessons")}>View lessons</button>
             </div>
 
             <div className="today-stats">
               <div>
-                <strong className="purple">3</strong>
+                <strong>{todayLessons.length}</strong>
                 <p>Lessons<br />Today</p>
               </div>
 
               <span className="divider" />
 
               <div>
-                <strong>$300</strong>
+                <strong>{formatMoney(todayEarnings)}</strong>
                 <p>Earned</p>
               </div>
 
               <span className="divider" />
 
               <div>
-                <strong className="orange">1</strong>
+                <strong>  {
+                  weekLessons.filter(
+                    (lesson) => getLessonStatus(lesson) === "upcoming"
+                  ).length
+                }</strong>
                 <p>Upcoming</p>
               </div>
             </div>
@@ -382,28 +751,28 @@ function Dashboard() {
 
             <div className="week-stats">
               <div>
-                <strong className="purple">$1,240</strong>
+                <strong className="purple">{formatMoney(weekEarnings)}</strong>
                 <p>Earnings</p>
               </div>
 
               <span className="divider" />
 
               <div>
-                <strong>18</strong>
+                <strong>{weekLessons.length}</strong>
                 <p>Lessons</p>
               </div>
 
               <span className="divider" />
 
               <div>
-                <strong className="orange">6</strong>
+                <strong className="orange">{weekUnbilledLessons.length}</strong>
                 <p>Unbilled</p>
               </div>
 
               <span className="divider" />
 
               <div>
-                <strong className="red">3</strong>
+                <strong className="red">{weekPendingInvoices.length}</strong>
                 <p>Invoices<br />Pending</p>
               </div>
             </div>
@@ -412,55 +781,106 @@ function Dashboard() {
           <section className="dashboard-section">
             <h3>Upcoming</h3>
 
-            <div className="lesson-list">
-              <div className="lesson-row">
-                <div className="lesson-time">
-                  <strong>10:00 AM</strong>
-                  <span>Today</span>
-                </div>
+            {todayLessons
+              .filter((lesson) => getLessonStatus(lesson) === "upcoming")
+              .sort((a, b) => {
+                const dateA = new Date(
+                  `${a.lesson_date}T${a.start_time}`
+                );
 
-                <div className="lesson-info">
-                  <strong>Anna Petrova</strong>
-                  <span>Freestyle • 45 min</span>
-                  <span>World Ice Arena</span>
-                </div>
+                const dateB = new Date(
+                  `${b.lesson_date}T${b.start_time}`
+                );
 
-                <div className="lesson-status green">In 18 min</div>
-                <FaChevronRight className="row-arrow"/>
+                return dateA.getTime() - dateB.getTime();
+              }).length === 0 ? (
+              <p className="empty-lessons">
+                No upcoming lessons for today.
+              </p>
+            ) : (
+              <div className="lesson-list">
+                {todayLessons
+                  .filter(
+                    (lesson) => getLessonStatus(lesson) === "upcoming"
+                  )
+                  .sort((a, b) => {
+                    const dateA = new Date(
+                      `${a.lesson_date}T${a.start_time}`
+                    );
+
+                    const dateB = new Date(
+                      `${b.lesson_date}T${b.start_time}`
+                    );
+
+                    return dateA.getTime() - dateB.getTime();
+                  })
+                  .map((lesson, index, array) => {
+                    const lessonStart = new Date(
+                      `${lesson.lesson_date}T${lesson.start_time}`
+                    );
+
+                    const now = new Date();
+
+                    const diffMs =
+                      lessonStart.getTime() - now.getTime();
+
+                    const totalMinutes = Math.max(
+                      0,
+                      Math.floor(diffMs / 60000)
+                    );
+
+                    const hours = Math.floor(totalMinutes / 60);
+                    const minutes = totalMinutes % 60;
+
+                    let timeUntil = "";
+
+                    if (hours > 0) {
+                      timeUntil = `In ${hours}h ${minutes}m`;
+                    } else {
+                      timeUntil = `In ${minutes} min`;
+                    }
+
+                    return (
+                      <div
+                        key={lesson.id}
+                        className={`lesson-row ${
+                          index === array.length - 1 ? "last" : ""
+                        }`}
+                      >
+                        <div className="lesson-time">
+                          <strong>
+                            {formatTime(lesson.start_time)}
+                          </strong>
+
+                          <span>Today</span>
+                        </div>
+
+                        <div className="lesson-info">
+                          <strong>
+                            {lesson.students?.student_name ||
+                              "Student"}
+                          </strong>
+
+                          <span>
+                            {lesson.duration_minutes} min • {formatMoney(lesson.rate)}
+                          </span>
+                        </div>
+
+                        <div className="lesson-status purple-bg">
+                          {timeUntil}
+                        </div>
+                        <button
+                          type="button"
+                          className="dashboard-row-edit-btn"
+                          onClick={() => openEditLesson(lesson)}
+                        >
+                          <FaChevronRight />
+                        </button>
+                      </div>
+                    );
+                  })}
               </div>
-
-              <div className="lesson-row">
-                <div className="lesson-time">
-                  <strong>11:00 AM</strong>
-                  <span>Today</span>
-                </div>
-
-                <div className="lesson-info">
-                  <strong>Maya Chen</strong>
-                  <span>Spins • 30 min</span>
-                  <span>World Ice Arena</span>
-                </div>
-
-                <div className="lesson-status purple-bg">In 1h 18m</div>
-                <FaChevronRight className="row-arrow" />
-              </div>
-
-              <div className="lesson-row last">
-                <div className="lesson-time">
-                  <strong>12:00 PM</strong>
-                  <span>Today</span>
-                </div>
-
-                <div className="lesson-info">
-                  <strong>Alex Kim</strong>
-                  <span>Jumps • 45 min</span>
-                  <span>Summit Rink</span>
-                </div>
-
-                <div className="lesson-status purple-bg">In 2h 18m</div>
-                <FaChevronRight className="row-arrow" />
-              </div>
-            </div>
+            )}
           </section>
 
           <section className="dashboard-section">
@@ -469,7 +889,15 @@ function Dashboard() {
               <button>View all</button>
             </div>
 
-            <div className="invoice-card">
+            {weekPendingInvoices.length === 0 ? (
+              <p className="empty-lessons">
+                No pending invoices right now.
+              </p>
+            ) : (
+              <div className="recent-invoices-card">
+              </div>
+            )}
+            {/* <div className="invoice-card">
               <div className="invoice-avatar">AP</div>
 
               <div className="invoice-info">
@@ -480,7 +908,7 @@ function Dashboard() {
               <strong className="invoice-price">$225</strong>
               <span className="invoice-status">Sent</span>
               <FaChevronRight className="row-arrow" />
-            </div>
+            </div> */}
           </section>
 
         </div>
@@ -502,12 +930,12 @@ function Dashboard() {
           <span>Students</span>
         </div>
 
-        <div className="nav-item">
+        <div className="nav-item" onClick={() => navigate("/invoices")}>
           <FaFileInvoiceDollar />
           <span>Invoices</span>
         </div>
 
-        <div className="nav-item">
+        <div className="nav-item" onClick={() => navigate("/more")}>
           <FaEllipsisH />
           <span>More</span>
         </div>
@@ -535,11 +963,50 @@ function Dashboard() {
             </div>
 
             <nav className="side-menu-links">
-              <a>Dashboard</a>
-              <a>Lessons</a>
-              <a>Students</a>
-              <a>Invoices</a>
-              <a>Settings</a>
+              <a
+                onClick={() => {
+                  navigate("/dashboard");
+                  setMenuOpen(false);
+                }}
+              >
+                Dashboard
+              </a>
+
+              <a
+                onClick={() => {
+                  navigate("/lessons");
+                  setMenuOpen(false);
+                }}
+              >
+                Lessons
+              </a>
+
+              <a
+                onClick={() => {
+                  navigate("/students");
+                  setMenuOpen(false);
+                }}
+              >
+                Students
+              </a>
+
+              <a
+                onClick={() => {
+                  navigate("/invoices");
+                  setMenuOpen(false);
+                }}
+              >
+                Invoices
+              </a>
+
+              <a
+                onClick={() => {
+                  navigate("/settings");
+                  setMenuOpen(false);
+                }}
+              >
+                Settings
+              </a>
             </nav>
 
             <button className="side-menu-logout" onClick={handleLogout}>
@@ -695,6 +1162,217 @@ function Dashboard() {
                 onClick={handleSkipOnboarding}
               >
                 Skip for now
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showAddLesson && (
+        <div
+          className="add-lesson-overlay"
+          onClick={() => setShowAddLesson(false)}
+        >
+          <div
+            className="add-lesson-sheet"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="add-lesson-header">
+              <h2>Add Lesson</h2>
+              <button type="button" onClick={() => setShowAddLesson(false)}>
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateLesson} className="add-lesson-form">
+              <div className="input-block">
+                <label>Student Name</label>
+                <input
+                  type="text"
+                  value={studentName}
+                  onChange={(e) => {
+                    setStudentName(e.target.value);
+                    setSelectedStudentId(null);
+                  }}
+                  placeholder="Enter student name"
+                  required
+                  autoComplete="new-password"
+                />
+              </div>
+
+              <div className="input-block">
+                <label>Lesson Date</label>
+                <input
+                  type="date"
+                  value={lessonDate}
+                  onChange={(e) => setLessonDate(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="input-block">
+                <label>Start Time</label>
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="input-block">
+                <label>Duration</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={durationMinutes}
+                  onChange={(e) =>
+                    setDurationMinutes(e.target.value.replace(/\D/g, ""))
+                  }
+                  required
+                />
+              </div>
+
+              <div className="input-block">
+                <label>Lesson Type</label>
+                <input
+                  type="text"
+                  value={lessonType}
+                  onChange={(e) => setLessonType(e.target.value)}
+                  placeholder="Optional"
+                />
+              </div>
+
+              <div className="input-block">
+                <label>Hourly Rate</label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={hourlyRate ? `$${hourlyRate}` : ""}
+                  onChange={(e) =>
+                    setHourlyRate(e.target.value.replace(/[^0-9.]/g, ""))
+                  }
+                  placeholder="$60"
+                  required
+                />
+              </div>
+
+              <div className="input-block">
+                <label>Notes</label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Optional"
+                />
+              </div>
+
+              <button type="submit" className="save-lesson-btn">
+                Save Lesson
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEditLesson && editingLesson && (
+        <div
+          className="add-lesson-overlay"
+          onClick={closeEditLesson}
+        >
+          <div
+            className="add-lesson-sheet"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="add-lesson-header">
+              <h2>Edit Lesson</h2>
+              <button type="button" onClick={closeEditLesson}>
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateLesson} className="add-lesson-form">
+              <div className="input-block">
+                <label>Student Name</label>
+                <input
+                  type="text"
+                  value={studentName}
+                  disabled
+                />
+              </div>
+
+              <div className="input-block">
+                <label>Lesson Date</label>
+                <input
+                  type="date"
+                  value={lessonDate}
+                  onChange={(e) => setLessonDate(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="input-block">
+                <label>Start Time</label>
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="input-block">
+                <label>Duration</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={durationMinutes}
+                  onChange={(e) =>
+                    setDurationMinutes(e.target.value.replace(/\D/g, ""))
+                  }
+                  required
+                />
+              </div>
+
+              <div className="input-block">
+                <label>Lesson Type</label>
+                <input
+                  type="text"
+                  value={lessonType}
+                  onChange={(e) => setLessonType(e.target.value)}
+                />
+              </div>
+
+              <div className="input-block">
+                <label>Hourly Rate</label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={hourlyRate ? `$${hourlyRate}` : ""}
+                  onChange={(e) =>
+                    setHourlyRate(e.target.value.replace(/[^0-9.]/g, ""))
+                  }
+                  placeholder="$60"
+                  required
+                />
+              </div>
+
+              <div className="input-block">
+                <label>Notes</label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+              </div>
+
+              <button type="submit" className="save-lesson-btn">
+                Save Changes
+              </button>
+              <button
+                type="button"
+                className="delete-lesson-btn"
+                onClick={() => handleDeleteLesson(editingLesson.id)}
+              >
+                Delete Lesson
               </button>
             </form>
           </div>

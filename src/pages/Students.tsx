@@ -7,7 +7,8 @@ import {
   FaFileInvoiceDollar,
   FaEllipsisH,
   FaPlus,
-  FaEdit
+  FaEdit,
+  FaFilter
 } from "react-icons/fa";
 import { supabase } from "../lib/supabaseClient";
 
@@ -30,6 +31,23 @@ function Students() {
   const [active, setActive] = useState(true);
   const [notes, setNotes] = useState("");
   const [parentEmail, setParentEmail] = useState("");
+
+  // Student - lessons+invoices popup
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [studentLessons, setStudentLessons] = useState<any[]>([]);
+  const [studentInvoices, setStudentInvoices] = useState<any[]>([]);
+
+  // Edit lessons
+  const [selectedLessonActionId, setSelectedLessonActionId] = useState<string | null>(null);
+  const [showEditLesson, setShowEditLesson] = useState(false);
+  const [editingLesson, setEditingLesson] = useState<any>(null);
+
+  const [lessonDate, setLessonDate] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [durationMinutes, setDurationMinutes] = useState("30");
+  const [lessonType, setLessonType] = useState("");
+  const [hourlyRate, setHourlyRate] = useState("");
+  const [lessonNotes, setLessonNotes] = useState("");
 
 
   useEffect(() => {
@@ -189,48 +207,131 @@ function Students() {
     setActive(true);
     setNotes("");
   }
+  function openEditLesson(lesson: any) {
+    setEditingLesson(lesson);
 
-  async function handleUpdateStudent(e: any) {
+    setLessonDate(lesson.lesson_date || "");
+    setStartTime(lesson.start_time?.slice(0, 5) || "");
+    setDurationMinutes(String(lesson.duration_minutes || "30"));
+    setLessonType(lesson.lesson_type || "");
+    setHourlyRate(String(lesson.hourly_rate || ""));
+    setLessonNotes(lesson.notes || "");
+
+    setShowEditLesson(true);
+    setSelectedLessonActionId(null);
+  }
+
+  function closeEditLesson() {
+    setShowEditLesson(false);
+    setEditingLesson(null);
+
+    setLessonDate("");
+    setStartTime("");
+    setDurationMinutes("30");
+    setLessonType("");
+    setHourlyRate("");
+    setLessonNotes("");
+  }
+
+  async function handleUpdateLesson(e: any) {
     e.preventDefault();
 
-    if (!editingStudent) return;
+    if (!editingLesson || !coachId) return;
 
-    const cleanStudentName = studentName.trim();
-
-    if (!cleanStudentName) {
-        alert("Please enter a student name.");
-        return;
-    }
+    const calculatedRate =
+      Number(hourlyRate) * (Number(durationMinutes) / 60);
 
     const { data, error } = await supabase
-        .from("students")
-        .update({
-        student_name: cleanStudentName,
-        email: email || null,
-        phone_number: phoneNumber || null,
-        parent_name: parentName || null,
-        parent_phone: parentPhone || null,
-        active,
-        notes: notes || null,
-        })
-        .eq("id", editingStudent.id)
-        .select()
-        .single();
+      .from("lessons")
+      .update({
+        lesson_date: lessonDate,
+        start_time: startTime,
+        duration_minutes: Number(durationMinutes),
+        lesson_type: lessonType || null,
+        hourly_rate: Number(hourlyRate),
+        rate: calculatedRate,
+        notes: lessonNotes || null,
+      })
+      .eq("id", editingLesson.id)
+      .eq("coach_id", coachId)
+      .select()
+      .single();
 
     if (error) {
-        console.log("Update student error:", error);
-        return;
+      console.log("Update student lesson error:", error);
+      return;
     }
 
-    setStudents((prev) =>
-        prev.map((link: any) =>
-        link.student_id === editingStudent.id
-            ? { ...link, students: data }
-            : link
-        )
+    setStudentLessons((prev) =>
+      prev.map((lesson) =>
+        lesson.id === editingLesson.id ? data : lesson
+      )
     );
 
-    closeEditStudent();
+    closeEditLesson();
+  }
+
+  async function handleDeleteStudentLesson(lessonId: string) {
+
+    const { error } = await supabase
+      .from("lessons")
+      .delete()
+      .eq("id", lessonId)
+      .eq("coach_id", coachId);
+
+    if (error) {
+      console.log("Delete student lesson error:", error);
+      return;
+    }
+
+    setStudentLessons((prev) =>
+      prev.filter((lesson) => lesson.id !== lessonId)
+    );
+
+    setSelectedLessonActionId(null);
+  }
+
+  async function handleUpdateStudent(e: any) {
+      e.preventDefault();
+
+      if (!editingStudent) return;
+
+      const cleanStudentName = studentName.trim();
+
+      if (!cleanStudentName) {
+          alert("Please enter a student name.");
+          return;
+      }
+
+      const { data, error } = await supabase
+          .from("students")
+          .update({
+          student_name: cleanStudentName,
+          email: email || null,
+          phone_number: phoneNumber || null,
+          parent_name: parentName || null,
+          parent_phone: parentPhone || null,
+          active,
+          notes: notes || null,
+          })
+          .eq("id", editingStudent.id)
+          .select()
+          .single();
+
+      if (error) {
+          console.log("Update student error:", error);
+          return;
+      }
+
+      setStudents((prev) =>
+          prev.map((link: any) =>
+          link.student_id === editingStudent.id
+              ? { ...link, students: data }
+              : link
+          )
+      );
+
+      closeEditStudent();
   }
   async function handleDeleteStudent(studentId: string) {
 
@@ -260,6 +361,41 @@ function Students() {
     );
 
     closeEditStudent();
+  }
+
+  async function openStudentDetails(link: any) {
+    const student = link.students;
+
+    setSelectedStudent(student);
+
+    if (!coachId || !student?.id) return;
+
+    const { data: lessonsData, error: lessonsError } = await supabase
+      .from("lessons")
+      .select("*")
+      .eq("coach_id", coachId)
+      .eq("student_id", student.id)
+      .order("lesson_date", { ascending: false })
+      .order("start_time", { ascending: false });
+
+    if (lessonsError) {
+      console.log("Student lessons error:", lessonsError);
+    } else {
+      setStudentLessons(lessonsData || []);
+    }
+
+    const { data: invoicesData, error: invoicesError } = await supabase
+      .from("invoices")
+      .select("*")
+      .eq("coach_id", coachId)
+      .eq("student_id", student.id)
+      .order("created_at", { ascending: false });
+
+    if (invoicesError) {
+      console.log("Student invoices error:", invoicesError);
+    } else {
+      setStudentInvoices(invoicesData || []);
+    }
   }
 
   if (loading) {
@@ -311,7 +447,7 @@ function Students() {
                     const student = link.students;
 
                     return (
-                      <div key={link.student_id} className="students-row">
+                      <div key={link.student_id} className="students-row" onClick={() => openStudentDetails(link)}>
                         <div className="students-avatar">
                           {student?.student_name
                             ? student.student_name.charAt(0).toUpperCase()
@@ -330,7 +466,7 @@ function Students() {
                         <button
                         type="button"
                         className="students-edit-btn"
-                        onClick={() => openEditStudent(link)}
+                        onClick={(e) => {e.stopPropagation(), openEditStudent(link)}}
                         >
                         <FaEdit />
                         </button>
@@ -621,6 +757,229 @@ function Students() {
                 </button>
             </form>
             </div>
+        </div>
+      )}
+      {selectedStudent && (
+        <div
+          className="students-detail-overlay"
+          onClick={() => setSelectedStudent(null)}
+        >
+          <div
+            className="students-detail-sheet"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="students-detail-header">
+              <div>
+                <h2>{selectedStudent.student_name}</h2>
+                <span>Student details</span>
+              </div>
+
+              <button
+                type="button"
+                className="students-filter-btn"
+              >
+                <FaFilter />
+              </button>
+
+              <button
+                type="button"
+                className="students-close-btn"
+                onClick={() => setSelectedStudent(null)}
+              >
+                ×
+              </button>
+            </div>
+
+            <section className="students-detail-section">
+              <div className="students-detail-title">
+                <h3>Lessons</h3>
+                <span>{studentLessons.length}</span>
+              </div>
+
+              {studentLessons.length === 0 ? (
+                <p className="students-empty">
+                  No lessons for this student yet.
+                </p>
+              ) : (
+                <div className="students-detail-card">
+                  {studentLessons.map((lesson) => (
+                    <div
+                    key={lesson.id}
+                    className={`students-detail-row ${
+                      selectedLessonActionId === lesson.id ? "action-mode" : ""
+                    }`}
+                    onClick={() =>
+                      setSelectedLessonActionId(
+                        selectedLessonActionId === lesson.id ? null : lesson.id
+                      )
+                    }
+                  >
+                    {selectedLessonActionId === lesson.id ? (
+                      <div className="students-lesson-actions">
+                        <button
+                          type="button"
+                          className="students-lesson-edit-action"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openStudentDetails(false)
+                            openEditLesson(lesson);
+                          }}
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          type="button"
+                          className="students-lesson-delete-action"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteStudentLesson(lesson.id);
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div>
+                          <strong>{lesson.lesson_date}</strong>
+                          <span>
+                            {lesson.start_time?.slice(0, 5)} •{" "}
+                            {lesson.duration_minutes} min
+                          </span>
+                        </div>
+
+                        <strong>${Number(lesson.rate || 0).toFixed(2)}</strong>
+                      </>
+                    )}
+                  </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className="students-detail-section">
+              <div className="students-detail-title">
+                <h3>Invoices</h3>
+                <span>{studentInvoices.length}</span>
+              </div>
+
+              {studentInvoices.length === 0 ? (
+                <p className="students-empty">
+                  No invoices for this student yet.
+                </p>
+              ) : (
+                <div className="students-detail-card">
+                  {studentInvoices.map((invoice) => (
+                    <div key={invoice.id} className="students-detail-row">
+                      <div>
+                        <strong>{invoice.invoice_number || "Invoice"}</strong>
+                        <span>{invoice.status || "No status"}</span>
+                      </div>
+
+                      <strong>${Number(invoice.total || 0).toFixed(2)}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+        </div>
+      )}
+      {showEditLesson && editingLesson && (
+        <div
+          className="add-lesson-overlay"
+          onClick={closeEditLesson}
+        >
+          <div
+            className="add-lesson-sheet"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="add-lesson-header">
+              <h2>Edit Lesson</h2>
+              <button type="button" onClick={closeEditLesson}>
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateLesson} className="add-lesson-form">
+              <div className="input-block">
+                <label>Lesson Date</label>
+                <input
+                  type="date"
+                  value={lessonDate}
+                  onChange={(e) => setLessonDate(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="input-block">
+                <label>Start Time</label>
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="input-block">
+                <label>Duration</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={durationMinutes}
+                  onChange={(e) =>
+                    setDurationMinutes(e.target.value.replace(/\D/g, ""))
+                  }
+                  required
+                />
+              </div>
+
+              <div className="input-block">
+                <label>Lesson Type</label>
+                <input
+                  type="text"
+                  value={lessonType}
+                  onChange={(e) => setLessonType(e.target.value)}
+                />
+              </div>
+
+              <div className="input-block">
+                <label>Hourly Rate</label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={hourlyRate ? `$${hourlyRate}` : ""}
+                  onChange={(e) =>
+                    setHourlyRate(e.target.value.replace(/[^0-9.]/g, ""))
+                  }
+                  placeholder="$60"
+                  required
+                />
+              </div>
+
+              <div className="input-block">
+                <label>Notes</label>
+                <textarea
+                  value={lessonNotes}
+                  onChange={(e) => setLessonNotes(e.target.value)}
+                />
+              </div>
+
+              <button type="submit" className="save-lesson-btn">
+                Save Changes
+              </button>
+
+              <button
+                type="button"
+                className="delete-lesson-btn"
+                onClick={() => handleDeleteStudentLesson(editingLesson.id)}
+              >
+                Delete Lesson
+              </button>
+            </form>
+          </div>
         </div>
       )}
     </div>

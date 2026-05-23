@@ -523,7 +523,7 @@ function Students() {
               </button>
             </div>
 
-            <form onSubmit={handleCreateStudent} className="students-add-form">
+            <form onSubmit={handleCreateStudent} autoComplete="off" className="students-add-form">
                 <div className="input-block">
                     <label htmlFor="studentName">Student Name (Required)</label>
 

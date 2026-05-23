@@ -104,7 +104,6 @@ button {
   margin-top: 30px;
   font-size: 18px;
   margin-bottom: 40px;
-  
 }
 
 .mb-signup > a {
@@ -686,7 +685,6 @@ button {
   font-size: 14px;
 }
 
-
 .dashboard-logout {
   margin-top: 28px;
   width: 100%;
@@ -730,6 +728,8 @@ button {
   font-weight: 600;
 }
 
+/* MEDIA SHOULD BE MOVED TO THE END */
+
 @media (max-width: 390px) {
   .dashboard-wrapper {
     padding-left: 14px;
@@ -758,7 +758,6 @@ button {
     display: none;
   }
 }
-
 
 /* HAMBURGER */
 .dashboard-menu-btn {
@@ -1225,9 +1224,9 @@ textarea:focus {
   background-color: var(--border);
 }
 
-/* LESSONS PAGE */
+/* LESSONS, STUDENTS, INVOICES COMMON PAGE ELEMENTS */
 
-.lessons-page, .students-page {
+.lessons-page, .students-page, .invoices-page {
   width: 100%;
   min-height: 100vh;
   background: var(--main-bg);
@@ -1251,18 +1250,18 @@ textarea:focus {
   color: #dc2626;
 }
 
-.lessons-wrapper, .students-wrapper {
+.lessons-wrapper, .students-wrapper, .invoices-wrapper {
   width: 100%;
   max-width: 520px;
   margin: 0 auto;
   
 }
 
-.lessons-body, .students-body {
+.lessons-body, .students-body, .invoices-body {
   padding: 30px 18px 0;
 }
 
-.lessons-header, .students-header {
+.lessons-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -1270,7 +1269,11 @@ textarea:focus {
   margin-bottom: 22px;
 }
 
-.lessons-header-add, .students-header-add {
+.students-header, .invoices-header {
+  margin-bottom: 22px;
+}
+
+.lessons-header-add, .students-header-add, .invoices-header-add {
   padding: 0px 5px;
   display: flex;
   width: 100%;
@@ -1285,7 +1288,7 @@ textarea:focus {
   margin: 0 0 4px;
 }
 
-.lessons-header h1, .students-header h1 {
+.lessons-header h1, .students-header h1, .invoices-header h1 {
   color: var(--main-text);
   font-size: 30px;
   font-weight: 700;
@@ -1293,7 +1296,7 @@ textarea:focus {
   letter-spacing: -1px;
 }
 
-.lessons-add-btn, .students-add-btn {
+.lessons-add-btn, .students-add-btn, .invoices-add-btn {
   width: 45px;
   height: 45px;
   margin: 0;
@@ -1367,7 +1370,7 @@ textarea:focus {
   color: white;
 }
 
-.empty-lessons, .students-empty {
+.empty-lessons, .students-empty, .invoices-empty {
   padding: 24px 10px;
   text-align: center;
   color: var(--secondary-text);
@@ -1387,19 +1390,19 @@ textarea:focus {
   margin-bottom: 13px;
 }
 
-.lesson-group-title h2, .students-group-title h2 {
+.lesson-group-title h2, .students-group-title h2, .invoices-group-title h2 {
   color: var(--main-text);
   font-size: 20px;
   font-weight: 650;
   margin: 0;
 }
 
-.lesson-group-title span, .students-group-title span {
+.lesson-group-title span, .students-group-title span, .invoices-group-title span {
   color: var(--secondary-text);
   font-size: 14px;
 }
 
-.lesson-group-card, .students-group-card {
+.lesson-group-card, .students-group-card, .invoices-group-card {
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 22px;
@@ -1414,7 +1417,7 @@ textarea:focus {
   padding: 18px 0;
   border-bottom: 1px solid var(--border);
 }
-.lesson-edit-btn, .students-edit-btn {
+.lesson-edit-btn, .students-edit-btn, .invoices-edit-btn  {
   width: 38px;
   height: 38px;
   margin: 0;
@@ -1853,7 +1856,7 @@ textarea:focus {
   background: #fecaca;
 }
 
-/* STUDENTS */
+/* STUDENTS SPECIFIC PAGE */
 
 .students-row {
   cursor: pointer;
@@ -1999,7 +2002,6 @@ textarea:focus {
   justify-content: center;
 }
 
-
 .students-filter-btn {
   width: 42px;
   height: 42px;
@@ -2117,120 +2119,7 @@ textarea:focus {
   color: #dc2626;
 }
 
-/* COMING SOON */
-.coming-soon-page {
-  width: 100%;
-  min-height: 100vh;
-  background: var(--main-bg);
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  padding: 24px;
-}
-
-.coming-soon-card {
-  width: 100%;
-  max-width: 420px;
-
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 28px;
-
-  padding: 42px 28px;
-
-  text-align: center;
-}
-
-.coming-soon-icon {
-  width: 74px;
-  height: 74px;
-  margin: 0 auto 22px;
-
-  border-radius: 50%;
-  background: #eef2ff;
-  color: var(--primary-purple);
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  font-size: 28px;
-}
-
-.coming-soon-card h1 {
-  color: var(--main-text);
-  font-size: 30px;
-  font-weight: 700;
-  margin-bottom: 10px;
-}
-
-.coming-soon-card p {
-  color: var(--secondary-text);
-  font-size: 16px;
-  line-height: 1.6;
-  margin-bottom: 28px;
-}
-
-.coming-soon-btn {
-  width: 100%;
-  gap: 10px;
-}
-
-
-/* INVOICES */
-.invoices-page {
-  width: 100%;
-  min-height: 100vh;
-  background: var(--main-bg);
-  overflow-x: hidden;
-  padding-bottom: 95px;
-}
-
-.invoices-wrapper {
-  width: 100%;
-  max-width: 520px;
-  margin: 0 auto;
-}
-
-.invoices-body {
-  padding: 30px 18px 0;
-}
-
-.invoices-header {
-  margin-bottom: 22px;
-}
-
-.invoices-header-add {
-  padding: 0 5px;
-  display: flex;
-  width: 100%;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.invoices-header h1 {
-  color: var(--main-text);
-  font-size: 30px;
-  font-weight: 700;
-  margin: 0;
-  letter-spacing: -1px;
-}
-
-.invoices-add-btn {
-  width: 45px;
-  height: 45px;
-  margin: 0;
-  padding: 0;
-  border-radius: 50%;
-  background: var(--primary-purple);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
+/* INVOICES SPECIFIC PAGE */
 
 .invoice-stat-grid {
   margin-top: 22px;
@@ -2310,25 +2199,6 @@ textarea:focus {
   margin-bottom: 5px;
 }
 
-.invoices-group-title h2 {
-  color: var(--main-text);
-  font-size: 20px;
-  font-weight: 650;
-  margin: 0;
-}
-
-.invoices-group-title span {
-  color: var(--secondary-text);
-  font-size: 14px;
-}
-
-.invoices-group-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 22px;
-  padding: 0 16px;
-}
-
 .invoices-row {
   display: grid;
   grid-template-columns: 52px 1fr auto;
@@ -2368,22 +2238,63 @@ textarea:focus {
   margin-top: 4px;
 }
 
-.invoices-edit-btn {
-  width: 38px;
-  height: 38px;
-  margin: 0;
-  padding: 0;
-  border-radius: 50%;
-  background: #eef2ff;
-  color: var(--primary-purple);
+/* COMING SOON PAGE */
+.coming-soon-page {
+  width: 100%;
+  min-height: 100vh;
+  background: var(--main-bg);
+
   display: flex;
   align-items: center;
   justify-content: center;
+
+  padding: 24px;
 }
 
-.invoices-empty {
-  padding: 24px 10px;
+.coming-soon-card {
+  width: 100%;
+  max-width: 420px;
+
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+
+  padding: 42px 28px;
+
   text-align: center;
+}
+
+.coming-soon-icon {
+  width: 74px;
+  height: 74px;
+  margin: 0 auto 22px;
+
+  border-radius: 50%;
+  background: #eef2ff;
+  color: var(--primary-purple);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 28px;
+}
+
+.coming-soon-card h1 {
+  color: var(--main-text);
+  font-size: 30px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.coming-soon-card p {
   color: var(--secondary-text);
   font-size: 16px;
+  line-height: 1.6;
+  margin-bottom: 28px;
+}
+
+.coming-soon-btn {
+  width: 100%;
+  gap: 10px;
 }

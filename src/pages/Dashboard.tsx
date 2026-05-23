@@ -410,15 +410,32 @@ function Dashboard() {
       return;
     }
 
-    let finalStudentId = selectedStudentId;
+    const { data: existingLinks, error: existingStudentError } = await supabase
+      .from("coach_students")
+      .select(`
+        student_id,
+        students (
+          id,
+          student_name
+        )
+      `)
+      .eq("coach_id", coachId);
 
-    if (!finalStudentId) {
-      const existingLink = coachStudents.find((link: any) =>
+    if (existingStudentError) {
+      console.log("Student lookup error:", existingStudentError);
+      return;
+    }
+
+    const existingLink = existingLinks?.find((link: any) => {
+      return (
         link.students?.student_name?.trim().toLowerCase() ===
         cleanStudentName.toLowerCase()
       );
+    });
 
-      finalStudentId = existingLink?.student_id;
+    let finalStudentId = existingLink?.student_id;
+    if (selectedStudentId) {
+      finalStudentId = selectedStudentId;
     }
 
     if (!finalStudentId) {
@@ -655,6 +672,16 @@ function Dashboard() {
 
     return "past";
   }
+
+  const studentMatches =
+  studentName.trim().length > 0
+    ? coachStudents.filter((link: any) =>
+        link.students?.student_name
+          ?.toLowerCase()
+          .includes(studentName.trim().toLowerCase())
+      )
+    : [];
+
 
   if (loading) {
     return (
@@ -1184,8 +1211,8 @@ function Dashboard() {
               </button>
             </div>
 
-            <form onSubmit={handleCreateLesson} className="add-lesson-form">
-              <div className="input-block">
+            <form onSubmit={handleCreateLesson} autoComplete="off" className="add-lesson-form">
+              <div className="input-block student-search-block">
                 <label>Student Name</label>
                 <input
                   type="text"
@@ -1197,7 +1224,27 @@ function Dashboard() {
                   placeholder="Enter student name"
                   required
                   autoComplete="new-password"
+                  autoCorrect="off"
+                  autoCapitalize="words"
+                  spellCheck={false}
                 />
+                {studentMatches.length > 0 && !selectedStudentId && (
+                  <div className="student-suggestions">
+                    {studentMatches.map((link: any) => (
+                      <button
+                        key={link.student_id}
+                        type="button"
+                        className="student-suggestion"
+                        onClick={() => {
+                          setStudentName(link.students.student_name);
+                          setSelectedStudentId(link.student_id);
+                        }}
+                      >
+                        {link.students.student_name}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="input-block">

@@ -677,10 +677,10 @@ function Lessons() {
                   }}
                   placeholder="Enter student name"
                   required
-                   autoComplete="new-password"
-                    autoCorrect="off"
-                    autoCapitalize="words"
-                    spellCheck={false}
+                  autoComplete="new-password"
+                  autoCorrect="off"
+                  autoCapitalize="words"
+                  spellCheck={false}
                 />
 
                 {studentMatches.length > 0 && !selectedStudentId && (

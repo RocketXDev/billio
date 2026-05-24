@@ -479,8 +479,6 @@ function Dashboard() {
       lesson_type: lessonType || null,
       hourly_rate: Number(hourlyRate),
       rate: calculatedRate,
-      status: "scheduled",
-      billed: false,
       notes: notes || null,
     });
 
@@ -924,18 +922,6 @@ function Dashboard() {
               <div className="recent-invoices-card">
               </div>
             )}
-            {/* <div className="invoice-card">
-              <div className="invoice-avatar">AP</div>
-
-              <div className="invoice-info">
-                <strong>Anna Petrova</strong>
-                <span>May 12 – May 18</span>
-              </div>
-
-              <strong className="invoice-price">$225</strong>
-              <span className="invoice-status">Sent</span>
-              <FaChevronRight className="row-arrow" />
-            </div> */}
           </section>
 
         </div>

@@ -25,9 +25,39 @@ function Invoices() {
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
 
+  // Invoices Creation States
+  const [showAddInvoice, setShowAddInvoice] = useState(false);
+  const [students, setStudents] = useState<any[]>([]);
+  const [selectedStudentId, setSelectedStudentId] = useState("");
+  const [invoiceLessons, setInvoiceLessons] = useState<any[]>([]);
+  const [selectedLessonIds, setSelectedLessonIds] = useState<string[]>([]);
+  const [showDateRangePicker, setShowDateRangePicker] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [rangeStart, setRangeStart] = useState("");
+  const [rangeEnd, setRangeEnd] = useState("");
+  const [isClosingCalendar, setIsClosingCalendar] = useState(false);
+
+  // Invoices Editing
+  const [showEditInvoice, setShowEditInvoice] = useState(false);
+  const [editingInvoice, setEditingInvoice] = useState<any>(null);
+  const [editInvoiceNumber, setEditInvoiceNumber] = useState("");
+  const [editInvoiceStatus, setEditInvoiceStatus] = useState("");
+  const [editIssueDate, setEditIssueDate] = useState("");
+  const [editDueDate, setEditDueDate] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [editInvoiceLessons, setEditInvoiceLessons] = useState<any[]>([]);
+  const [editSelectedLessonIds, setEditSelectedLessonIds] = useState<string[]>([]);
+  const [originalInvoiceStatus, setOriginalInvoiceStatus] = useState("unbilled");
+
   useEffect(() => {
     loadInvoices();
   }, []);
+
+  useEffect(() => {
+    if (coachId && selectedStudentId && rangeStart && rangeEnd) {
+      loadInvoiceLessons();
+    }
+  }, [coachId, selectedStudentId, rangeStart, rangeEnd]);
 
   async function loadInvoices() {
     setLoading(true);
@@ -125,6 +155,459 @@ function Invoices() {
 
   const pendingInvoices = invoices.filter((invoice) => invoice.status === "pending");
 
+  async function openAddInvoice() {
+    if (!coachId) return;
+
+    const { data, error } = await supabase
+      .from("coach_students")
+      .select(`
+        student_id,
+        students (
+          id,
+          student_name
+        )
+      `)
+      .eq("coach_id", coachId);
+
+    if (error) {
+      console.log("Load invoice students error:", error);
+      return;
+    }
+
+    setStudents(data || []);
+    setShowAddInvoice(true);
+  }
+
+  async function loadInvoiceLessons() {
+    if (!coachId || !selectedStudentId || !rangeStart || !rangeEnd) return;
+
+    const { data, error } = await supabase
+      .from("lessons")
+      .select("*")
+      .eq("coach_id", coachId)
+      .eq("student_id", selectedStudentId)
+      .gte("lesson_date", rangeStart)
+      .lte("lesson_date", rangeEnd)
+      .order("lesson_date", { ascending: true })
+      .order("start_time", { ascending: true });
+
+    if (error) {
+      console.log("Load invoice lessons error:", error);
+      return;
+    }
+
+    setInvoiceLessons(data || []);
+    setSelectedLessonIds((data || []).map((lesson) => lesson.id));
+  }
+
+  function toggleInvoiceLesson(lessonId: string) {
+    setSelectedLessonIds((prev) =>
+      prev.includes(lessonId)
+        ? prev.filter((id) => id !== lessonId)
+        : [...prev, lessonId]
+    );
+  }
+
+  async function handleCreateInvoice(e: any) {
+    e.preventDefault();
+
+    if (!coachId || !selectedStudentId || selectedLessonIds.length === 0) return;
+
+    const selectedLessons = invoiceLessons.filter((lesson) =>
+      selectedLessonIds.includes(lesson.id)
+    );
+
+    const total = selectedLessons.reduce(
+      (sum, lesson) => sum + Number(lesson.rate || 0),
+      0
+    );
+
+    const invoiceNumber = generateInvoiceNumber();
+
+    const { data: invoiceData, error: invoiceError } = await supabase
+      .from("invoices")
+      .insert({
+        invoice_number: invoiceNumber,
+        coach_id: coachId,
+        student_id: selectedStudentId,
+        status: "unbilled",
+        subtotal: total,
+        total,
+        issue_date: new Date().toISOString().split("T")[0],
+        notes: null,
+      })
+      .select(`
+        *,
+        students (
+          student_name
+        )
+      `)
+      .single();
+
+    if (invoiceError) {
+      console.log("Create invoice error:", invoiceError);
+      return;
+    }
+
+    const invoiceLessonRows = selectedLessonIds.map((lessonId) => ({
+      invoice_id: invoiceData.id,
+      lesson_id: lessonId,
+    }));
+
+    const { error: linkError } = await supabase
+      .from("invoice_lessons")
+      .insert(invoiceLessonRows);
+
+    if (linkError) {
+      console.log("Invoice lesson link error:", linkError);
+      return;
+    }
+
+    await supabase
+      .from("lessons")
+      .update({
+        status: "unbilled",
+      })
+      .in("id", selectedLessonIds);
+
+    setInvoices((prev) => [invoiceData, ...prev]);
+
+    setSelectedStudentId("");
+    setRangeStart("");
+    setRangeEnd("");
+    setInvoiceLessons([]);
+    setSelectedLessonIds([]);
+    setShowAddInvoice(false);
+  }
+
+  function formatDateRangeLabel() {
+    if (!rangeStart && !rangeEnd) return "Select date range";
+    if (rangeStart && !rangeEnd) return `${rangeStart} → End date`;
+    return `${rangeStart} → ${rangeEnd}`;
+  }
+
+  function getCalendarDays() {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+
+    const days = [];
+
+    for (let i = 0; i < firstDay.getDay(); i++) {
+      days.push(null);
+    }
+
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+      const date = new Date(year, month, day);
+      const value = date.toLocaleDateString("en-CA");
+      days.push(value);
+    }
+
+    return days;
+  }
+
+  async function handleDateRangeSelect(dateValue: string) {
+    if (!rangeStart || (rangeStart && rangeEnd)) {
+      setRangeStart(dateValue);
+      setRangeEnd("");
+      setInvoiceLessons([]);
+      setSelectedLessonIds([]);
+      return;
+    }
+
+    if (dateValue < rangeStart) {
+      setRangeEnd(rangeStart);
+      setRangeStart(dateValue);
+    } else {
+      setRangeEnd(dateValue);
+    }
+
+    setIsClosingCalendar(true);
+
+    setTimeout(() => {
+      setShowDateRangePicker(false);
+      setIsClosingCalendar(false);
+    }, 220);
+  }
+
+  function closeAddInvoice() {
+    setShowAddInvoice(false);
+    setSelectedStudentId("");
+    setRangeStart("");
+    setRangeEnd("");
+    setInvoiceLessons([]);
+    setSelectedLessonIds([]);
+    setShowDateRangePicker(false);
+  }
+
+  async function openEditInvoice(invoice: any) {
+    setEditingInvoice(invoice);
+
+    setOriginalInvoiceStatus(invoice.status || "unbilled");
+    setEditInvoiceStatus(invoice.status || "unbilled"); 
+    setEditIssueDate(invoice.issue_date || "");
+    setEditDueDate(invoice.due_date || "");
+    setEditNotes(invoice.notes || "");
+
+    const { data, error } = await supabase
+      .from("invoice_lessons")
+      .select(`
+        lesson_id,
+        lessons (
+          id,
+          lesson_date,
+          start_time,
+          duration_minutes,
+          rate,
+          billing_status
+        )
+      `)
+      .eq("invoice_id", invoice.id);
+
+    if (error) {
+      console.log("Load invoice lessons error:", error);
+      setEditInvoiceLessons([]);
+      setEditSelectedLessonIds([]);
+    } else {
+      const lessons = data?.map((row: any) => row.lessons) || [];
+
+      setEditInvoiceLessons(lessons);
+      setEditSelectedLessonIds(data?.map((row: any) => row.lesson_id) || []);
+    }
+
+    setShowEditInvoice(true);
+  }
+
+  function closeEditInvoice() {
+    setShowEditInvoice(false);
+    setEditingInvoice(null);
+
+    setEditInvoiceStatus("unbilled");
+    setEditIssueDate("");
+    setEditDueDate("");
+    setEditNotes("");
+    setEditInvoiceLessons([]);
+    setEditSelectedLessonIds([]);
+  }
+
+  function toggleEditInvoiceLesson(lessonId: string) {
+    setEditSelectedLessonIds((prev) =>
+      prev.includes(lessonId)
+        ? prev.filter((id) => id !== lessonId)
+        : [...prev, lessonId]
+    );
+  }
+
+  async function handleUpdateInvoice(e: any) {
+    e.preventDefault();
+
+    if (!editingInvoice || !coachId) return;
+
+    const selectedLessons = editInvoiceLessons.filter((lesson) =>
+      editSelectedLessonIds.includes(lesson.id)
+    );
+
+    const total = editSelectedLessonIds.reduce((sum, lessonId) => {
+      const lesson = editInvoiceLessons.find(
+        (lesson) => lesson.id === lessonId
+      );
+
+      return sum + Number(lesson?.rate || 0);
+    }, 0);
+
+    const originalLessonIds = editInvoiceLessons.map((lesson) => lesson.id);
+
+    const removedLessonIds = originalLessonIds.filter(
+      (lessonId) => !editSelectedLessonIds.includes(lessonId)
+    );
+
+    const invoiceStatusChanged =
+      editInvoiceStatus !== originalInvoiceStatus;
+
+    if (editSelectedLessonIds.length === 0) {
+      const { error: deleteInvoiceError } = await supabase
+        .from("invoices")
+        .delete()
+        .eq("id", editingInvoice.id)
+        .eq("coach_id", coachId);
+
+      if (deleteInvoiceError) {
+        console.log("Delete empty invoice error:", deleteInvoiceError);
+        return;
+      }
+
+      if (removedLessonIds.length > 0) {
+        await supabase
+          .from("lessons")
+          .update({
+            billing_status: "unbilled",
+          })
+          .in("id", removedLessonIds)
+          .eq("coach_id", coachId);
+      }
+
+      setInvoices((prev) =>
+        prev.filter((invoice) => invoice.id !== editingInvoice.id)
+      );
+
+      setEditInvoiceLessons(selectedLessons);
+      closeEditInvoice();
+      return;
+    }
+
+    const { error: deleteLinksError } = await supabase
+      .from("invoice_lessons")
+      .delete()
+      .eq("invoice_id", editingInvoice.id);
+
+    if (deleteLinksError) {
+      console.log("Delete old invoice lesson links error:", deleteLinksError);
+      return;
+    }
+
+    const { error: linkError } = await supabase
+      .from("invoice_lessons")
+      .insert(
+        editSelectedLessonIds.map((lessonId) => ({
+          invoice_id: editingInvoice.id,
+          lesson_id: lessonId,
+        }))
+      );
+
+    if (linkError) {
+      console.log("Update invoice lessons error:", linkError);
+      return;
+    }
+
+    if (removedLessonIds.length > 0) {
+      await supabase
+        .from("lessons")
+        .update({
+          billing_status: "unbilled",
+        })
+        .in("id", removedLessonIds)
+        .eq("coach_id", coachId);
+    }
+
+    if (invoiceStatusChanged && editSelectedLessonIds.length > 0) {
+      const { error: selectedLessonsError } = await supabase
+        .from("lessons")
+        .update({
+          billing_status: editInvoiceStatus,
+        })
+        .in("id", editSelectedLessonIds)
+        .eq("coach_id", coachId);
+
+      if (selectedLessonsError) {
+        console.log(
+          "Update selected lessons billing status error:",
+          selectedLessonsError
+        );
+        return;
+      }
+    }
+
+    const finalSelectedLessons = invoiceStatusChanged
+      ? selectedLessons.map((lesson) => ({
+          ...lesson,
+          billing_status: editInvoiceStatus,
+        }))
+      : selectedLessons;
+
+    const finalInvoiceStatus =
+      getInvoiceStatusFromLessons(finalSelectedLessons);
+
+    const { data: updatedInvoice, error: invoiceError } = await supabase
+      .from("invoices")
+      .update({
+        status: finalInvoiceStatus,
+        issue_date: editIssueDate || null,
+        due_date: editDueDate || null,
+        notes: editNotes || null,
+        subtotal: total,
+        total,
+      })
+      .eq("id", editingInvoice.id)
+      .eq("coach_id", coachId)
+      .select(`
+        *,
+        students (
+          student_name,
+          email,
+          phone_number,
+          parent_name,
+          parent_phone
+        )
+      `)
+      .single();
+
+    if (invoiceError) {
+      console.log("Update invoice error:", invoiceError);
+      return;
+    }
+
+    setInvoices((prev) =>
+      prev.map((invoice) =>
+        invoice.id === editingInvoice.id ? updatedInvoice : invoice
+      )
+    );
+
+    closeEditInvoice();
+  }
+
+  async function handleDeleteInvoice(invoiceId: string) {
+
+    const lessonIds = editInvoiceLessons.map((lesson) => lesson.id);
+
+    const { error } = await supabase
+      .from("invoices")
+      .delete()
+      .eq("id", invoiceId)
+      .eq("coach_id", coachId);
+
+    if (error) {
+      console.log("Delete invoice error:", error);
+      return;
+    }
+
+    setInvoices((prev) =>
+      prev.filter((invoice) => invoice.id !== invoiceId)
+    );
+
+    closeEditInvoice();
+  }
+
+  function generateInvoiceNumber() {
+    const year = new Date().getFullYear();
+
+    const randomCode = Math.random()
+      .toString(36)
+      .substring(2, 6)
+      .toUpperCase();
+
+    return `INV-${year}-${randomCode}`;
+  }
+
+  function getInvoiceStatusFromLessons(lessons: any[]) {
+    if (lessons.length === 0) return "unbilled";
+
+    const statuses = lessons.map(
+      (lesson) => lesson.billing_status || "unbilled"
+    );
+
+    if (statuses.every((status) => status === "paid")) {
+      return "paid";
+    }
+
+    if (statuses.some((status) => status === "unbilled")) {
+      return "unbilled";
+    }
+
+    return "billed";
+  }
+
   if (loading) {
     return (
       <div className="loading-screen">
@@ -147,7 +630,7 @@ function Invoices() {
                     <button
                     type="button"
                     className="invoices-add-btn"
-                    // onClick={() => setShowAddInvoice(true)}
+                    onClick={openAddInvoice}
                     >
                     <FaPlus />
                     </button>
@@ -226,7 +709,7 @@ function Invoices() {
                         <button
                         type="button"
                         className="invoices-edit-btn"
-                        // onClick={() => openEditInvoice(invoice)}
+                        onClick={(e) => {e.stopPropagation(); openEditInvoice(invoice)}}
                         >
                         <FaEdit />
                         </button>
@@ -265,6 +748,303 @@ function Invoices() {
             </div>
         </nav>
         </div>
+        {showAddInvoice && (
+          <div
+            className="invoices-add-overlay"
+            onClick={closeAddInvoice}
+          >
+            <div
+              className="invoices-add-sheet"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="invoices-add-header">
+                <h2>Create Invoice</h2>
+                <button type="button" onClick={closeAddInvoice}>
+                  ×
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateInvoice} className="invoices-add-form">
+                <div className="input-block">
+                  <label>Student</label>
+                  <select
+                    value={selectedStudentId}
+                    onChange={(e) => setSelectedStudentId(e.target.value)}
+                    required
+                  >
+                    <option value="">Select Student</option>
+                    {students.map((link: any) => (
+                      <option key={link.student_id} value={link.student_id}>
+                        {link.students?.student_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="input-block invoice-date-range-wrapper">
+                  <label>Date Range</label>
+                  <button
+                    type="button"
+                    className="invoice-date-range-btn"
+                    onClick={() => setShowDateRangePicker(true)}
+                  >
+                    {formatDateRangeLabel()}
+                  </button>
+                    {showDateRangePicker && (
+                      <div className={`invoice-calendar-floating ${
+                              isClosingCalendar ? "closing" : ""
+                            }`}>
+                        <div className="invoice-calendar-header">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setCalendarMonth(
+                                new Date(
+                                  calendarMonth.getFullYear(),
+                                  calendarMonth.getMonth() - 1,
+                                  1
+                                )
+                              )
+                            }
+                          >
+                            ‹
+                          </button>
+
+                          <strong>
+                            {calendarMonth.toLocaleDateString("en-US", {
+                              month: "long",
+                              year: "numeric",
+                            })}
+                          </strong>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setCalendarMonth(
+                                new Date(
+                                  calendarMonth.getFullYear(),
+                                  calendarMonth.getMonth() + 1,
+                                  1
+                                )
+                              )
+                            }
+                          >
+                            ›
+                          </button>
+                        </div>
+
+                        <div className="invoice-calendar-weekdays">
+                          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+                            <span key={day}>{day.charAt(0)}</span>
+                          ))}
+                        </div>
+
+                        <div className="invoice-calendar-grid">
+                          {getCalendarDays().map((dateValue, index) => {
+                            const isSelected =
+                              dateValue === rangeStart || dateValue === rangeEnd;
+
+                            const isInRange =
+                              dateValue &&
+                              rangeStart &&
+                              rangeEnd &&
+                              dateValue > rangeStart &&
+                              dateValue < rangeEnd;
+
+                            return (
+                              <button
+                                key={index}
+                                type="button"
+                                className={`
+                                  invoice-calendar-day
+                                  ${isSelected ? "selected" : ""}
+                                  ${isInRange ? "in-range" : ""}
+                                `}
+                                disabled={!dateValue}
+                                onClick={() => dateValue && handleDateRangeSelect(dateValue)}
+                              >
+                                {dateValue ? Number(dateValue.split("-")[2]) : ""}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                </div>
+                {rangeStart && rangeEnd && (
+                  <>
+                    {invoiceLessons.length === 0 ? (
+                      <p className="invoices-empty">
+                        No lessons in that date range.
+                      </p>
+                    ) : (
+                      <div className="invoice-lessons-section">
+                        <h3>Lessons</h3>
+
+                        <div className="invoice-lessons-picker">
+                          {invoiceLessons.map((lesson) => {
+                            const billingStatus = lesson.status || "unbilled";
+
+                            return (
+                              <button
+                                key={lesson.id}
+                                type="button"
+                                className={`invoice-lesson-option ${
+                                  selectedLessonIds.includes(lesson.id) ? "selected" : ""
+                                }`}
+                                onClick={() => toggleInvoiceLesson(lesson.id)}
+                              >
+                                <div>
+                                  <strong>
+                                    {lesson.lesson_date} • {lesson.duration_minutes} min
+                                  </strong>
+
+                                  <span>
+                                    {lesson.start_time?.slice(0, 5)} •{" "}
+                                    <b className={`billing-status ${billingStatus}`}>
+                                      {billingStatus}
+                                    </b>
+                                  </span>
+                                </div>
+
+                                <span className="invoice-lesson-check">
+                                  {selectedLessonIds.includes(lesson.id) ? "✓" : ""}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                <button type="submit" className="invoices-save-btn">
+                  Create Invoice
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+        {showEditInvoice && editingInvoice && (
+          <div
+            className="invoices-add-overlay"
+            onClick={closeEditInvoice}
+          >
+            <div
+              className="invoices-add-sheet"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="invoices-add-header">
+                <h2>Edit Invoice</h2>
+
+                <button type="button" onClick={closeEditInvoice}>
+                  ×
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateInvoice} className="invoices-add-form">
+                <div className="invoice-readonly-number">
+                  <span>Invoice Number</span>
+                  <strong>
+                    {editingInvoice.invoice_number || "No invoice number"}
+                  </strong>
+                </div>
+
+                <div className="input-block">
+                  <label>Status</label>
+                  <select
+                    value={editInvoiceStatus}
+                    onChange={(e) => setEditInvoiceStatus(e.target.value)}
+                  >
+                    <option value="unbilled">Unbilled</option>
+                    <option value="billed">Billed</option>
+                    <option value="paid">Paid</option>
+                  </select>
+                </div>
+
+                <div className="input-block">
+                  <label>Issue Date</label>
+                  <input
+                    type="date"
+                    value={editIssueDate}
+                    onChange={(e) => setEditIssueDate(e.target.value)}
+                  />
+                </div>
+
+                <div className="input-block">
+                  <label>Due Date</label>
+                  <input
+                    type="date"
+                    value={editDueDate}
+                    onChange={(e) => setEditDueDate(e.target.value)}
+                  />
+                </div>
+
+                <div className="input-block">
+                  <label>Notes</label>
+                  <textarea
+                    value={editNotes}
+                    onChange={(e) => setEditNotes(e.target.value)}
+                    placeholder="Invoice notes"
+                  />
+                </div>
+
+                {editInvoiceLessons.length > 0 && (
+                  <div className="invoice-lessons-section">
+                    <h3>Lessons</h3>
+
+                    <div className="invoice-lessons-picker">
+                      {editInvoiceLessons.map((lesson) => {
+                        const isSelected = editSelectedLessonIds.includes(lesson.id);
+                        const billingStatus = lesson.billing_status || "unbilled";
+
+                        return (
+                          <button
+                            key={lesson.id}
+                            type="button"
+                            className={`invoice-lesson-option ${
+                              isSelected ? "selected" : ""
+                            }`}
+                            onClick={() => toggleEditInvoiceLesson(lesson.id)}
+                          >
+                            <div>
+                              <strong>
+                                {lesson.lesson_date} • {lesson.duration_minutes} min
+                              </strong>
+
+                              <span>
+                                {lesson.start_time?.slice(0, 5)} •{" "}
+                                <b className={`billing-status ${billingStatus}`}>
+                                  {billingStatus}
+                                </b>
+                              </span>
+                            </div>
+
+                            <span className="invoice-lesson-check">
+                              {isSelected ? "✓" : ""}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <button type="submit" className="invoices-save-btn">
+                  Save Changes
+                </button>
+
+                <button
+                  type="button"
+                  className="invoices-delete-btn"
+                  onClick={() => handleDeleteInvoice(editingInvoice.id)}
+                >
+                  Delete Invoice
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
     </div>
   );
 }

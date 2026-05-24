@@ -37,6 +37,7 @@ function Lessons() {
   const [editingLesson, setEditingLesson] = useState<any>(null);
   const [coachStudents, setCoachStudents] = useState<any[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [billingStatus, setBillingStatus] = useState("unbilled");
 
   const navigate = useNavigate();
 
@@ -187,9 +188,8 @@ function Lessons() {
         lesson_type: lessonType || null,
         hourly_rate: Number(hourlyRate),
         rate: calculatedRate,
-        status: "scheduled",
-        billed: false,
         notes: notes || null,
+        billing_status: "unbilled"
       })
       .select(`
         *,
@@ -258,6 +258,7 @@ function Lessons() {
   setLessonType(lesson.lesson_type || "");
   setHourlyRate(String(lesson.hourly_rate || ""));
   setNotes(lesson.notes || "");
+  setBillingStatus(lesson.billing_status || "unbilled");
 
   setShowEditLesson(true);
   }
@@ -273,6 +274,7 @@ function Lessons() {
     setLessonType("");
     setHourlyRate("");
     setNotes("");
+    setBillingStatus("unbilled");
   }
 
   async function handleUpdateLesson(e: any) {
@@ -293,6 +295,7 @@ function Lessons() {
         hourly_rate: Number(hourlyRate),
         rate: calculatedRate,
         notes: notes || null,
+        billing_status: billingStatus,
       })
       .eq("id", editingLesson.id)
       .eq("coach_id", coachId)
@@ -312,6 +315,8 @@ function Lessons() {
     setLessons((prev) =>
       prev.map((lesson) => (lesson.id === editingLesson.id ? data : lesson))
     );
+
+    await syncInvoiceStatusFromLesson(editingLesson.id);
 
     closeEditLesson();
   }
@@ -436,6 +441,70 @@ function Lessons() {
     await pullDefaultRate();
     await loadCoachStudents();
     setShowAddLesson(true);
+  }
+
+  async function syncInvoiceStatusFromLesson(lessonId: string) {
+    const { data: invoiceLinks, error: linkError } = await supabase
+      .from("invoice_lessons")
+      .select(`
+        invoice_id,
+        invoices (
+          id,
+          coach_id
+        )
+      `)
+      .eq("lesson_id", lessonId);
+
+    if (linkError || !invoiceLinks || invoiceLinks.length === 0) {
+      return;
+    }
+
+    for (const link of invoiceLinks as any[]) {
+      const invoiceId = link.invoice_id;
+
+      const { data: attachedLessons, error: lessonsError } = await supabase
+        .from("invoice_lessons")
+        .select(`
+          lessons (
+            id,
+            billing_status
+          )
+        `)
+        .eq("invoice_id", invoiceId);
+
+      if (lessonsError || !attachedLessons) {
+        console.log("Invoice attached lessons error:", lessonsError);
+        continue;
+      }
+
+      const lessons = attachedLessons.map((row: any) => row.lessons);
+
+      const statuses = lessons.map(
+        (lesson: any) => lesson.billing_status || "unbilled"
+      );
+
+      let invoiceStatus = "unbilled";
+
+      if (statuses.length > 0 && statuses.every((status) => status === "paid")) {
+        invoiceStatus = "paid";
+      } else if (
+        statuses.length > 0 &&
+        statuses.every((status) => status === "billed")
+      ) {
+        invoiceStatus = "billed";
+      } else if (statuses.some((status) => status === "unbilled")) {
+        invoiceStatus = "unbilled";
+      } else {
+        invoiceStatus = "billed";
+      }
+
+      await supabase
+        .from("invoices")
+        .update({
+          status: invoiceStatus,
+        })
+        .eq("id", invoiceId);
+    }
   }
   
 
@@ -838,6 +907,19 @@ function Lessons() {
                   onChange={(e) => setDurationMinutes(e.target.value.replace(/\D/g, ""))}
                   required
                 />
+              </div>
+
+              <div className="input-block">
+                <label>Billing Status</label>
+
+                <select
+                  value={billingStatus}
+                  onChange={(e) => setBillingStatus(e.target.value)}
+                >
+                  <option value="unbilled">Unbilled</option>
+                  <option value="billed">Billed</option>
+                  <option value="paid">Paid</option>
+                </select>
               </div>
 
               <div className="input-block">

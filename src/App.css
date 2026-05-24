@@ -1856,6 +1856,17 @@ textarea:focus {
   background: #fecaca;
 }
 
+.add-lesson-form select {
+  width: 100%;
+  height: 50px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--main-text);
+  padding: 0 15px;
+  font-size: 16px;
+}
+
 /* STUDENTS SPECIFIC PAGE */
 
 .students-row {
@@ -2236,6 +2247,395 @@ textarea:focus {
   color: var(--secondary-text);
   font-size: 13px;
   margin-top: 4px;
+}
+
+/* ADD INVOICE POPUP */
+
+.invoices-add-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(15, 23, 42, 0.35);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.invoices-add-sheet {
+  width: 100%;
+  max-width: 520px;
+  max-height: 92vh;
+  background: var(--card-bg);
+  border-top-left-radius: 32px;
+  border-top-right-radius: 32px;
+  padding: 24px 20px 30px;
+  box-sizing: border-box;
+  animation: lessonSheetUp 0.25s ease forwards;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  transition:
+    max-height 0.22s ease,
+    padding 0.22s ease;
+}
+
+.invoice-readonly-number {
+  width: 100%;
+  margin-bottom: 0px;
+}
+
+.invoice-readonly-number span {
+  display: block;
+  color: var(--main-text);
+  font-size: 18px;
+  margin-bottom: 8px;
+  padding-left: 2px;
+}
+
+.invoice-readonly-number strong {
+  display: block;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--secondary-text);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  box-sizing: border-box;
+}
+
+.invoices-add-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.invoices-add-header h2 {
+  color: var(--main-text);
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.invoices-add-header button {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--main-bg);
+  color: var(--main-text);
+  font-size: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.invoices-add-form {
+  width: 100%;
+  min-width: 0;
+  gap: 16px;
+}
+
+.invoices-add-form .input-block {
+  width: 100%;
+  min-width: 0;
+}
+
+.invoices-add-form select,
+.invoices-add-form input,
+.invoices-add-form textarea {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.invoices-add-form select {
+  height: 50px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--main-text);
+  padding: 0 15px;
+  font-size: 16px;
+}
+
+.invoice-calendar-floating.closing {
+  animation: invoiceCalendarCollapse 0.22s ease forwards;
+}
+
+@keyframes invoiceCalendarCollapse {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 420px;
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(8px);
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-top: 0;
+  }
+}
+
+.invoices-delete-btn {
+  width: 100%;
+  margin-top: 4px;
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.invoices-delete-btn:hover {
+  background: #fecaca;
+}
+
+/* DATE RANGE */
+
+.invoice-date-range-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.invoice-date-range-btn {
+  width: 100%;
+  height: 50px;
+  margin: 0;
+  padding: 0 15px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--main-text);
+  text-align: left;
+  font-size: 16px;
+  font-weight: 400;
+  box-sizing: border-box;
+}
+
+/* FLOATING CALENDAR */
+
+.invoice-calendar-floating {
+  width: 100%;
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 22px;
+  border: 1px solid var(--border);
+  background: white;
+  box-sizing: border-box;
+  box-shadow:
+    0 10px 24px rgba(15, 23, 42, 0.08),
+    0 4px 12px rgba(15, 23, 42, 0.04);
+  animation: invoiceCalendarExpand 0.22s ease;
+}
+
+@keyframes invoiceCalendarExpand {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+.invoice-calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.invoice-calendar-header button {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  background: #eef2ff;
+  color: var(--primary-purple);
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.invoice-calendar-header strong {
+  color: var(--main-text);
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.invoice-calendar-weekdays,
+.invoice-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+
+.invoice-calendar-weekdays {
+  margin-bottom: 8px;
+}
+
+.invoice-calendar-weekdays span {
+  text-align: center;
+  color: var(--secondary-text);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.invoice-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+.invoice-calendar-day {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+
+  margin: 0 auto;
+  padding: 0;
+
+  border-radius: 50%;
+  background: var(--input-bg);
+  color: var(--main-text);
+
+  font-size: 11px;
+  font-weight: 600;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.invoice-calendar-day:disabled {
+  opacity: 0;
+}
+
+.invoice-calendar-day.selected {
+  background: var(--primary-purple);
+  color: white;
+}
+
+.invoice-calendar-day.in-range {
+  background: #eef2ff;
+  color: var(--primary-purple);
+}
+
+/* LESSON PICKER */
+
+.invoice-lessons-section {
+  width: 100%;
+  min-width: 0;
+}
+
+.invoice-lessons-section h3 {
+  color: var(--main-text);
+  font-size: 20px;
+  font-weight: 650;
+  margin-bottom: 12px;
+}
+
+.invoice-lessons-picker {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.invoice-lesson-option {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: auto;
+  margin: 0;
+  padding: 14px 15px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--main-text);
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+}
+
+.invoice-lesson-option.selected {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+
+.invoice-lesson-option > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.invoice-lesson-option strong {
+  display: block;
+  font-size: 15px;
+  color: var(--main-text);
+}
+
+.invoice-lesson-option span {
+  display: block;
+  font-size: 13px;
+  color: var(--secondary-text);
+  margin-top: 4px;
+}
+
+.invoice-lesson-check {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  margin: 0;
+  border-radius: 50%;
+  background: white;
+  color: var(--primary-purple) !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+/* BUTTONS */
+
+.invoice-load-lessons-btn,
+.invoices-save-btn {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.billing-status.unbilled {
+  color: #dc2626;
+}
+
+.billing-status.pending {
+  color: var(--primary-purple);
+}
+
+.billing-status.paid {
+  color: #16a34a;
+}
+
+.billing-status.billed {
+  color: #2563eb;
 }
 
 /* COMING SOON PAGE */

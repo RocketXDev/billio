@@ -2429,6 +2429,32 @@ textarea:focus {
   font-size: 16px;
 }
 
+.invoices-add-sheet.student-picker-open {
+  max-height: 96vh;
+  transform: translateY(-70px);
+  transition: transform 0.22s ease, max-height 0.22s ease;
+}
+
+.invoices-add-sheet {
+  transition: transform 0.22s ease, max-height 0.22s ease;
+}
+
+.student-search-block {
+  position: relative;
+  z-index: 20;
+}
+
+.invoice-student-dropdown {
+  position: relative;
+  top: auto;
+  left: auto;
+  width: 100%;
+  max-height: 260px;
+  margin-top: 10px;
+  overflow-y: auto;
+  z-index: 80;
+}
+
 .invoice-calendar-floating.closing {
   animation: invoiceCalendarCollapse 0.22s ease forwards;
 }

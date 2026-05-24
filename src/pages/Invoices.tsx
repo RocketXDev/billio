@@ -36,6 +36,7 @@ function Invoices() {
   const [rangeStart, setRangeStart] = useState("");
   const [rangeEnd, setRangeEnd] = useState("");
   const [isClosingCalendar, setIsClosingCalendar] = useState(false);
+  const [showStudentPicker, setShowStudentPicker] = useState(false);
 
   // Invoices Editing
   const [showEditInvoice, setShowEditInvoice] = useState(false);
@@ -340,6 +341,7 @@ function Invoices() {
     setInvoiceLessons([]);
     setSelectedLessonIds([]);
     setShowDateRangePicker(false);
+    setShowStudentPicker(false);
   }
 
   async function openEditInvoice(invoice: any) {
@@ -757,7 +759,9 @@ function Invoices() {
             onClick={closeAddInvoice}
           >
             <div
-              className="invoices-add-sheet"
+              className={`invoices-add-sheet ${
+                showStudentPicker ? "student-picker-open" : ""
+              }`}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="invoices-add-header">
@@ -768,20 +772,42 @@ function Invoices() {
               </div>
 
               <form onSubmit={handleCreateInvoice} className="invoices-add-form">
-                <div className="input-block">
+                <div className="input-block student-search-block">
                   <label>Student</label>
-                  <select
-                    value={selectedStudentId}
-                    onChange={(e) => setSelectedStudentId(e.target.value)}
-                    required
-                  >
-                    <option value="">Select Student</option>
-                    {students.map((link: any) => (
-                      <option key={link.student_id} value={link.student_id}>
-                        {link.students?.student_name}
-                      </option>
-                    ))}
-                  </select>
+
+                  <input
+                    type="text"
+                    className="invoice-date-range-btn"
+                    value={
+                      selectedStudentId
+                        ? students.find((link: any) => link.student_id === selectedStudentId)
+                            ?.students?.student_name || ""
+                        : ""
+                    }
+                    placeholder="Select student"
+                    readOnly
+                    onClick={() => setShowStudentPicker(true)}
+                  />
+
+                  {showStudentPicker && (
+                    <div className="student-suggestions invoice-student-dropdown">
+                      {students.map((link: any) => (
+                        <button
+                          key={link.student_id}
+                          type="button"
+                          className="student-suggestion"
+                          onClick={() => {
+                            setSelectedStudentId(link.student_id);
+                            setShowStudentPicker(false);
+                            setInvoiceLessons([]);
+                            setSelectedLessonIds([]);
+                          }}
+                        >
+                          {link.students?.student_name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="input-block invoice-date-range-wrapper">
                   <label>Date Range</label>

@@ -904,7 +904,7 @@ function Invoices() {
                                   <span>
                                     {lesson.start_time?.slice(0, 5)} •{" "}
                                     <b className={`billing-status ${billingStatus}`}>
-                                      {billingStatus}
+                                      {billingStatus.charAt(0).toUpperCase() + billingStatus.slice(1)}
                                     </b>
                                   </span>
                                 </div>
@@ -1018,7 +1018,7 @@ function Invoices() {
                               <span>
                                 {lesson.start_time?.slice(0, 5)} •{" "}
                                 <b className={`billing-status ${billingStatus}`}>
-                                  {billingStatus}
+                                  {billingStatus.charAt(0).toUpperCase() + billingStatus.slice(1)}
                                 </b>
                               </span>
                             </div>

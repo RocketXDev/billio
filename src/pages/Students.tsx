@@ -883,7 +883,11 @@ function Students() {
                     <div key={invoice.id} className="students-detail-row">
                       <div>
                         <strong>{invoice.invoice_number || "Invoice"}</strong>
-                        <span>{invoice.status || "No status"}</span>
+                        <span>
+                          {invoice.status
+                            ? invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)
+                            : "No status"}
+                        </span>
                       </div>
 
                       <strong>${Number(invoice.total || 0).toFixed(2)}</strong>

@@ -635,44 +635,51 @@ function Lessons() {
     resetLessonForm();
   }
 
-  function getCalendarWeekDays() {
-  const selected = new Date(`${selectedCalendarDate}T00:00:00`);
-  const dayOfWeek = selected.getDay();
-  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  function getCalendarMonthDays() {
+    const selected = new Date(`${selectedCalendarDate}T00:00:00`);
 
-  const monday = new Date(selected);
-  monday.setDate(selected.getDate() + mondayOffset);
+    const year = selected.getFullYear();
+    const month = selected.getMonth();
 
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + index);
+    const firstDayOfMonth = new Date(year, month, 1);
+    const startDay = firstDayOfMonth.getDay();
 
-    const full = getLocalDateString(date);
+    const calendarStart = new Date(firstDayOfMonth);
+    calendarStart.setDate(firstDayOfMonth.getDate() - startDay);
 
-    const dayLessons = lessons.filter(
-      (lesson) => lesson.lesson_date === full
-    );
+    return Array.from({ length: 42 }, (_, index) => {
+      const date = new Date(calendarStart);
+      date.setDate(calendarStart.getDate() + index);
 
-    return {
-      full,
-      dayName: date.toLocaleDateString("en-US", { weekday: "short" }),
-      dayNumber: date.getDate(),
-      lessons: dayLessons,
-    };
-  });
+      const full = getLocalDateString(date);
+
+      return {
+        full,
+        dayNumber: date.getDate(),
+        isCurrentMonth: date.getMonth() === month,
+        lessons: lessons.filter((lesson) => lesson.lesson_date === full),
+      };
+    });
   }
 
   function changeCalendarMonth(direction: "prev" | "next") {
     const current = new Date(`${selectedCalendarDate}T00:00:00`);
-
-    current.setMonth(
-      current.getMonth() + (direction === "next" ? 1 : -1)
-    );
+    current.setDate(1);
+    current.setMonth(current.getMonth() + (direction === "next" ? 1 : -1));
 
     setSelectedCalendarDate(getLocalDateString(current));
   }
 
-  const calendarWeekDays = getCalendarWeekDays();
+  function changeCalendarYear(direction: "prev" | "next") {
+    const current = new Date(`${selectedCalendarDate}T00:00:00`);
+    current.setFullYear(current.getFullYear() + (direction === "next" ? 1 : -1));
+
+    setSelectedCalendarDate(getLocalDateString(current));
+  }
+
+const calendarMonthDays = getCalendarMonthDays();
+
+const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   const selectedCalendarLessons = lessons.filter(
     (lesson) => lesson.lesson_date === selectedCalendarDate
@@ -730,37 +737,39 @@ function Lessons() {
             {viewMode === "calendar" && (
               <div className="calendar-view">
                 <div className="calendar-top">
-                  <button
-                    type="button"
-                    onClick={() => changeCalendarMonth("prev")}
-                  >
+                  <button type="button" onClick={() => changeCalendarYear("prev")}>
+                    «
+                  </button>
+
+                  <button type="button" onClick={() => changeCalendarMonth("prev")}>
                     <FaChevronLeft />
                   </button>
 
                   <h2>{calendarMonthLabel}</h2>
 
-                  <button
-                    type="button"
-                    onClick={() => changeCalendarMonth("next")}
-                  >
+                  <button type="button" onClick={() => changeCalendarMonth("next")}>
                     <FaChevronRight />
+                  </button>
+
+                  <button type="button" onClick={() => changeCalendarYear("next")}>
+                    »
                   </button>
                 </div>
 
                 <div className="calendar-days">
-                  {calendarWeekDays.map((day) => (
-                    <span key={day.full}>{day.dayName}</span>
+                  {calendarWeekLabels.map((day) => (
+                    <span key={day}>{day}</span>
                   ))}
                 </div>
 
                 <div className="calendar-grid">
-                  {calendarWeekDays.map((day) => (
+                  {calendarMonthDays.map((day) => (
                     <button
                       key={day.full}
                       type="button"
                       className={`calendar-day-card ${
                         selectedCalendarDate === day.full ? "active" : ""
-                      }`}
+                      } ${!day.isCurrentMonth ? "muted" : ""}`}
                       onClick={() => setSelectedCalendarDate(day.full)}
                     >
                       <strong>{day.dayNumber}</strong>
@@ -768,10 +777,10 @@ function Lessons() {
                       {day.lessons.length > 0 && (
                         <>
                           <div className="calendar-lesson-dot purple-dot" />
-                          <p>
+                          {/* <p>
                             {day.lessons.length}{" "}
                             {day.lessons.length === 1 ? "lesson" : "lessons"}
-                          </p>
+                          </p> */}
                         </>
                       )}
                     </button>
@@ -779,15 +788,25 @@ function Lessons() {
                 </div>
 
                 <section className="calendar-detail-card">
-                  <h3>
-                    {new Date(`${selectedCalendarDate}T00:00:00`).toLocaleDateString(
-                      "en-US",
-                      {
-                        month: "long",
-                        day: "numeric",
-                      }
-                    )}
-                  </h3>
+                  <div className="calendar-detail-header">
+                   <h3>
+                      {new Date(`${selectedCalendarDate}T00:00:00`).toLocaleDateString(
+                        "en-US",
+                        {
+                          month: "long",
+                          day: "numeric",
+                          year: "numeric",
+                        }
+                      )}
+                    </h3>
+
+                    <span className="calendar-detail-count">
+                      {selectedCalendarLessons.length}{" "}
+                      {selectedCalendarLessons.length === 1
+                        ? "lesson"
+                        : "lessons"}
+                    </span>
+                  </div>
 
                   {selectedCalendarLessons.length === 0 ? (
                     <p className="empty-lessons">No lessons for this day.</p>
@@ -800,12 +819,11 @@ function Lessons() {
 
                         <div>
                           <strong>
-                            {lesson.students?.student_name || "Student"} •{" "} {formatTime(lesson.start_time)}
+                            {lesson.students?.student_name || "Student"} •{" "}
+                            {formatTime(lesson.start_time)}
                           </strong>
 
-                          <span>
-                            {lesson.duration_minutes} min
-                          </span>
+                          <span>{lesson.duration_minutes} min</span>
                         </div>
 
                         <button

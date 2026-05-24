@@ -2638,6 +2638,26 @@ textarea:focus {
   color: #2563eb;
 }
 
+.invoices-add-form input[type="date"] {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+
+  height: 50px;
+
+  box-sizing: border-box;
+
+  border-radius: 10px;
+  border: 1px solid var(--border);
+
+  background: var(--input-bg);
+  color: var(--main-text);
+
+  padding: 0 14px;
+
+  font-size: 16px;
+}
+
 /* COMING SOON PAGE */
 .coming-soon-page {
   width: 100%;

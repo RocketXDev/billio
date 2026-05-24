@@ -196,17 +196,10 @@ function Students() {
   }
 
   function closeEditStudent() {
-    setShowEditStudent(false);
-    setEditingStudent(null);
-
-    setStudentName("");
-    setEmail("");
-    setPhoneNumber("");
-    setParentName("");
-    setParentPhone("");
-    setActive(true);
-    setNotes("");
+    setShowAddStudent(false);
+    resetStudentForm();
   }
+
   function openEditLesson(lesson: any) {
     setEditingLesson(lesson);
 
@@ -219,6 +212,22 @@ function Students() {
 
     setShowEditLesson(true);
     setSelectedLessonActionId(null);
+  }
+
+  function resetStudentForm() {
+    setStudentName("");
+    setEmail("");
+    setPhoneNumber("");
+    setParentName("");
+    setParentPhone("");
+    setActive(true);
+    setNotes("");
+    setEditingStudent(null);
+  }
+
+  function closeAddStudent() {
+  setShowAddStudent(false);
+  resetStudentForm();
   }
 
   function closeEditLesson() {
@@ -510,7 +519,7 @@ function Students() {
       {showAddStudent && (
         <div
           className="students-add-overlay"
-          onClick={() => setShowAddStudent(false)}
+          onClick={closeAddStudent}
         >
           <div
             className="students-add-sheet"
@@ -518,7 +527,7 @@ function Students() {
           >
             <div className="students-add-header">
               <h2>Add Student</h2>
-              <button type="button" onClick={() => setShowAddStudent(false)}>
+              <button type="button" onClick={closeAddStudent}>
                 ×
               </button>
             </div>

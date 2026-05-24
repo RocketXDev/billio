@@ -45,6 +45,10 @@ function Dashboard() {
   const [showEditLesson, setShowEditLesson] = useState(false);
   const [editingLesson, setEditingLesson] = useState<any>(null);
 
+  // Invoices
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [editingInvoiceStatusId, setEditingInvoiceStatusId] = useState<string | null>(null);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -160,11 +164,13 @@ function Dashboard() {
           setShowOnboarding(true);
           await loadDashboardLessons(newCoach.id);
           await loadCoachStudents(newCoach.id);
+          await loadDashboardInvoices(coachData.id);
         }
         } else {
           setCoachId(coachData.id);
           await loadDashboardLessons(coachData.id);
           await loadCoachStudents(coachData.id);
+          await loadDashboardInvoices(coachData.id);
 
           if (!coachData.setup_completed) {
             setShowOnboarding(true);
@@ -573,6 +579,8 @@ function Dashboard() {
 
   async function handleDeleteLesson(lessonId: string) {
 
+    await cleanupInvoicesAfterLessonDelete(lessonId);
+
     const { error } = await supabase
       .from("lessons")
       .delete()
@@ -641,7 +649,7 @@ function Dashboard() {
   );
 
   const weekPendingInvoices = weekLessons.filter(
-    (lesson) => lesson.status === "pending"
+    (lesson) => lesson.status === "unbilled"
   );
   function getLessonStatus(lesson: any) {
     if (!lesson.lesson_date || !lesson.start_time) {
@@ -680,6 +688,194 @@ function Dashboard() {
       )
     : [];
 
+    const recentInvoices = [...invoices]
+      .sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() -
+          new Date(a.created_at).getTime()
+      )
+      .slice(0, 3);
+
+    const unpaidInvoices = invoices.filter(
+      (invoice) => invoice.status === "unbilled" || invoice.status === "billed"
+    );
+
+    const paidInvoices = invoices.filter(
+      (invoice) => invoice.status === "paid"
+    );
+
+    const totalUnpaid = unpaidInvoices.reduce(
+      (sum, invoice) => sum + Number(invoice.total || 0),
+      0
+    );
+
+    const totalPaid = paidInvoices.reduce(
+      (sum, invoice) => sum + Number(invoice.total || 0),
+      0
+    );
+
+    function formatStatus(status: string | null) {
+      if (!status) return "No status";
+
+      return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+
+  function getInvoiceStatusFromLessons(lessons: any[]) {
+    if (lessons.length === 0) return "unbilled";
+
+    const statuses = lessons.map(
+      (lesson) => lesson.billing_status || "unbilled"
+    );
+
+    if (statuses.every((status) => status === "paid")) {
+      return "paid";
+    }
+
+    if (statuses.every((status) => status === "billed")) {
+      return "billed";
+    }
+
+    if (statuses.some((status) => status === "unbilled")) {
+      return "unbilled";
+    }
+
+    return "billed";
+  }
+
+  async function cleanupInvoicesAfterLessonDelete(lessonId: string) {
+    if (!coachId) return;
+
+    const { data: invoiceLinks, error: linkError } = await supabase
+      .from("invoice_lessons")
+      .select("invoice_id")
+      .eq("lesson_id", lessonId);
+
+    if (linkError) {
+      console.log("Find invoice links error:", linkError);
+      return;
+    }
+
+    if (!invoiceLinks || invoiceLinks.length === 0) return;
+
+    for (const link of invoiceLinks) {
+      const invoiceId = link.invoice_id;
+
+      const { data: remainingLinks, error: remainingError } = await supabase
+        .from("invoice_lessons")
+        .select(`
+          lesson_id,
+          lessons (
+            id,
+            rate,
+            billing_status
+          )
+        `)
+        .eq("invoice_id", invoiceId)
+        .neq("lesson_id", lessonId);
+
+      if (remainingError) {
+        console.log("Remaining invoice lessons error:", remainingError);
+        continue;
+      }
+
+      if (!remainingLinks || remainingLinks.length === 0) {
+        const { error: deleteInvoiceError } = await supabase
+          .from("invoices")
+          .delete()
+          .eq("id", invoiceId)
+          .eq("coach_id", coachId);
+
+        if (deleteInvoiceError) {
+          console.log("Delete empty invoice error:", deleteInvoiceError);
+        }
+
+        continue;
+      }
+
+      const remainingLessons = remainingLinks.map((row: any) => row.lessons);
+
+      const newTotal = remainingLessons.reduce(
+        (sum: number, lesson: any) => sum + Number(lesson.rate || 0),
+        0
+      );
+
+      const newStatus = getInvoiceStatusFromLessons(remainingLessons);
+
+      const { error: updateInvoiceError } = await supabase
+        .from("invoices")
+        .update({
+          subtotal: newTotal,
+          total: newTotal,
+          status: newStatus,
+        })
+        .eq("id", invoiceId)
+        .eq("coach_id", coachId);
+
+      if (updateInvoiceError) {
+        console.log("Update invoice after lesson delete error:", updateInvoiceError);
+      }
+    }
+  }
+
+  function resetLessonForm() {
+    setStudentName("");
+    setSelectedStudentId(null);
+    setLessonDate("");
+    setStartTime("");
+    setDurationMinutes("30");
+    setLessonType("");
+    setHourlyRate("");
+    setNotes("");
+    setEditingLesson(null);
+  }
+
+  function closeAddLesson() {
+    setShowAddLesson(false);
+    resetLessonForm();
+  }
+
+  async function loadDashboardInvoices(currentCoachId: string) {
+    const { data, error } = await supabase
+      .from("invoices")
+      .select(`
+        *,
+        students (
+          student_name
+        )
+      `)
+      .eq("coach_id", currentCoachId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.log("Dashboard invoices error:", error);
+      return;
+    }
+
+    setInvoices(data || []);
+  }
+
+  async function updateInvoiceStatusFromDashboard(invoiceId: string, newStatus: string) {
+    const { error } = await supabase
+      .from("invoices")
+      .update({ status: newStatus })
+      .eq("id", invoiceId)
+      .eq("coach_id", coachId);
+
+    if (error) {
+      console.log("Dashboard invoice status update error:", error);
+      return;
+    }
+
+    setInvoices((prev) =>
+      prev.map((invoice) =>
+        invoice.id === invoiceId
+          ? { ...invoice, status: newStatus }
+          : invoice
+      )
+    );
+
+    setEditingInvoiceStatusId(null);
+  }
 
   if (loading) {
     return (
@@ -911,16 +1107,44 @@ function Dashboard() {
           <section className="dashboard-section">
             <div className="section-title-row">
               <h3>Recent Invoices</h3>
-              <button>View all</button>
+
+              <button type="button" onClick={() => navigate("/invoices")}>
+                View all
+              </button>
             </div>
 
-            {weekPendingInvoices.length === 0 ? (
+            {recentInvoices.length === 0 ? (
               <p className="empty-lessons">
-                No pending invoices right now.
+                No invoices yet.
               </p>
             ) : (
-              <div className="recent-invoices-card">
-              </div>
+              <>
+                {recentInvoices.map((invoice) => (
+                  <div key={invoice.id} className="invoice-card">
+                    <div className="invoice-avatar">
+                      {invoice.students?.student_name
+                        ? invoice.students.student_name.charAt(0).toUpperCase()
+                        : "I"}
+                    </div>
+
+                    <div className="invoice-info">
+                      <strong>{invoice.students?.student_name || "Student"}</strong>
+                      <span>{invoice.invoice_number || "Invoice"}</span>
+                    </div>
+
+                    <div className="invoice-price">
+                      {formatMoney(invoice.total)}
+                    </div>
+                    <div className={`invoice-status ${invoice.status || "unbilled"}`}>
+                      {formatStatus(invoice.status)}
+                    </div>
+                    <FaChevronRight
+                      className="row-arrow"
+                      onClick={() => navigate("/invoices")}
+                    />
+                  </div>
+                ))}
+              </>
             )}
           </section>
 
@@ -1184,7 +1408,7 @@ function Dashboard() {
       {showAddLesson && (
         <div
           className="add-lesson-overlay"
-          onClick={() => setShowAddLesson(false)}
+          onClick={closeAddLesson}
         >
           <div
             className="add-lesson-sheet"
@@ -1192,7 +1416,7 @@ function Dashboard() {
           >
             <div className="add-lesson-header">
               <h2>Add Lesson</h2>
-              <button type="button" onClick={() => setShowAddLesson(false)}>
+              <button type="button" onClick={closeAddLesson}>
                 ×
               </button>
             </div>

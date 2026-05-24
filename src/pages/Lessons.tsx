@@ -323,6 +323,8 @@ function Lessons() {
 
   async function handleDeleteLesson(lessonId: string) {
 
+    await cleanupInvoicesAfterLessonDelete(lessonId);
+
     const { error } = await supabase
       .from("lessons")
       .delete()
@@ -505,6 +507,121 @@ function Lessons() {
         })
         .eq("id", invoiceId);
     }
+  }
+
+  function getInvoiceStatusFromLessons(lessons: any[]) {
+    if (lessons.length === 0) return "unbilled";
+
+    const statuses = lessons.map(
+      (lesson) => lesson.billing_status || "unbilled"
+    );
+
+    if (statuses.every((status) => status === "paid")) {
+      return "paid";
+    }
+
+    if (statuses.every((status) => status === "billed")) {
+      return "billed";
+    }
+
+    if (statuses.some((status) => status === "unbilled")) {
+      return "unbilled";
+    }
+
+    return "billed";
+  }
+
+  async function cleanupInvoicesAfterLessonDelete(lessonId: string) {
+    if (!coachId) return;
+
+    const { data: invoiceLinks, error: linkError } = await supabase
+      .from("invoice_lessons")
+      .select("invoice_id")
+      .eq("lesson_id", lessonId);
+
+    if (linkError) {
+      console.log("Find invoice links error:", linkError);
+      return;
+    }
+
+    if (!invoiceLinks || invoiceLinks.length === 0) return;
+
+    for (const link of invoiceLinks) {
+      const invoiceId = link.invoice_id;
+
+      const { data: remainingLinks, error: remainingError } = await supabase
+        .from("invoice_lessons")
+        .select(`
+          lesson_id,
+          lessons (
+            id,
+            rate,
+            billing_status
+          )
+        `)
+        .eq("invoice_id", invoiceId)
+        .neq("lesson_id", lessonId);
+
+      if (remainingError) {
+        console.log("Remaining invoice lessons error:", remainingError);
+        continue;
+      }
+
+      if (!remainingLinks || remainingLinks.length === 0) {
+        const { error: deleteInvoiceError } = await supabase
+          .from("invoices")
+          .delete()
+          .eq("id", invoiceId)
+          .eq("coach_id", coachId);
+
+        if (deleteInvoiceError) {
+          console.log("Delete empty invoice error:", deleteInvoiceError);
+        }
+
+        continue;
+      }
+
+      const remainingLessons = remainingLinks.map((row: any) => row.lessons);
+
+      const newTotal = remainingLessons.reduce(
+        (sum: number, lesson: any) => sum + Number(lesson.rate || 0),
+        0
+      );
+
+      const newStatus = getInvoiceStatusFromLessons(remainingLessons);
+
+      const { error: updateInvoiceError } = await supabase
+        .from("invoices")
+        .update({
+          subtotal: newTotal,
+          total: newTotal,
+          status: newStatus,
+        })
+        .eq("id", invoiceId)
+        .eq("coach_id", coachId);
+
+      if (updateInvoiceError) {
+        console.log("Update invoice after lesson delete error:", updateInvoiceError);
+      }
+    }
+  }
+
+  function resetLessonForm() {
+    setStudentName("");
+    setSelectedStudentId(null);
+    setLessonDate("");
+    setStartTime("");
+    setDurationMinutes("30");
+    setLessonType("");
+    setHourlyRate("");
+    setNotes("");
+    setBillingStatus("unbilled");
+    setEditingLesson(null);
+  }
+
+  function closeAddLesson() {
+    setShowAddLesson(false);
+    resetLessonForm();
   }
   
 
@@ -720,14 +837,12 @@ function Lessons() {
       </div>
 
       {showAddLesson && (
-        <div className="add-lesson-overlay" onClick={() => {
-          setShowAddLesson(false);
-          setShowEditLesson(false);
-        }}>
+        <div className="add-lesson-overlay" onClick={
+          closeAddLesson}>
           <div className="add-lesson-sheet" onClick={(e) => e.stopPropagation()}>
             <div className="add-lesson-header">
               <h2>Add Lesson</h2>
-              <button type="button" onClick={() => setShowAddLesson(false)}>
+              <button type="button" onClick={closeAddLesson}>
                 ×
               </button>
             </div>
@@ -851,10 +966,7 @@ function Lessons() {
         </div>
       )}
       {showEditLesson && editingLesson && (
-        <div className="add-lesson-overlay" onClick={() => {
-          setShowAddLesson(false);
-          setShowEditLesson(false);
-        }}>
+        <div className="add-lesson-overlay" onClick={closeEditLesson}>
           <div className="add-lesson-sheet" onClick={(e) => e.stopPropagation()}>
             <div className="add-lesson-header">
               <h2>Edit Lesson</h2>

@@ -1224,6 +1224,7 @@ textarea:focus {
   background-color: var(--border);
 }
 
+
 /* LESSONS, STUDENTS, INVOICES COMMON PAGE ELEMENTS */
 
 .lessons-page, .students-page, .invoices-page {
@@ -2168,7 +2169,7 @@ textarea:focus {
   display: block;
   color: var(--main-text);
   font-size: 22px;
-  font-weight: 750;
+  font-weight: 600;
   margin-top: 6px;
 }
 

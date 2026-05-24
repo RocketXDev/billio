@@ -144,16 +144,16 @@ function Invoices() {
       : invoices.filter((invoice) => invoice.status === selectedFilter);
 
   const unpaidThisWeek = invoices
-    .filter((invoice) => invoice.status === "pending" || invoice.status === "billed")
+    .filter((invoice) => invoice.status === "unbilled" || invoice.status === "billed")
     .reduce((total, invoice) => total + Number(invoice.total || 0), 0);
 
   const paidThisMonth = invoices
     .filter((invoice) => invoice.status === "paid")
     .reduce((total, invoice) => total + Number(invoice.total || 0), 0);
 
-  const draftInvoices = invoices.filter((invoice) => invoice.status === null);
+  const draftInvoices = invoices.filter((invoice) => invoice.status === "unbilled");
 
-  const pendingInvoices = invoices.filter((invoice) => invoice.status === "pending");
+  const pendingInvoices = invoices.filter((invoice) => invoice.status === "billed");
 
   async function openAddInvoice() {
     if (!coachId) return;
@@ -653,14 +653,14 @@ function Invoices() {
 
               <div className="invoice-stat-card orange-stat">
                 <div className="invoice-stat-icon"><FaReceipt /></div>
-                <span>Draft invoices</span>
+                <span>Unbilled invoices</span>
                 <strong>{draftInvoices.length}</strong>
                 <p>{formatMoney(draftInvoices.reduce((t, i) => t + Number(i.total || 0), 0))}</p>
               </div>
 
               <div className="invoice-stat-card red-stat">
                 <div className="invoice-stat-icon"><FaClock /></div>
-                <span>Pending</span>
+                <span>Billed Invoices</span>
                 <strong>{pendingInvoices.length}</strong>
                 <p>{formatMoney(pendingInvoices.reduce((t, i) => t + Number(i.total || 0), 0))}</p>
               </div>
@@ -702,7 +702,10 @@ function Invoices() {
                         </span>
 
                         <span>
-                            {invoice.status || "No status"}
+                            {invoice.status
+                            ? invoice.status.charAt(0).toUpperCase() +
+                              invoice.status.slice(1)
+                            : "No status"}
                         </span>
                         </div>
 

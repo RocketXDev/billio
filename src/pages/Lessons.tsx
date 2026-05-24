@@ -17,7 +17,7 @@ import { supabase } from "../lib/supabaseClient";
 import { useNavigate } from "react-router-dom";
 
 function Lessons() {
-  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [showAddLesson, setShowAddLesson] = useState(false);
   const [lessons, setLessons] = useState<any[]>([]);
   const [coachId, setCoachId] = useState("");
@@ -38,6 +38,17 @@ function Lessons() {
   const [coachStudents, setCoachStudents] = useState<any[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [billingStatus, setBillingStatus] = useState("unbilled");
+
+  // Calendar 
+  function getLocalDateString(date: Date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  }
+
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState(getLocalDateString(new Date()));
 
   const navigate = useNavigate();
 
@@ -623,6 +634,56 @@ function Lessons() {
     setShowAddLesson(false);
     resetLessonForm();
   }
+
+  function getCalendarWeekDays() {
+  const selected = new Date(`${selectedCalendarDate}T00:00:00`);
+  const dayOfWeek = selected.getDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+
+  const monday = new Date(selected);
+  monday.setDate(selected.getDate() + mondayOffset);
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + index);
+
+    const full = getLocalDateString(date);
+
+    const dayLessons = lessons.filter(
+      (lesson) => lesson.lesson_date === full
+    );
+
+    return {
+      full,
+      dayName: date.toLocaleDateString("en-US", { weekday: "short" }),
+      dayNumber: date.getDate(),
+      lessons: dayLessons,
+    };
+  });
+  }
+
+  function changeCalendarMonth(direction: "prev" | "next") {
+    const current = new Date(`${selectedCalendarDate}T00:00:00`);
+
+    current.setMonth(
+      current.getMonth() + (direction === "next" ? 1 : -1)
+    );
+
+    setSelectedCalendarDate(getLocalDateString(current));
+  }
+
+  const calendarWeekDays = getCalendarWeekDays();
+
+  const selectedCalendarLessons = lessons.filter(
+    (lesson) => lesson.lesson_date === selectedCalendarDate
+  );
+
+  const calendarMonthLabel = new Date(
+    `${selectedCalendarDate}T00:00:00`
+  ).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
   
 
   return (
@@ -644,18 +705,9 @@ function Lessons() {
             <div className="lessons-view-toggle">
             <div
                 className={`lessons-toggle-slider ${
-                viewMode === "calendar" ? "lessons-toggle-slider-right" : ""
+                viewMode === "list" ? "lessons-toggle-slider-right" : ""
                 }`}
             />
-
-            <button
-                type="button"
-                className={`lessons-toggle-option ${viewMode === "list" ? "active" : ""}`}
-                onClick={() => setViewMode("list")}
-            >
-                <FaList />
-                List
-            </button>
 
             <button
                 type="button"
@@ -665,8 +717,110 @@ function Lessons() {
                 <FaCalendarAlt />
                 Calendar
             </button>
-            </div>
 
+            <button
+                type="button"
+                className={`lessons-toggle-option ${viewMode === "list" ? "active" : ""}`}
+                onClick={() => setViewMode("list")}
+            >
+                <FaList />
+                List
+            </button>
+            </div>
+            {viewMode === "calendar" && (
+              <div className="calendar-view">
+                <div className="calendar-top">
+                  <button
+                    type="button"
+                    onClick={() => changeCalendarMonth("prev")}
+                  >
+                    <FaChevronLeft />
+                  </button>
+
+                  <h2>{calendarMonthLabel}</h2>
+
+                  <button
+                    type="button"
+                    onClick={() => changeCalendarMonth("next")}
+                  >
+                    <FaChevronRight />
+                  </button>
+                </div>
+
+                <div className="calendar-days">
+                  {calendarWeekDays.map((day) => (
+                    <span key={day.full}>{day.dayName}</span>
+                  ))}
+                </div>
+
+                <div className="calendar-grid">
+                  {calendarWeekDays.map((day) => (
+                    <button
+                      key={day.full}
+                      type="button"
+                      className={`calendar-day-card ${
+                        selectedCalendarDate === day.full ? "active" : ""
+                      }`}
+                      onClick={() => setSelectedCalendarDate(day.full)}
+                    >
+                      <strong>{day.dayNumber}</strong>
+
+                      {day.lessons.length > 0 && (
+                        <>
+                          <div className="calendar-lesson-dot purple-dot" />
+                          <p>
+                            {day.lessons.length}{" "}
+                            {day.lessons.length === 1 ? "lesson" : "lessons"}
+                          </p>
+                        </>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                <section className="calendar-detail-card">
+                  <h3>
+                    {new Date(`${selectedCalendarDate}T00:00:00`).toLocaleDateString(
+                      "en-US",
+                      {
+                        month: "long",
+                        day: "numeric",
+                      }
+                    )}
+                  </h3>
+
+                  {selectedCalendarLessons.length === 0 ? (
+                    <p className="empty-lessons">No lessons for this day.</p>
+                  ) : (
+                    selectedCalendarLessons.map((lesson) => (
+                      <div key={lesson.id} className="calendar-detail-row">
+                        <div className="calendar-time-icon">
+                          <FaClock />
+                        </div>
+
+                        <div>
+                          <strong>
+                            {lesson.students?.student_name || "Student"} •{" "} {formatTime(lesson.start_time)}
+                          </strong>
+
+                          <span>
+                            {lesson.duration_minutes} min
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          className="lesson-edit-btn"
+                          onClick={() => openEditLesson(lesson)}
+                        >
+                          <FaEdit />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </section>
+              </div>
+            )}
             {viewMode === "list" && (
               <div className="lessons-list-view">
                 {lessons.length === 0 ? (
@@ -731,80 +885,6 @@ function Lessons() {
                   </>
                 )}
               </div>
-            )}
-            {viewMode === "calendar" && (
-            <div className="calendar-view">
-                <div className="calendar-top">
-                <button type="button">
-                    <FaChevronLeft />
-                </button>
-
-                <h2>May 2026</h2>
-
-                <button type="button">
-                    <FaChevronRight />
-                </button>
-                </div>
-
-                <div className="calendar-days">
-                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
-                    <span key={day}>{day}</span>
-                ))}
-                </div>
-
-                <div className="calendar-grid">
-                {[7, 8, 9, 10, 11, 12, 13].map((date) => (
-                    <div
-                    key={date}
-                    className={`calendar-day-card ${
-                        date === 9 ? "active" : ""
-                    }`}
-                    >
-                    <strong>{date}</strong>
-
-                    {date === 9 && (
-                        <>
-                        <div className="calendar-lesson-dot purple-dot" />
-                        <p>2 lessons</p>
-                        </>
-                    )}
-
-                    {date === 11 && (
-                        <>
-                        <div className="calendar-lesson-dot orange-dot" />
-                        <p>1 lesson</p>
-                        </>
-                    )}
-                    </div>
-                ))}
-                </div>
-
-                <section className="calendar-detail-card">
-                <h3>May 9</h3>
-
-                <div className="calendar-detail-row">
-                    <div className="calendar-time-icon">
-                    <FaClock />
-                    </div>
-
-                    <div>
-                    <strong>Anna Petrova</strong>
-                    <span>10:00 AM • Freestyle • 45 min</span>
-                    </div>
-                </div>
-
-                <div className="calendar-detail-row">
-                    <div className="calendar-time-icon">
-                    <FaClock />
-                    </div>
-
-                    <div>
-                    <strong>Alex Kim</strong>
-                    <span>2:00 PM • Jumps • 60 min</span>
-                    </div>
-                </div>
-                </section>
-            </div>
             )}
         </div>
 

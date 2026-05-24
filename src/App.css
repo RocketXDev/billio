@@ -1525,6 +1525,7 @@ textarea:focus {
   border: 1px solid var(--border);
   border-radius: 22px;
   padding: 18px;
+  margin-bottom: 18px;
 
   display: flex;
   align-items: center;
@@ -1541,38 +1542,76 @@ textarea:focus {
 .calendar-top button {
   width: 38px;
   height: 38px;
+  min-width: 38px;
   margin: 0;
+  padding: 0;
+
   border-radius: 50%;
   background: var(--main-bg);
   color: var(--main-text);
-  border: none;
-  font-size: 14px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  line-height: 1;
+}
+
+.calendar-top button svg {
+  display: block;
+}
+
+/* SCROLLABLE DATE STRIP */
+
+.calendar-days,
+.calendar-grid {
+  display: flex;
+  gap: 10px;
+
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  scrollbar-width: none;
+}
+
+.calendar-days::-webkit-scrollbar,
+.calendar-grid::-webkit-scrollbar {
+  display: none;
 }
 
 .calendar-days {
-  margin-top: 18px;
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  text-align: center;
-  color: var(--secondary-text);
-  font-size: 13px;
-  font-weight: 600;
+  margin-bottom: 8px;
+  padding: 0 2px;
 }
 
 .calendar-grid {
-  margin-top: 10px;
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 7px;
+  padding: 0 2px 4px;
+}
+
+.calendar-days span,
+.calendar-day-card {
+  min-width: 52px;
+  flex: 0 0 52px;
+}
+
+.calendar-days span {
+  text-align: center;
+  color: var(--secondary-text);
+  font-size: 12px;
+  font-weight: 650;
 }
 
 .calendar-day-card {
   min-height: 74px;
+  margin: 0;
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 10px 6px;
+  padding: 5px 6px;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .calendar-day-card.active {
@@ -1589,15 +1628,9 @@ textarea:focus {
 .calendar-day-card p {
   color: var(--secondary-text);
   font-size: 10px;
-  margin: 6px 0 0;
+  margin: 5px 0 0;
 }
 
-.calendar-lesson-dot {
-  width: 8px;
-  height: 8px;
-  margin: 7px auto 0;
-  border-radius: 50%;
-}
 
 .purple-dot {
   background: var(--primary-purple);
@@ -1607,7 +1640,12 @@ textarea:focus {
   background: #f59e0b;
 }
 
+/* LESSON DETAIL CARD */
+
 .calendar-detail-card {
+  width: 100%;
+  box-sizing: border-box;
+
   margin-top: 24px;
   background: var(--card-bg);
   border: 1px solid var(--border);
@@ -1622,15 +1660,24 @@ textarea:focus {
 }
 
 .calendar-detail-row {
-  display: flex;
-  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+
+  display: grid;
+  grid-template-columns: 42px 1fr auto;
   gap: 14px;
-  padding: 14px 0;
+  align-items: center;
+
+  padding: 16px 0;
   border-bottom: 1px solid var(--border);
 }
 
 .calendar-detail-row:last-child {
   border-bottom: none;
+}
+
+.calendar-detail-row > div:nth-child(2) {
+  min-width: 0;
 }
 
 .calendar-time-icon {

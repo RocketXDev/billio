@@ -645,11 +645,11 @@ function Dashboard() {
     0
   );
   const weekUnbilledLessons = weekLessons.filter(
-  (lesson) => lesson.billed !== true
+    (lesson) => lesson.billing_status === "unbilled" || !lesson.billing_status
   );
 
-  const weekPendingInvoices = weekLessons.filter(
-    (lesson) => lesson.status === "unbilled"
+  const weekPendingInvoices = invoices.filter(
+    (invoice) => invoice.status === "unbilled"
   );
   function getLessonStatus(lesson: any) {
     if (!lesson.lesson_date || !lesson.start_time) {
@@ -958,9 +958,7 @@ function Dashboard() {
 
               <div>
                 <strong>  {
-                  weekLessons.filter(
-                    (lesson) => getLessonStatus(lesson) === "upcoming"
-                  ).length
+                  upcomingTodayLessons.length
                 }</strong>
                 <p>Upcoming</p>
               </div>

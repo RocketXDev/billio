@@ -1655,25 +1655,40 @@ textarea:focus {
 .calendar-detail-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: 12px;
+  gap: 14px;
+  margin-bottom: 18px;
+  align-items: flex-start;
 }
 
 .calendar-detail-header h3 {
   margin: 0;
-  text-align: left;
 }
 
 .calendar-detail-count {
-  padding: 8px 12px;
-  border-radius: 999px;
-
-  background: #eef2ff;
-  color: var(--primary-purple);
-
+  display: block;
+  margin-top: 4px;
+  color: var(--secondary-text);
   font-size: 13px;
-  font-weight: 650;
-  white-space: nowrap;
+}
+
+.calendar-detail-header button.calendar-add-lesson-btn {
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  max-width: 42px !important;
+  flex: 0 0 42px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none;
+  border-radius: 50%;
+  background: var(--primary-purple);
+  color: white;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+}
+.calendar-add-lesson-btn svg {
+  font-size: 18px;
 }
 
 .calendar-detail-row {

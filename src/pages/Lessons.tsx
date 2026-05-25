@@ -788,8 +788,9 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                 </div>
 
                 <section className="calendar-detail-card">
-                  <div className="calendar-detail-header">
-                   <h3>
+                <div className="calendar-detail-header">
+                  <div>
+                    <h3>
                       {new Date(`${selectedCalendarDate}T00:00:00`).toLocaleDateString(
                         "en-US",
                         {
@@ -808,7 +809,15 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                     </span>
                   </div>
 
-                  {selectedCalendarLessons.length === 0 ? (
+                  <button
+                    type="button"
+                    className="calendar-add-lesson-btn"
+                    onClick={openAddLesson}
+                  >
+                    <FaPlus />
+                  </button>
+                </div>
+                {selectedCalendarLessons.length === 0 ? (
                     <p className="empty-lessons">No lessons for this day.</p>
                   ) : (
                     selectedCalendarLessons.map((lesson) => (
@@ -822,8 +831,14 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                             {lesson.students?.student_name || "Student"} •{" "}
                             {formatTime(lesson.start_time)}
                           </strong>
-
-                          <span>{lesson.duration_minutes} min</span>
+                          <span>
+                            {lesson.duration_minutes} min
+                            {lesson.lesson_type
+                              ? ` • ${lesson.lesson_type}`
+                              : ""}
+                            {" • $"}
+                            {formatMoney(lesson.rate)}
+                          </span>
                         </div>
 
                         <button

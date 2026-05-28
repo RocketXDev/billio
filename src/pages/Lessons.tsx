@@ -812,7 +812,8 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                   <button
                     type="button"
                     className="calendar-add-lesson-btn"
-                    onClick={openAddLesson}
+                    onClick={()=> {setLessonDate(selectedCalendarDate);
+                    openAddLesson();}}
                   >
                     <FaPlus />
                   </button>

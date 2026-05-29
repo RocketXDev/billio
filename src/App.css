@@ -3016,8 +3016,13 @@ textarea:focus {
 }
 
 .custom-rate-row input {
-  font-size: 20px;
   height: 48px;
+  font-size: 16px;
+}
+
+.custom-rate-row input::placeholder {
+  font-size: 16px;
+  color: var(--secondary-text);
 }
 
 .custom-rate-row button {

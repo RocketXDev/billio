@@ -36,6 +36,7 @@ function Profile() {
   const [rateAmount, setRateAmount] = useState("");
 
   // Avatar related states
+  const [avatarPath, setAvatarPath] = useState("");
   const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
   const [showCropper, setShowCropper] = useState(false);
@@ -88,6 +89,7 @@ function Profile() {
 
     setCoachId(coachData.id);
     setAvatarUrl(coachData.avatar_url || "");
+    setAvatarPath(coachData.avatar_path || "");
     setDefaultHourlyRate(
       coachData.default_hourly_rate ? String(coachData.default_hourly_rate) : ""
     );
@@ -194,24 +196,42 @@ function Profile() {
   }
 
   async function handleDeleteAvatar() {
-    if (!coachId || !avatarUrl) return;
+    if (!coachId || (!avatarPath && !avatarUrl)) return;
 
-    const path = avatarUrl.split("/coach-avatars/")[1];
+    let pathToDelete = avatarPath;
 
-    if (path) {
-      await supabase.storage
-        .from("coach-avatars")
-        .remove([path]);
+    if (!pathToDelete && avatarUrl) {
+      pathToDelete = decodeURIComponent(
+        avatarUrl.split("/coach-avatars/")[1] || ""
+      );
     }
 
-    await supabase
+    if (pathToDelete) {
+      const { error: storageError } = await supabase.storage
+        .from("coach-avatars")
+        .remove([pathToDelete]);
+
+      if (storageError) {
+        console.log("Storage delete error:", storageError);
+        return;
+      }
+    }
+
+    const { error: coachError } = await supabase
       .from("coaches")
       .update({
         avatar_url: null,
+        avatar_path: null,
       })
       .eq("id", coachId);
 
+    if (coachError) {
+      console.log("Coach update error:", coachError);
+      return;
+    }
+
     setAvatarUrl("");
+    setAvatarPath("");
   }
 
   function createImage(url: string): Promise<HTMLImageElement> {
@@ -288,10 +308,14 @@ function Profile() {
     const publicUrl = data.publicUrl;
 
     setAvatarUrl(publicUrl);
+    setAvatarPath(filePath);
 
     await supabase
       .from("coaches")
-      .update({ avatar_url: publicUrl })
+      .update({
+        avatar_url: publicUrl,
+        avatar_path: filePath,
+      })
       .eq("id", coachId);
 
     setShowCropper(false);

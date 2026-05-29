@@ -11,6 +11,7 @@ import {
   FaSave,
 } from "react-icons/fa";
 import { supabase } from "../lib/supabaseClient";
+import Cropper from "react-easy-crop";
 
 function Profile() {
   const navigate = useNavigate();
@@ -21,12 +22,26 @@ function Profile() {
   const [profileId, setProfileId] = useState("");
   const [coachId, setCoachId] = useState("");
 
+  const [avatarUrl, setAvatarUrl] = useState("");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [visibleName, setVisibleName] = useState("");
   const [bio, setBio] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [preferredCommunication, setPreferredCommunication] = useState("email");
+
+  const [defaultHourlyRate, setDefaultHourlyRate] = useState("");
+  const [customRates, setCustomRates] = useState<any[]>([]);
+  const [rateName, setRateName] = useState("");
+  const [rateAmount, setRateAmount] = useState("");
+
+  // Avatar related states
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
+  const [showCropper, setShowCropper] = useState(false);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
 
   useEffect(() => {
     loadProfile();
@@ -72,6 +87,11 @@ function Profile() {
     }
 
     setCoachId(coachData.id);
+    setAvatarUrl(coachData.avatar_url || "");
+    setDefaultHourlyRate(
+      coachData.default_hourly_rate ? String(coachData.default_hourly_rate) : ""
+    );
+    setCustomRates(coachData.custom_rates || []);
     setVisibleName(coachData.visible_name || "");
     setBio(coachData.bio || "");
     setPhoneNumber(coachData.phone_number || "");
@@ -110,6 +130,9 @@ function Profile() {
           bio: bio || null,
           phone_number: phoneNumber || null,
           preferred_communication: preferredCommunication,
+          default_hourly_rate: Number(defaultHourlyRate || 0),
+          custom_rates: customRates,
+          avatar_url: avatarUrl || null,
         })
         .eq("id", coachId);
 
@@ -121,6 +144,161 @@ function Profile() {
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  async function handleAvatarUpload(e: any) {
+    const file = e.target.files?.[0];
+
+    if (!file || !coachId) return;
+
+    const fileExt = file.name.split(".").pop();
+    const filePath = `${coachId}/avatar.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("coach-avatars")
+      .upload(filePath, file, {
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.log("Avatar upload error:", uploadError);
+      return;
+    }
+
+    const { data } = supabase.storage
+      .from("coach-avatars")
+      .getPublicUrl(filePath);
+
+    const publicUrl = data.publicUrl;
+
+    setAvatarUrl(publicUrl);
+
+    await supabase
+      .from("coaches")
+      .update({
+        avatar_url: publicUrl,
+      })
+      .eq("id", coachId);
+  }
+
+  function handleAvatarSelect(e: any) {
+    const file = e.target.files?.[0];
+
+    if (!file) return;
+
+    setSelectedAvatarFile(file);
+    setAvatarPreviewUrl(URL.createObjectURL(file));
+    setShowCropper(true);
+
+    e.target.value = "";
+  }
+
+  async function handleDeleteAvatar() {
+    if (!coachId || !avatarUrl) return;
+
+    const path = avatarUrl.split("/coach-avatars/")[1];
+
+    if (path) {
+      await supabase.storage
+        .from("coach-avatars")
+        .remove([path]);
+    }
+
+    await supabase
+      .from("coaches")
+      .update({
+        avatar_url: null,
+      })
+      .eq("id", coachId);
+
+    setAvatarUrl("");
+  }
+
+  function createImage(url: string): Promise<HTMLImageElement> {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.addEventListener("load", () => resolve(image));
+      image.addEventListener("error", reject);
+      image.src = url;
+    });
+  }
+
+  async function getCroppedImage(imageSrc: string, pixelCrop: any): Promise<Blob> {
+    const image = await createImage(imageSrc);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = pixelCrop.width;
+    canvas.height = pixelCrop.height;
+
+    if (!ctx) {
+      throw new Error("Could not create canvas context");
+    }
+
+    ctx.drawImage(
+      image,
+      pixelCrop.x,
+      pixelCrop.y,
+      pixelCrop.width,
+      pixelCrop.height,
+      0,
+      0,
+      pixelCrop.width,
+      pixelCrop.height
+    );
+
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error("Canvas is empty"));
+          return;
+        }
+
+        resolve(blob);
+      }, "image/jpeg");
+    });
+  }
+
+  async function saveCroppedAvatar() {
+    if (!avatarPreviewUrl || !croppedAreaPixels || !coachId) return;
+
+    const croppedBlob = await getCroppedImage(
+      avatarPreviewUrl,
+      croppedAreaPixels
+    );
+
+    const filePath = `${coachId}/avatar-${Date.now()}.jpg`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("coach-avatars")
+      .upload(filePath, croppedBlob, {
+        contentType: "image/jpeg",
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.log("Avatar upload error:", uploadError);
+      return;
+    }
+
+    const { data } = supabase.storage
+      .from("coach-avatars")
+      .getPublicUrl(filePath);
+
+    const publicUrl = data.publicUrl;
+
+    setAvatarUrl(publicUrl);
+
+    await supabase
+      .from("coaches")
+      .update({ avatar_url: publicUrl })
+      .eq("id", coachId);
+
+    setShowCropper(false);
+    setSelectedAvatarFile(null);
+    setAvatarPreviewUrl("");
+    setZoom(1);
+    setCrop({ x: 0, y: 0 });
   }
 
   if (loading) {
@@ -143,8 +321,31 @@ function Profile() {
           </div>
 
           <section className="profile-hero-card">
-            <div className="profile-avatar">
-              {(visibleName || fullName || "B").charAt(0).toUpperCase()}
+            <div className="profile-avatar-wrapper">
+              <label className="profile-avatar uploadable-avatar">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Coach avatar" />
+                ) : (
+                  (visibleName || fullName || "B").charAt(0).toUpperCase()
+                )}
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarSelect}
+                  hidden
+                />
+              </label>
+
+              {avatarUrl && (
+                <button
+                  type="button"
+                  className="avatar-delete-btn"
+                  onClick={handleDeleteAvatar}
+                >
+                  ×
+                </button>
+              )}
             </div>
 
             <div className="profile-hero-info">
@@ -208,6 +409,88 @@ function Profile() {
             </section>
 
             <section className="profile-section-card">
+              <h3>Coaching Information</h3>
+
+              <div className="input-block">
+                <label>Default Hourly Rate</label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={defaultHourlyRate ? `$${defaultHourlyRate}` : ""}
+                  onChange={(e) =>
+                    setDefaultHourlyRate(e.target.value.replace(/[^0-9.]/g, ""))
+                  }
+                  placeholder="$100"
+                />
+              </div>
+
+              <h4 className="custom-rates-title">
+                Other Custom Rates
+              </h4>
+
+              <div className="custom-rate-row">
+                <input
+                  type="text"
+                  value={rateName}
+                  onChange={(e) => setRateName(e.target.value)}
+                  placeholder="Lesson"
+                />
+
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={rateAmount ? `$${rateAmount}` : ""}
+                  onChange={(e) =>
+                    setRateAmount(e.target.value.replace(/[^0-9.]/g, ""))
+                  }
+                  placeholder="Amount"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!rateName.trim() || !rateAmount) return;
+
+                    setCustomRates((prev) => [
+                      ...prev,
+                      {
+                        name: rateName.trim(),
+                        amount: Number(rateAmount),
+                      },
+                    ]);
+
+                    setRateName("");
+                    setRateAmount("");
+                  }}
+                >
+                  Add
+                </button>
+              </div>
+
+              {customRates.length > 0 && (
+                <div className="custom-rates-list">
+                  {customRates.map((rate, index) => (
+                    <div key={index} className="custom-rate-item">
+                      <span>{rate.name}</span>
+                      <strong>${Number(rate.amount).toFixed(2)}</strong>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCustomRates((prev) =>
+                            prev.filter((_, rateIndex) => rateIndex !== index)
+                          )
+                        }
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className="profile-section-card">
               <h3>Communication Preferences</h3>
 
               <div className="profile-choice-group">
@@ -268,6 +551,54 @@ function Profile() {
           </div>
         </nav>
       </div>
+      {showCropper && (
+        <div className="avatar-crop-overlay">
+          <div className="avatar-crop-sheet">
+            <div className="avatar-crop-header">
+              <h2>Adjust Photo</h2>
+              <button type="button" onClick={() => setShowCropper(false)}>
+                ×
+              </button>
+            </div>
+
+            <div className="avatar-crop-box">
+              <Cropper
+                image={avatarPreviewUrl}
+                crop={crop}
+                zoom={zoom}
+                aspect={1}
+                cropShape="round"
+                showGrid={false}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={(_, croppedPixels) =>
+                  setCroppedAreaPixels(croppedPixels)
+                }
+              />
+            </div>
+
+            <div className="avatar-zoom-control">
+              <label>Zoom</label>
+              <input
+                type="range"
+                min={1}
+                max={3}
+                step={0.1}
+                value={zoom}
+                onChange={(e) => setZoom(Number(e.target.value))}
+              />
+            </div>
+
+            <button
+              type="button"
+              className="profile-save-btn"
+              onClick={saveCroppedAvatar}
+            >
+              Save Photo
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

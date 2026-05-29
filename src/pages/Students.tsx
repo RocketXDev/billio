@@ -715,6 +715,17 @@ function Students() {
                 </div>
 
                 <div className="input-block">
+                  <label htmlFor="editParentEmail">Parent Email</label>
+                  <input
+                  id="editParentEmail"
+                  type="text"
+                  value={parentEmail}
+                  onChange={(e) => setParentEmail(e.target.value)}
+                  autoComplete="off"
+                  />
+                </div>
+
+                <div className="input-block">
                 <label htmlFor="editParentPhone">Parent Phone</label>
                 <input
                     id="editParentPhone"

@@ -1186,7 +1186,7 @@ function Dashboard() {
               </button>
             </div>
 
-            <div className="side-menu-user">
+            <div onClick={()=>{navigate("/profile")}} className="side-menu-user">
               <div className="side-menu-avatar">
                 {fullName ? fullName.charAt(0).toUpperCase() : "B"}
               </div>

@@ -10,7 +10,8 @@ import ForgotPassword from "./pages/ForgotPassword";
 import PasswordUpdated from "./pages/PasswordUpdated";
 import Lessons from "./pages/Lessons";
 import Students from "./pages/Students";
-import Invoices from "./pages/Invoices"
+import Invoices from "./pages/Invoices";
+import Profile from "./pages/Profile";
 import ComingSoon from "./pages/ComingSoon";
 
 function App() {
@@ -54,6 +55,15 @@ function App() {
         element={
           <ProtectedRoute>
             <Invoices />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Profile />
           </ProtectedRoute>
         }
       />

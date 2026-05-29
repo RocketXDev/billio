@@ -28,6 +28,7 @@ function Dashboard() {
   const [defaultHourlyRate, setDefaultHourlyRate] = useState("");
   const [bio, setBio] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
 
   //Lessons and other functions
   const [lessons, setLessons] = useState<any[]>([]);
@@ -162,12 +163,14 @@ function Dashboard() {
         if (newCoach) {
           setCoachId(newCoach.id);
           setShowOnboarding(true);
+          setAvatarUrl("");
           await loadDashboardLessons(newCoach.id);
           await loadCoachStudents(newCoach.id);
           await loadDashboardInvoices(coachData.id);
         }
         } else {
           setCoachId(coachData.id);
+          setAvatarUrl(coachData.avatar_url || "");
           await loadDashboardLessons(coachData.id);
           await loadCoachStudents(coachData.id);
           await loadDashboardInvoices(coachData.id);
@@ -1188,7 +1191,11 @@ function Dashboard() {
 
             <div onClick={()=>{navigate("/profile")}} className="side-menu-user">
               <div className="side-menu-avatar">
-                {fullName ? fullName.charAt(0).toUpperCase() : "B"}
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Coach avatar" />
+                ) : (
+                  fullName ? fullName.charAt(0).toUpperCase() : "B"
+                )}
               </div>
 
               <div>

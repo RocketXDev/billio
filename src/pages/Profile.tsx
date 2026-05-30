@@ -179,6 +179,7 @@ function Profile() {
       .from("coaches")
       .update({
         avatar_url: publicUrl,
+        avatar_path: filePath
       })
       .eq("id", coachId);
   }
@@ -196,25 +197,29 @@ function Profile() {
   }
 
   async function handleDeleteAvatar() {
-    if (!coachId || (!avatarPath && !avatarUrl)) return;
+    if (!coachId) return;
 
     let pathToDelete = avatarPath;
 
     if (!pathToDelete && avatarUrl) {
-      pathToDelete = decodeURIComponent(
-        avatarUrl.split("/coach-avatars/")[1] || ""
-      );
+      const parts = avatarUrl.split("/coach-avatars/");
+
+      if (parts.length > 1) {
+        pathToDelete = decodeURIComponent(parts[1]);
+      }
     }
 
+    console.log("Deleting avatar path:", pathToDelete);
+
     if (pathToDelete) {
-      const { error: storageError } = await supabase.storage
+      const { data, error: storageError } = await supabase.storage
         .from("coach-avatars")
         .remove([pathToDelete]);
 
-      if (storageError) {
-        console.log("Storage delete error:", storageError);
-        return;
-      }
+      console.log("Storage delete data:", data);
+      console.log("Storage delete error:", storageError);
+
+      if (storageError) return;
     }
 
     const { error: coachError } = await supabase
@@ -226,7 +231,7 @@ function Profile() {
       .eq("id", coachId);
 
     if (coachError) {
-      console.log("Coach update error:", coachError);
+      console.log("Coach avatar clear error:", coachError);
       return;
     }
 

@@ -43,15 +43,14 @@ input[type="time"] {
   width: 100%;
   min-width: 0;
   max-width: 100%;
-
   box-sizing: border-box;
-
   appearance: none;
   -webkit-appearance: none;
-
   padding: 0 14px;
-
   overflow: hidden;
+}
+form > .input-block > label {
+  margin-bottom: 3px !important;
 }
 
 /* FONTS */

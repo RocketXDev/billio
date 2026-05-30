@@ -30,6 +30,10 @@ function Dashboard() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
 
+  // Onboarding specific
+  const [preferredCommunication, setPreferredCommunication] = useState("email");
+  const [preferredInvoiceDelivery, setPreferredInvoiceDelivery] = useState("email");
+
   //Lessons and other functions
   const [lessons, setLessons] = useState<any[]>([]);
   const [coachStudents, setCoachStudents] = useState<any[]>([]);
@@ -278,46 +282,48 @@ function Dashboard() {
   }
 
   async function handleSaveOnboarding(e: any) {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (!defaultHourlyRate || Number(defaultHourlyRate) <= 0) {
-  alert("Please enter your hourly rate before finishing setup.");
-  return;
-  }
-
-  if (!coachId) return;
-
-  const { data, error } = await supabase
-    .from("coaches")
-    .update({
-      visible_name: visibleName,
-      default_hourly_rate: Number(defaultHourlyRate),
-      bio: bio || null,
-      phone_number: phoneNumber,
-      setup_completed: true,
-    })
-    .eq("id", coachId)
-    .select();
-
-  if (error) {
-    console.log("Onboarding save error:", error);
+    if (!defaultHourlyRate || Number(defaultHourlyRate) <= 0) {
+    alert("Please enter your hourly rate before finishing setup.");
     return;
-  }
+    }
 
-  await supabase
-    .from("notifications")
-    .delete()
-    .eq("profile_id", profileId)
-    .eq("type", "onboarding");
+    if (!coachId) return;
 
-  // remove onboarding notification locally
-  setNotifications((prev) =>
-    prev.filter(
-      (notification) => notification.type !== "onboarding"
-    )
-  );
+    const { data, error } = await supabase
+      .from("coaches")
+      .update({
+        visible_name: visibleName,
+        default_hourly_rate: Number(defaultHourlyRate),
+        bio: bio || null,
+        phone_number: phoneNumber,
+        preferred_invoice_delivery: preferredInvoiceDelivery,
+        preferred_communication: preferredCommunication,
+        setup_completed: true,
+      })
+      .eq("id", coachId)
+      .select();
 
-  setShowOnboarding(false);
+    if (error) {
+      console.log("Onboarding save error:", error);
+      return;
+    }
+
+    await supabase
+      .from("notifications")
+      .delete()
+      .eq("profile_id", profileId)
+      .eq("type", "onboarding");
+
+    // remove onboarding notification locally
+    setNotifications((prev) =>
+      prev.filter(
+        (notification) => notification.type !== "onboarding"
+      )
+    );
+
+    setShowOnboarding(false);
   }
 
   async function handleSkipOnboarding() {
@@ -1385,6 +1391,58 @@ function Dashboard() {
                     placeholder="100"
                     required
                   />
+                </div>
+              </div>
+
+              <div className="input-block">
+                <label>Billio Notifications</label>
+                <p className="onboarding-field-note">
+                  How should Billio contact you?
+                </p>
+
+                <div className="onboarding-choice-group">
+                  {["email", "text", "both"].map((choice) => (
+                    <button
+                      key={choice}
+                      type="button"
+                      className={`onboarding-choice ${
+                        preferredCommunication === choice ? "active" : ""
+                      }`}
+                      onClick={() => setPreferredCommunication(choice)}
+                    >
+                      {choice === "email"
+                        ? "Email"
+                        : choice === "text"
+                        ? "Text Message"
+                        : "Email + Text"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="input-block">
+                <label>Invoice Delivery</label>
+                <p className="onboarding-field-note">
+                  How should invoices be sent to students?
+                </p>
+
+                <div className="onboarding-choice-group">
+                  {["email", "text", "both"].map((choice) => (
+                    <button
+                      key={choice}
+                      type="button"
+                      className={`onboarding-choice ${
+                        preferredInvoiceDelivery === choice ? "active" : ""
+                      }`}
+                      onClick={() => setPreferredInvoiceDelivery(choice)}
+                    >
+                      {choice === "email"
+                        ? "Email"
+                        : choice === "text"
+                        ? "Text Message"
+                        : "Email + Text"}
+                    </button>
+                  ))}
                 </div>
               </div>
 

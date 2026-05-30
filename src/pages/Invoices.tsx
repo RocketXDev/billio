@@ -24,6 +24,8 @@ function Invoices() {
   const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+  const [sendSuccessEmail, setSendSuccessEmail] = useState("");
+  const [sendError, setSendError] = useState("");
 
   // Invoices Creation States
   const [showAddInvoice, setShowAddInvoice] = useState(false);
@@ -610,6 +612,40 @@ function Invoices() {
     return "billed";
   }
 
+  async function sendInvoice(invoiceId: string) {
+    const { data, error } = await supabase.functions.invoke(
+      "send-single-invoice",
+      {
+        body: { invoiceId },
+      }
+    );
+
+    if (error || data?.error) {
+      setSendError(
+        data?.error ||
+          error?.message ||
+          "Invoice could not be sent. Please try again."
+      );
+      return;
+    }
+
+    setInvoices((prev) =>
+      prev.map((invoice) =>
+        invoice.id === invoiceId
+          ? {
+              ...invoice,
+              status: "billed",
+              sent_at: new Date().toISOString(),
+              delivery_method: data.deliveryMethod || "email",
+              recipient_email: data.recipientEmail,
+            }
+          : invoice
+      )
+    );
+
+    setSendSuccessEmail(data.recipientEmail || "recipient");
+  }
+
   if (loading) {
     return (
       <div className="loading-screen">
@@ -711,13 +747,29 @@ function Invoices() {
                         </span>
                         </div>
 
-                        <button
-                        type="button"
-                        className="invoices-edit-btn"
-                        onClick={(e) => {e.stopPropagation(); openEditInvoice(invoice)}}
-                        >
-                        <FaEdit />
-                        </button>
+                        <div className="invoice-actions">
+                          <button
+                            type="button"
+                            className="invoice-edit-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditInvoice(invoice);
+                            }}
+                          >
+                            <FaEdit />
+                          </button>
+
+                          <button
+                            type="button"
+                            className="invoice-send-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              sendInvoice(invoice.id);
+                            }}
+                          >
+                            <FaPaperPlane />
+                          </button>
+                        </div>
                     </div>
                     ))}
                 </div>
@@ -1071,6 +1123,67 @@ function Invoices() {
                   Delete Invoice
                 </button>
               </form>
+            </div>
+          </div>
+        )}
+        {sendSuccessEmail && (
+          <div
+            className="invoice-success-overlay"
+            onClick={() => setSendSuccessEmail("")}
+          >
+            <div
+              className="invoice-success-card"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="invoice-success-icon">
+                ✓
+              </div>
+
+              <h2>Invoice Sent</h2>
+
+              <p>
+                Invoice was successfully sent to{" "}
+                <strong>{sendSuccessEmail}</strong>.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setSendSuccessEmail("")}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        )}
+        {sendError && (
+          <div
+            className="invoice-success-overlay"
+            onClick={() => setSendError("")}
+          >
+            <div
+              className="invoice-success-card"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="invoice-error-icon">
+                !
+              </div>
+
+              <h2>{sendError.includes("Student email")
+                ? "Student Email Required"
+                : sendError.includes("Parent email")
+                ? "Parent Email Required"
+                : "Failed"}</h2>
+
+              <p>
+                {sendError}
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setSendError("")}
+              >
+                Close
+              </button>
             </div>
           </div>
         )}

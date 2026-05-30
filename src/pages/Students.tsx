@@ -108,7 +108,13 @@ function Students() {
         students (
           id,
           student_name,
+          email,
+          phone_number,
+          parent_name,
+          parent_email,
+          parent_phone,
           active,
+          notes,
           created_at
         )
       `)
@@ -156,7 +162,7 @@ function Students() {
         parent_name: parentName || null,
         parent_email: parentEmail || null,
         parent_phone: parentPhone || null,
-        active: true,
+        active,
         notes: notes || null,
       })
       .select()
@@ -167,10 +173,14 @@ function Students() {
       return;
     }
 
-    const { error: linkError } = await supabase.from("coach_students").insert({
-      coach_id: coachId,
-      student_id: newStudent.id,
-    });
+    const { error: linkError } = await supabase
+      .from("coach_students")
+      .insert({
+        coach_id: coachId,
+        student_id: newStudent.id,
+        invoice_contact_target: invoiceContactTarget,
+        invoice_delivery_method: invoiceDeliveryMethod,
+      });
 
     if (linkError) {
       console.log("Coach-student link error:", linkError);
@@ -181,11 +191,13 @@ function Students() {
       ...prev,
       {
         student_id: newStudent.id,
+        invoice_contact_target: invoiceContactTarget,
+        invoice_delivery_method: invoiceDeliveryMethod,
         students: newStudent,
       },
     ]);
 
-    setStudentName("");
+    resetStudentForm();
     setShowAddStudent(false);
   }
 
@@ -198,6 +210,7 @@ function Students() {
     setEmail(student?.email || "");
     setPhoneNumber(student?.phone_number || "");
     setParentName(student?.parent_name || "");
+    setParentEmail(student?.parent_email || "");
     setParentPhone(student?.parent_phone || "");
     setActive(student?.active ?? true);
     setNotes(student?.notes || "");
@@ -361,46 +374,69 @@ function Students() {
   }
 
   async function handleUpdateStudent(e: any) {
-      e.preventDefault();
+    e.preventDefault();
 
-      if (!editingStudent) return;
+    if (!editingStudent || !coachId) return;
 
-      const cleanStudentName = studentName.trim();
+    const cleanStudentName = studentName.trim();
 
-      if (!cleanStudentName) {
-          alert("Please enter a student name.");
-          return;
-      }
+    if (!cleanStudentName) {
+      alert("Please enter a student name.");
+      return;
+    }
 
-      const { data, error } = await supabase
-          .from("students")
-          .update({
-          student_name: cleanStudentName,
-          email: email || null,
-          phone_number: phoneNumber || null,
-          parent_name: parentName || null,
-          parent_phone: parentPhone || null,
-          active,
-          notes: notes || null,
-          })
-          .eq("id", editingStudent.id)
-          .select()
-          .single();
+    const { data, error } = await supabase
+      .from("students")
+      .update({
+        student_name: cleanStudentName,
+        email: email || null,
+        phone_number: phoneNumber || null,
+        parent_name: parentName || null,
+        parent_email: parentEmail || null,
+        parent_phone: parentPhone || null,
+        active,
+        notes: notes || null,
+      })
+      .eq("id", editingStudent.id)
+      .select()
+      .single();
 
-      if (error) {
-          console.log("Update student error:", error);
-          return;
-      }
+    if (error) {
+      console.log("Update student error:", error);
+      return;
+    }
 
-      setStudents((prev) =>
-          prev.map((link: any) =>
-          link.student_id === editingStudent.id
-              ? { ...link, students: data }
-              : link
-          )
+    const { error: linkUpdateError } = await supabase
+      .from("coach_students")
+      .update({
+        invoice_contact_target: invoiceContactTarget,
+        invoice_delivery_method: invoiceDeliveryMethod,
+      })
+      .eq("coach_id", coachId)
+      .eq("student_id", editingStudent.id);
+
+    if (linkUpdateError) {
+      console.log(
+        "Update student invoice preferences error:",
+        linkUpdateError
       );
+      return;
+    }
 
-      closeEditStudent();
+    setStudents((prev) =>
+      prev.map((link: any) =>
+        link.student_id === editingStudent.id
+          ? {
+              ...link,
+              invoice_contact_target: invoiceContactTarget,
+              invoice_delivery_method: invoiceDeliveryMethod,
+              students: data,
+            }
+          : link
+      )
+    );
+
+    closeEditStudent();
   }
   async function handleDeleteStudent(studentId: string) {
 

@@ -52,6 +52,9 @@ function Students() {
   const hiddenRates = rateOptions.slice(3);
   const [showRateSheet, setShowRateSheet] = useState(false);
 
+  const [invoiceContactTarget, setInvoiceContactTarget] = useState("auto");
+  const [invoiceDeliveryMethod, setInvoiceDeliveryMethod] = useState("auto");
+
 
   useEffect(() => {
     loadStudents();
@@ -100,6 +103,8 @@ function Students() {
       .from("coach_students")
       .select(`
         student_id,
+        invoice_contact_target,
+        invoice_delivery_method,
         students (
           id,
           student_name,
@@ -196,6 +201,8 @@ function Students() {
     setParentPhone(student?.parent_phone || "");
     setActive(student?.active ?? true);
     setNotes(student?.notes || "");
+    setInvoiceContactTarget(link.invoice_contact_target || "auto");
+    setInvoiceDeliveryMethod(link.invoice_delivery_method || "auto");
 
     setShowEditStudent(true);
   }
@@ -260,6 +267,8 @@ function Students() {
     setActive(true);
     setNotes("");
     setEditingStudent(null);
+    setInvoiceContactTarget("auto");
+    setInvoiceDeliveryMethod("auto");
   }
 
   function closeAddStudent() {
@@ -305,6 +314,20 @@ function Students() {
 
     if (error) {
       console.log("Update student lesson error:", error);
+      return;
+    }
+
+    const { error: linkUpdateError } = await supabase
+      .from("coach_students")
+      .update({
+        invoice_contact_target: invoiceContactTarget,
+        invoice_delivery_method: invoiceDeliveryMethod,
+      })
+      .eq("coach_id", coachId)
+      .eq("student_id", editingStudent.id);
+
+    if (linkUpdateError) {
+      console.log("Update student invoice preferences error:", linkUpdateError);
       return;
     }
 
@@ -660,6 +683,64 @@ function Students() {
                     />
                 </div>
 
+                <div className="student-preference-section">
+                  <h3>Invoice Preferences</h3>
+
+                  <div className="input-block">
+                    <label>Invoice Contact</label>
+                    <span className="student-field-note">
+                      Choose who should receive invoices for this student.
+                    </span>
+
+                    <div className="student-choice-group">
+                      {["auto", "student", "parent"].map((choice) => (
+                        <button
+                          key={choice}
+                          type="button"
+                          className={`student-choice ${
+                            invoiceContactTarget === choice ? "active" : ""
+                          }`}
+                          onClick={() => setInvoiceContactTarget(choice)}
+                        >
+                          {choice === "auto"
+                            ? "Auto"
+                            : choice === "student"
+                            ? "Student"
+                            : "Parent"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="input-block">
+                    <label>Invoice Delivery</label>
+                    <span className="student-field-note">
+                      Auto uses your default invoice delivery setting.
+                    </span>
+
+                    <div className="student-choice-group">
+                      {["auto", "email", "text", "both"].map((choice) => (
+                        <button
+                          key={choice}
+                          type="button"
+                          className={`student-choice ${
+                            invoiceDeliveryMethod === choice ? "active" : ""
+                          }`}
+                          onClick={() => setInvoiceDeliveryMethod(choice)}
+                        >
+                          {choice === "auto"
+                            ? "Auto"
+                            : choice === "email"
+                            ? "Email"
+                            : choice === "text"
+                            ? "Text"
+                            : "Both"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
                 <button
                 type="button"
                 className={`student-active-button ${active ? "active" : "inactive"}`}
@@ -780,6 +861,64 @@ function Students() {
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                 />
+                </div>
+
+                <div className="student-preference-section">
+                  <h3>Invoice Preferences</h3>
+
+                  <div className="input-block">
+                    <label>Invoice Contact</label>
+                    <span className="student-field-note">
+                      Choose who should receive invoices for this student.
+                    </span>
+
+                    <div className="student-choice-group">
+                      {["auto", "student", "parent"].map((choice) => (
+                        <button
+                          key={choice}
+                          type="button"
+                          className={`student-choice ${
+                            invoiceContactTarget === choice ? "active" : ""
+                          }`}
+                          onClick={() => setInvoiceContactTarget(choice)}
+                        >
+                          {choice === "auto"
+                            ? "Auto"
+                            : choice === "student"
+                            ? "Student"
+                            : "Parent"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="input-block">
+                    <label>Invoice Delivery</label>
+                    <span className="student-field-note">
+                      Auto uses your default invoice delivery setting.
+                    </span>
+
+                    <div className="student-choice-group">
+                      {["auto", "email", "text", "both"].map((choice) => (
+                        <button
+                          key={choice}
+                          type="button"
+                          className={`student-choice ${
+                            invoiceDeliveryMethod === choice ? "active" : ""
+                          }`}
+                          onClick={() => setInvoiceDeliveryMethod(choice)}
+                        >
+                          {choice === "auto"
+                            ? "Auto"
+                            : choice === "email"
+                            ? "Email"
+                            : choice === "text"
+                            ? "Text"
+                            : "Both"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
                 <button

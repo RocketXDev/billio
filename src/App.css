@@ -2092,15 +2092,12 @@ textarea:focus {
   height: auto;
   margin: 0;
   padding: 16px;
-
   border-radius: 16px;
   border: 1px solid var(--border);
-
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-
   text-align: left;
   transition: 0.2s ease;
 }
@@ -2160,6 +2157,55 @@ textarea:focus {
   display: flex;
   align-items: flex-end;
   justify-content: center;
+}
+
+.student-preference-section {
+  margin: 13px 0px 5px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.student-preference-section h3 {
+  margin: 0 0 5px;
+  color: var(--main-text);
+  font-size: 20px;
+  font-weight: 750;
+}
+
+.student-preference-section > .input-block:last-child {
+  margin-top: 15px;
+}
+
+.student-field-note {
+  display: block;
+  margin: 0 0 10px;
+  color: var(--secondary-text);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.student-choice-group {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.student-choice {
+  width: 100%;
+  height: 48px;
+  margin: 0;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--main-text);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.student-choice.active {
+  background: var(--primary-purple);
+  color: white;
+  border-color: var(--primary-purple);
 }
 
 .students-detail-sheet {

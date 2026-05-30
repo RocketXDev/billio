@@ -1457,6 +1457,80 @@ textarea:focus {
   border-bottom: none;
 }
 
+.rate-options-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  box-sizing: border-box;
+  margin-top: 3px;
+}
+
+.rate-options-row::-webkit-scrollbar {
+  display: none;
+}
+
+.rate-option-chip {
+  flex: 1 1 120px;
+  height: 34px;
+  margin: 0px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--secondary-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.rate-option-chip.active {
+  background: #eef2ff;
+  color: var(--primary-purple);
+  border-color: #c7d2fe;
+}
+.rate-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: rgba(15, 23, 42, 0.35);
+
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.rate-sheet {
+  width: 100%;
+  max-width: 430px;
+
+  background: var(--card-bg);
+  border-top-left-radius: 28px;
+  border-top-right-radius: 28px;
+
+  padding: 22px 20px 30px;
+}
+
+.rate-sheet h3 {
+  margin: 0 0 16px;
+  color: var(--main-text);
+  font-size: 22px;
+}
+
+.rate-sheet-item {
+  width: 100%;
+  height: 50px;
+  margin: 0 0 10px;
+
+  border-radius: 14px;
+  background: var(--input-bg);
+  color: var(--main-text);
+
+  font-size: 15px;
+  font-weight: 700;
+}
+
 .lesson-page-time strong {
   display: block;
   color: var(--main-text);

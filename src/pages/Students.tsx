@@ -41,13 +41,16 @@ function Students() {
   const [selectedLessonActionId, setSelectedLessonActionId] = useState<string | null>(null);
   const [showEditLesson, setShowEditLesson] = useState(false);
   const [editingLesson, setEditingLesson] = useState<any>(null);
-
   const [lessonDate, setLessonDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [durationMinutes, setDurationMinutes] = useState("30");
   const [lessonType, setLessonType] = useState("");
   const [hourlyRate, setHourlyRate] = useState("");
   const [lessonNotes, setLessonNotes] = useState("");
+  const [rateOptions, setRateOptions] = useState<any[]>([]);
+  const visibleRates = rateOptions.slice(0, 3);
+  const hiddenRates = rateOptions.slice(3);
+  const [showRateSheet, setShowRateSheet] = useState(false);
 
 
   useEffect(() => {
@@ -90,6 +93,8 @@ function Students() {
     }
 
     setCoachId(coachData.id);
+
+    await loadRateOptions(coachData.id)
 
     const { data, error } = await supabase
       .from("coach_students")
@@ -210,8 +215,40 @@ function Students() {
     setHourlyRate(String(lesson.hourly_rate || ""));
     setLessonNotes(lesson.notes || "");
 
+    if (coachId) {
+      loadRateOptions(coachId);
+    }
+
     setShowEditLesson(true);
     setSelectedLessonActionId(null);
+  }
+
+  async function loadRateOptions(coachId: string) {
+    const { data, error } = await supabase
+      .from("coaches")
+      .select("default_hourly_rate, custom_rates")
+      .eq("id", coachId)
+      .single();
+
+    if (error || !data) {
+      console.log("Rate load error:", error);
+      return;
+    }
+
+    const options = [];
+
+    if (data.default_hourly_rate) {
+      options.push({
+        name: "Default",
+        amount: Number(data.default_hourly_rate),
+      });
+    }
+
+    if (Array.isArray(data.custom_rates)) {
+      options.push(...data.custom_rates);
+    }
+
+    setRateOptions(options);
   }
 
   function resetStudentForm() {
@@ -971,6 +1008,32 @@ function Students() {
 
               <div className="input-block">
                 <label>Hourly Rate</label>
+                {rateOptions.length > 0 && (
+                  <div className="rate-options-row">
+                    {visibleRates.map((rate, index) => (
+                      <button
+                        key={`${rate.name}-${index}`}
+                        type="button"
+                        className={`rate-option-chip ${
+                          Number(hourlyRate) === Number(rate.amount) ? "active" : ""
+                        }`}
+                        onClick={() => setHourlyRate(String(rate.amount))}
+                      >
+                        {rate.name} ${Number(rate.amount).toFixed(0)}
+                      </button>
+                    ))}
+
+                    {hiddenRates.length > 0 && (
+                      <button
+                        type="button"
+                        className="rate-option-chip more-rate-chip"
+                        onClick={() => setShowRateSheet(true)}
+                      >
+                        More +{hiddenRates.length}
+                      </button>
+                    )}
+                  </div>
+                )}
                 <input
                   type="text"
                   inputMode="decimal"
@@ -1003,6 +1066,33 @@ function Students() {
                 Delete Lesson
               </button>
             </form>
+          </div>
+        </div>
+      )}
+      {showRateSheet && (
+        <div
+          className="rate-sheet-overlay"
+          onClick={() => setShowRateSheet(false)}
+        >
+          <div
+            className="rate-sheet"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3>Select Rate</h3>
+
+            {rateOptions.map((rate, index) => (
+              <button
+                key={`${rate.name}-${index}`}
+                type="button"
+                className="rate-sheet-item"
+                onClick={() => {
+                  setHourlyRate(String(rate.amount));
+                  setShowRateSheet(false);
+                }}
+              >
+                {rate.name} ${Number(rate.amount).toFixed(0)}
+              </button>
+            ))}
           </div>
         </div>
       )}

@@ -42,6 +42,10 @@ function Dashboard() {
   const [lessonType, setLessonType] = useState("");
   const [hourlyRate, setHourlyRate] = useState("");
   const [notes, setNotes] = useState("");
+  const [rateOptions, setRateOptions] = useState<any[]>([]);
+  const visibleRates = rateOptions.slice(0, 3);
+  const hiddenRates = rateOptions.slice(3);
+  const [showRateSheet, setShowRateSheet] = useState(false);
 
   const [showEditLesson, setShowEditLesson] = useState(false);
   const [editingLesson, setEditingLesson] = useState<any>(null);
@@ -366,7 +370,7 @@ function Dashboard() {
 
     const { data, error } = await supabase
       .from("coaches")
-      .select("default_hourly_rate")
+      .select("default_hourly_rate, custom_rates")
       .eq("id", coachId)
       .single();
 
@@ -376,7 +380,26 @@ function Dashboard() {
       return;
     }
 
-    setHourlyRate(data?.default_hourly_rate ? String(data.default_hourly_rate) : "");
+    const defaultRate = data?.default_hourly_rate
+      ? String(data.default_hourly_rate)
+      : "";
+
+    setHourlyRate(defaultRate);
+    const options = [];
+
+    if (data?.default_hourly_rate) {
+      options.push({
+        name: "Default",
+        amount: Number(data.default_hourly_rate),
+      });
+    }
+
+    if (Array.isArray(data?.custom_rates)) {
+      options.push(...data.custom_rates);
+    }
+
+    setRateOptions(options);
+
   }
 
   async function openAddLesson() {
@@ -1507,6 +1530,32 @@ function Dashboard() {
 
               <div className="input-block">
                 <label>Hourly Rate</label>
+                {rateOptions.length > 0 && (
+                  <div className="rate-options-row">
+                    {visibleRates.map((rate, index) => (
+                      <button
+                        key={`${rate.name}-${index}`}
+                        type="button"
+                        className={`rate-option-chip ${
+                          Number(hourlyRate) === Number(rate.amount) ? "active" : ""
+                        }`}
+                        onClick={() => setHourlyRate(String(rate.amount))}
+                      >
+                        {rate.name} ${Number(rate.amount).toFixed(0)}
+                      </button>
+                    ))}
+
+                    {hiddenRates.length > 0 && (
+                      <button
+                        type="button"
+                        className="rate-option-chip more-rate-chip"
+                        onClick={() => setShowRateSheet(true)}
+                      >
+                        More +{hiddenRates.length}
+                      </button>
+                    )}
+                  </div>
+                )}
                 <input
                   type="text"
                   inputMode="decimal"
@@ -1606,6 +1655,32 @@ function Dashboard() {
 
               <div className="input-block">
                 <label>Hourly Rate</label>
+                {rateOptions.length > 0 && (
+                  <div className="rate-options-row">
+                    {visibleRates.map((rate, index) => (
+                      <button
+                        key={`${rate.name}-${index}`}
+                        type="button"
+                        className={`rate-option-chip ${
+                          Number(hourlyRate) === Number(rate.amount) ? "active" : ""
+                        }`}
+                        onClick={() => setHourlyRate(String(rate.amount))}
+                      >
+                        {rate.name} ${Number(rate.amount).toFixed(0)}
+                      </button>
+                    ))}
+
+                    {hiddenRates.length > 0 && (
+                      <button
+                        type="button"
+                        className="rate-option-chip more-rate-chip"
+                        onClick={() => setShowRateSheet(true)}
+                      >
+                        More +{hiddenRates.length}
+                      </button>
+                    )}
+                  </div>
+                )}
                 <input
                   type="text"
                   inputMode="decimal"
@@ -1639,6 +1714,33 @@ function Dashboard() {
             </form>
           </div>
         </div>
+      )}
+      {showRateSheet && (
+          <div
+            className="rate-sheet-overlay"
+            onClick={() => setShowRateSheet(false)}
+          >
+            <div
+              className="rate-sheet"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3>Select Rate</h3>
+
+              {rateOptions.map((rate, index) => (
+                <button
+                  key={`${rate.name}-${index}`}
+                  type="button"
+                  className="rate-sheet-item"
+                  onClick={() => {
+                    setHourlyRate(String(rate.amount));
+                    setShowRateSheet(false);
+                  }}
+                >
+                  {rate.name} ${Number(rate.amount).toFixed(0)}
+                </button>
+              ))}
+            </div>
+          </div>
       )}
 
     </div>

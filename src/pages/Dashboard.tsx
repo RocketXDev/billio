@@ -58,6 +58,8 @@ function Dashboard() {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [editingInvoiceStatusId, setEditingInvoiceStatusId] = useState<string | null>(null);
 
+  const [isSaving, setIsSaving] = useState(false); 
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const navigate = useNavigate();
@@ -441,7 +443,7 @@ function Dashboard() {
   async function handleCreateLesson(e: any) {
     e.preventDefault();
 
-    if (isSubmitting) return; 
+    if (isSaving) return; 
     setIsSubmitting(true);
 
     try {
@@ -580,8 +582,8 @@ function Dashboard() {
   async function handleUpdateLesson(e: any) {
     e.preventDefault();
 
-    if (isSubmitting) return;
-    setIsSubmitting(true);
+    if (isSaving) return;
+    setIsSaving(true);
 
     try {
 
@@ -625,15 +627,15 @@ function Dashboard() {
       closeEditLesson();
 
     } finally {
-      setIsSubmitting(false);
+      setIsSaving(false);
     }
 
   }
 
   async function handleDeleteLesson(lessonId: string) {
 
-    if (isSubmitting) return;
-    setIsSubmitting(true);
+    if (isDeleting) return;
+    setIsDeleting(true);
 
     try {
 
@@ -657,7 +659,7 @@ function Dashboard() {
       closeEditLesson();
 
     } finally {
-      setIsSubmitting(false)
+      setIsDeleting(false)
     }
 
     
@@ -1768,16 +1770,16 @@ function Dashboard() {
                 />
               </div>
 
-              <button type="submit" className="save-lesson-btn" disabled={isSubmitting}>
-                {isSubmitting ? "Saving..." : "Save Lesson"}
+              <button type="submit" className="save-lesson-btn" disabled={isSaving}>
+                {isSaving ? "Saving..." : "Save Lesson"}
               </button>
               <button
                 type="button"
                 className="delete-lesson-btn"
-                disabled={isSubmitting}
+                disabled={isDeleting}
                 onClick={() => handleDeleteLesson(editingLesson.id)}
               >
-                {isSubmitting ? "Deleting..." : "Delete Lesson"}
+                {isDeleting ? "Deleting..." : "Delete Lesson"}
               </button>
             </form>
           </div>

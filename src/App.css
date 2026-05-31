@@ -3484,6 +3484,11 @@ textarea:focus {
   cursor: not-allowed;
 }
 
+button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 /* COMING SOON PAGE */
 .coming-soon-page {
   width: 100%;

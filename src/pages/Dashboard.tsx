@@ -58,6 +58,8 @@ function Dashboard() {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [editingInvoiceStatusId, setEditingInvoiceStatusId] = useState<string | null>(null);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -439,103 +441,112 @@ function Dashboard() {
   async function handleCreateLesson(e: any) {
     e.preventDefault();
 
-    if (!coachId) return;
+    if (isSubmitting) return; 
+    setIsSubmitting(true);
 
-    const cleanStudentName = studentName.trim();
+    try {
 
-    if (!cleanStudentName) {
-      alert("Please enter a student name.");
-      return;
-    }
+      if (!coachId) return;
 
-    const { data: existingLinks, error: existingStudentError } = await supabase
-      .from("coach_students")
-      .select(`
-        student_id,
-        students (
-          id,
-          student_name
-        )
-      `)
-      .eq("coach_id", coachId);
+      const cleanStudentName = studentName.trim();
 
-    if (existingStudentError) {
-      console.log("Student lookup error:", existingStudentError);
-      return;
-    }
-
-    const existingLink = existingLinks?.find((link: any) => {
-      return (
-        link.students?.student_name?.trim().toLowerCase() ===
-        cleanStudentName.toLowerCase()
-      );
-    });
-
-    let finalStudentId = existingLink?.student_id;
-    if (selectedStudentId) {
-      finalStudentId = selectedStudentId;
-    }
-
-    if (!finalStudentId) {
-      const { data: newStudent, error: newStudentError } = await supabase
-        .from("students")
-        .insert({
-          student_name: cleanStudentName,
-          active: true,
-        })
-        .select()
-        .single();
-
-      if (newStudentError) {
-        console.log("Student create error:", newStudentError);
+      if (!cleanStudentName) {
+        alert("Please enter a student name.");
         return;
       }
 
-      finalStudentId = newStudent.id;
-
-      const { error: linkError } = await supabase
+      const { data: existingLinks, error: existingStudentError } = await supabase
         .from("coach_students")
-        .insert({
-          coach_id: coachId,
-          student_id: finalStudentId,
-        });
+        .select(`
+          student_id,
+          students (
+            id,
+            student_name
+          )
+        `)
+        .eq("coach_id", coachId);
 
-      if (linkError) {
-        console.log("Coach-student link error:", linkError);
+      if (existingStudentError) {
+        console.log("Student lookup error:", existingStudentError);
         return;
       }
+
+      const existingLink = existingLinks?.find((link: any) => {
+        return (
+          link.students?.student_name?.trim().toLowerCase() ===
+          cleanStudentName.toLowerCase()
+        );
+      });
+
+      let finalStudentId = existingLink?.student_id;
+      if (selectedStudentId) {
+        finalStudentId = selectedStudentId;
+      }
+
+      if (!finalStudentId) {
+        const { data: newStudent, error: newStudentError } = await supabase
+          .from("students")
+          .insert({
+            student_name: cleanStudentName,
+            active: true,
+          })
+          .select()
+          .single();
+
+        if (newStudentError) {
+          console.log("Student create error:", newStudentError);
+          return;
+        }
+
+        finalStudentId = newStudent.id;
+
+        const { error: linkError } = await supabase
+          .from("coach_students")
+          .insert({
+            coach_id: coachId,
+            student_id: finalStudentId,
+          });
+
+        if (linkError) {
+          console.log("Coach-student link error:", linkError);
+          return;
+        }
+      }
+
+      const calculatedRate = Number(hourlyRate) * (Number(durationMinutes) / 60);
+
+      const { error: lessonError } = await supabase.from("lessons").insert({
+        coach_id: coachId,
+        student_id: finalStudentId,
+        lesson_date: lessonDate,
+        start_time: startTime,
+        duration_minutes: Number(durationMinutes),
+        lesson_type: lessonType || null,
+        hourly_rate: Number(hourlyRate),
+        rate: calculatedRate,
+        notes: notes || null,
+      });
+
+      if (lessonError) {
+        console.log("Lesson create error:", lessonError);
+        return;
+      }
+
+      await loadDashboardLessons(coachId);
+
+      setStudentName("");
+      setSelectedStudentId(null);
+      setLessonDate("");
+      setStartTime("");
+      setDurationMinutes("30");
+      setLessonType("");
+      setHourlyRate("");
+      setNotes("");
+      setShowAddLesson(false);
+
+    } finally {
+      setIsSubmitting(false)
     }
-
-    const calculatedRate = Number(hourlyRate) * (Number(durationMinutes) / 60);
-
-    const { error: lessonError } = await supabase.from("lessons").insert({
-      coach_id: coachId,
-      student_id: finalStudentId,
-      lesson_date: lessonDate,
-      start_time: startTime,
-      duration_minutes: Number(durationMinutes),
-      lesson_type: lessonType || null,
-      hourly_rate: Number(hourlyRate),
-      rate: calculatedRate,
-      notes: notes || null,
-    });
-
-    if (lessonError) {
-      console.log("Lesson create error:", lessonError);
-      return;
-    }
-
-    await loadDashboardLessons(coachId);
-
-    setStudentName("");
-    setSelectedStudentId(null);
-    setLessonDate("");
-    setStartTime("");
-    setDurationMinutes("30");
-    setLessonType("");
-    setHourlyRate("");
-    setNotes("");
-    setShowAddLesson(false);
   }
 
   function openEditLesson(lesson: any) {
@@ -569,66 +580,87 @@ function Dashboard() {
   async function handleUpdateLesson(e: any) {
     e.preventDefault();
 
-    if (!editingLesson || !coachId) return;
+    if (isSubmitting) return;
+    setIsSubmitting(true);
 
-    const calculatedRate =
-      Number(hourlyRate) * (Number(durationMinutes) / 60);
+    try {
 
-    const { data, error } = await supabase
-      .from("lessons")
-      .update({
-        lesson_date: lessonDate,
-        start_time: startTime,
-        duration_minutes: Number(durationMinutes),
-        lesson_type: lessonType || null,
-        hourly_rate: Number(hourlyRate),
-        rate: calculatedRate,
-        notes: notes || null,
-      })
-      .eq("id", editingLesson.id)
-      .eq("coach_id", coachId)
-      .select(`
-        *,
-        students (
-          student_name
+      if (!editingLesson || !coachId) return;
+
+      const calculatedRate =
+        Number(hourlyRate) * (Number(durationMinutes) / 60);
+
+      const { data, error } = await supabase
+        .from("lessons")
+        .update({
+          lesson_date: lessonDate,
+          start_time: startTime,
+          duration_minutes: Number(durationMinutes),
+          lesson_type: lessonType || null,
+          hourly_rate: Number(hourlyRate),
+          rate: calculatedRate,
+          notes: notes || null,
+        })
+        .eq("id", editingLesson.id)
+        .eq("coach_id", coachId)
+        .select(`
+          *,
+          students (
+            student_name
+          )
+        `)
+        .single();
+
+      if (error) {
+        console.log("Update dashboard lesson error:", error);
+        return;
+      }
+
+      setLessons((prev) =>
+        prev.map((lesson) =>
+          lesson.id === editingLesson.id ? data : lesson
         )
-      `)
-      .single();
+      );
 
-    if (error) {
-      console.log("Update dashboard lesson error:", error);
-      return;
+      closeEditLesson();
+
+    } finally {
+      setIsSubmitting(false);
     }
 
-    setLessons((prev) =>
-      prev.map((lesson) =>
-        lesson.id === editingLesson.id ? data : lesson
-      )
-    );
-
-    closeEditLesson();
   }
 
   async function handleDeleteLesson(lessonId: string) {
 
-    await cleanupInvoicesAfterLessonDelete(lessonId);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
 
-    const { error } = await supabase
-      .from("lessons")
-      .delete()
-      .eq("id", lessonId)
-      .eq("coach_id", coachId);
+    try {
 
-    if (error) {
-      console.log("Delete dashboard lesson error:", error);
-      return;
+      await cleanupInvoicesAfterLessonDelete(lessonId);
+
+      const { error } = await supabase
+        .from("lessons")
+        .delete()
+        .eq("id", lessonId)
+        .eq("coach_id", coachId);
+
+      if (error) {
+        console.log("Delete dashboard lesson error:", error);
+        return;
+      }
+
+      setLessons((prev) =>
+        prev.filter((lesson) => lesson.id !== lessonId)
+      );
+
+      closeEditLesson();
+
+    } finally {
+      setIsSubmitting(false)
     }
 
-    setLessons((prev) =>
-      prev.filter((lesson) => lesson.id !== lessonId)
-    );
-
-    closeEditLesson();
+    
   }
 
   function getLocalToday() {
@@ -884,29 +916,6 @@ function Dashboard() {
     }
 
     setInvoices(data || []);
-  }
-
-  async function updateInvoiceStatusFromDashboard(invoiceId: string, newStatus: string) {
-    const { error } = await supabase
-      .from("invoices")
-      .update({ status: newStatus })
-      .eq("id", invoiceId)
-      .eq("coach_id", coachId);
-
-    if (error) {
-      console.log("Dashboard invoice status update error:", error);
-      return;
-    }
-
-    setInvoices((prev) =>
-      prev.map((invoice) =>
-        invoice.id === invoiceId
-          ? { ...invoice, status: newStatus }
-          : invoice
-      )
-    );
-
-    setEditingInvoiceStatusId(null);
   }
 
   if (loading) {
@@ -1635,8 +1644,8 @@ function Dashboard() {
                 />
               </div>
 
-              <button type="submit" className="save-lesson-btn">
-                Save Lesson
+              <button type="submit" className="save-lesson-btn" disabled={isSubmitting}>
+                {isSubmitting ? "Saving..." : "Save Lesson"}
               </button>
             </form>
           </div>
@@ -1759,15 +1768,16 @@ function Dashboard() {
                 />
               </div>
 
-              <button type="submit" className="save-lesson-btn">
-                Save Changes
+              <button type="submit" className="save-lesson-btn" disabled={isSubmitting}>
+                {isSubmitting ? "Saving..." : "Save Lesson"}
               </button>
               <button
                 type="button"
                 className="delete-lesson-btn"
+                disabled={isSubmitting}
                 onClick={() => handleDeleteLesson(editingLesson.id)}
               >
-                Delete Lesson
+                {isSubmitting ? "Deleting..." : "Delete Lesson"}
               </button>
             </form>
           </div>

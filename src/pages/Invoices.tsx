@@ -645,6 +645,14 @@ function Invoices() {
 
     setSendSuccessEmail(data.recipientEmail || "recipient");
   }
+  const currentInvoices = invoices.filter(
+    (invoice) => (invoice.status || "unbilled") === "unbilled"
+  );
+
+  const pastInvoices = invoices.filter(
+    (invoice) =>
+      invoice.status === "billed" || invoice.status === "paid"
+  );
 
   if (loading) {
     return (
@@ -706,45 +714,110 @@ function Invoices() {
 
 
             <div className="invoices-list-view">
-            <section className="invoices-group">
+              {/* <section className="invoices-group">
+                  <div className="invoices-group-title">
+                  <h2>Your Invoices</h2>
+                  <span>
+                      {invoices.length}{" "}
+                      {invoices.length === 1 ? "invoice" : "invoices"}
+                  </span>
+                  </div>
+
+                  {invoices.length === 0 ? (
+                  <p className="invoices-empty">
+                      No invoices yet. Tap + to create one.
+                  </p>
+                  ) : (
+                  <div className="invoices-group-card">
+                      {invoices.map((invoice) => (
+                      <div key={invoice.id} className="invoices-row">
+                          <div className="invoices-avatar">
+                          {invoice.students?.student_name
+                              ? invoice.students.student_name.charAt(0).toUpperCase()
+                              : "I"}
+                          </div>
+
+                          <div className="invoices-info">
+                          <strong>
+                              {invoice.invoice_number || "Invoice"}
+                          </strong>
+
+                          <span>
+                              {invoice.students?.student_name || "Student"} •{" "}
+                              {formatMoney(invoice.total)}
+                          </span>
+
+                          <span>
+                              {invoice.status
+                              ? invoice.status.charAt(0).toUpperCase() +
+                                invoice.status.slice(1)
+                              : "No status"}
+                          </span>
+                          </div>
+
+                          <div className="invoice-actions">
+                            <button
+                              type="button"
+                              className="invoice-edit-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditInvoice(invoice);
+                              }}
+                            >
+                              <FaEdit />
+                            </button>
+
+                            <button
+                              type="button"
+                              className="invoice-send-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                sendInvoice(invoice.id);
+                              }}
+                            >
+                              <FaPaperPlane />
+                            </button>
+                          </div>
+                      </div>
+                      ))}
+                  </div>
+                  )}
+              </section> */}
+              <section className="invoices-group">
                 <div className="invoices-group-title">
-                <h2>Your Invoices</h2>
-                <span>
-                    {invoices.length}{" "}
-                    {invoices.length === 1 ? "invoice" : "invoices"}
-                </span>
+                  <h2>Current Invoices</h2>
+                  <span>
+                    {currentInvoices.length}{" "}
+                    {currentInvoices.length === 1 ? "invoice" : "invoices"}
+                  </span>
                 </div>
 
-                {invoices.length === 0 ? (
-                <p className="invoices-empty">
-                    No invoices yet. Tap + to create one.
-                </p>
+                {currentInvoices.length === 0 ? (
+                  <p className="invoices-empty">No current invoices.</p>
                 ) : (
-                <div className="invoices-group-card">
-                    {invoices.map((invoice) => (
-                    <div key={invoice.id} className="invoices-row">
+                  <div className="invoices-group-card">
+                    {currentInvoices.map((invoice) => (
+                      <div key={invoice.id} className="invoices-row">
                         <div className="invoices-avatar">
-                        {invoice.students?.student_name
+                          {invoice.students?.student_name
                             ? invoice.students.student_name.charAt(0).toUpperCase()
                             : "I"}
                         </div>
 
                         <div className="invoices-info">
-                        <strong>
-                            {invoice.invoice_number || "Invoice"}
-                        </strong>
+                          <strong>{invoice.invoice_number || "Invoice"}</strong>
 
-                        <span>
+                          <span>
                             {invoice.students?.student_name || "Student"} •{" "}
                             {formatMoney(invoice.total)}
-                        </span>
+                          </span>
 
-                        <span>
+                          <span>
                             {invoice.status
-                            ? invoice.status.charAt(0).toUpperCase() +
-                              invoice.status.slice(1)
-                            : "No status"}
-                        </span>
+                              ? invoice.status.charAt(0).toUpperCase() +
+                                invoice.status.slice(1)
+                              : "No status"}
+                          </span>
                         </div>
 
                         <div className="invoice-actions">
@@ -770,11 +843,66 @@ function Invoices() {
                             <FaPaperPlane />
                           </button>
                         </div>
-                    </div>
+                      </div>
                     ))}
-                </div>
+                  </div>
                 )}
-            </section>
+              </section>
+
+              <section className="invoices-group past-invoices-group">
+                <div className="invoices-group-title">
+                  <h2>Past Invoices</h2>
+                  <span>
+                    {pastInvoices.length}{" "}
+                    {pastInvoices.length === 1 ? "invoice" : "invoices"}
+                  </span>
+                </div>
+
+                {pastInvoices.length === 0 ? (
+                  <p className="invoices-empty">No past invoices.</p>
+                ) : (
+                  <div className="invoices-group-card">
+                    {pastInvoices.map((invoice) => (
+                      <div key={invoice.id} className="invoices-row past-invoice-row">
+                        <div className="invoices-avatar">
+                          {invoice.students?.student_name
+                            ? invoice.students.student_name.charAt(0).toUpperCase()
+                            : "I"}
+                        </div>
+
+                        <div className="invoices-info">
+                          <strong>{invoice.invoice_number || "Invoice"}</strong>
+
+                          <span>
+                            {invoice.students?.student_name || "Student"} •{" "}
+                            {formatMoney(invoice.total)}
+                          </span>
+
+                          <span>
+                            {invoice.status
+                              ? invoice.status.charAt(0).toUpperCase() +
+                                invoice.status.slice(1)
+                              : "No status"}
+                          </span>
+                        </div>
+
+                        <div className="invoice-actions">
+                          <button
+                            type="button"
+                            className="invoice-edit-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditInvoice(invoice);
+                            }}
+                          >
+                            <FaEdit />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
             </div>
         </div>
 
@@ -1168,14 +1296,10 @@ function Invoices() {
                 !
               </div>
 
-              <h2>{sendError.includes("Student email")
-                ? "Student Email Required"
-                : sendError.includes("Parent email")
-                ? "Parent Email Required"
-                : "Failed"}</h2>
+              <h2>Failed</h2>
 
               <p>
-                {sendError}
+                Please add student's info before sending invoices
               </p>
 
               <button

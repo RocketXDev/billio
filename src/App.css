@@ -1830,12 +1830,46 @@ textarea:focus {
   height: 42px;
   min-width: 42px;
   border-radius: 50%;
-  background: #eef2ff;
-  color: var(--primary-purple);
-
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.calendar-time-icon.unbilled {
+  background: #fff7ed;
+  color: #f59e0b;
+}
+
+.calendar-time-icon.billed {
+  background: #eff6ff;
+  color: #3b82f6;
+}
+
+.calendar-time-icon.paid {
+  background: #ecfdf5;
+  color: #22c55e;
+}
+
+.calendar-billing-label {
+  display: inline-flex;
+  width: fit-content;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* orange */
+.calendar-billing-label.unbilled {
+  color: #f59e0b;
+}
+
+/* blue */
+.calendar-billing-label.billed {
+  color: #3b82f6;
+}
+
+/* green */
+.calendar-billing-label.paid {
+  color: #22c55e;
 }
 
 .calendar-detail-row strong {
@@ -2476,6 +2510,29 @@ textarea:focus {
   padding: 18px 0;
   border-bottom: 1px solid var(--border);
 }
+.invoice-section {
+  margin-top: 20px;
+}
+
+.invoice-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.invoice-section-title h2 {
+  margin: 0;
+  color: var(--main-text);
+  font-size: 20px;
+  font-weight: 750;
+}
+
+.invoice-section-title span {
+  color: var(--secondary-text);
+  font-size: 13px;
+  font-weight: 700;
+}
 
 .invoices-row:last-child {
   border-bottom: none;
@@ -2510,21 +2567,21 @@ textarea:focus {
 .invoice-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .invoice-edit-btn,
 .invoice-send-btn {
-  width: 38px;
-  height: 38px;
-  min-width: 38px;
+  width: 41px;
+  height: 41px;
+  min-width: 41px;
   margin: 0;
   padding: 0;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .invoice-edit-btn {

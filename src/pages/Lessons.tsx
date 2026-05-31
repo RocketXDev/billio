@@ -843,7 +843,11 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                   ) : (
                     selectedCalendarLessons.map((lesson) => (
                       <div key={lesson.id} className="calendar-detail-row">
-                        <div className="calendar-time-icon">
+                        <div
+                          className={`calendar-time-icon ${
+                            lesson.billing_status || "unbilled"
+                          }`}
+                        >
                           <FaClock />
                         </div>
 
@@ -858,7 +862,18 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                               ? ` • ${lesson.lesson_type}`
                               : ""}
                             {" • $"}
-                            {formatMoney(lesson.rate)}
+                            {formatMoney(lesson.rate)} 
+                            {" • "}
+                            <div
+                            className={`calendar-billing-label ${
+                              lesson.billing_status || "unbilled"
+                            }`}
+                          >
+                            {(lesson.billing_status || "unbilled")
+                              .charAt(0)
+                              .toUpperCase() +
+                              (lesson.billing_status || "unbilled").slice(1)}
+                          </div>
                           </span>
                         </div>
 

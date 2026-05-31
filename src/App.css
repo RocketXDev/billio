@@ -2160,20 +2160,34 @@ textarea:focus {
 }
 
 .student-preference-section {
-  margin: 13px 0px 5px;
-  padding-top: 18px;
-  border-top: 1px solid var(--border);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: 0;
+  padding-right: 0;
+  border-top: 1px var(--border) solid;
+  transform: none;
+  left: auto;
+  position: relative;
+}
+
+.student-preference-section .input-block {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .student-preference-section h3 {
-  margin: 0 0 5px;
+  margin: 10px 0 5px;
   color: var(--main-text);
   font-size: 20px;
   font-weight: 750;
 }
 
 .student-preference-section > .input-block:last-child {
-  margin-top: 15px;
+  margin-top: 20px;
 }
 
 .student-field-note {
@@ -2185,8 +2199,13 @@ textarea:focus {
 }
 
 .student-choice-group {
-  display: grid;
-  grid-template-columns: 1fr;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
   gap: 10px;
 }
 

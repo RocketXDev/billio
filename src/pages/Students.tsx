@@ -277,6 +277,7 @@ function Students() {
     setPhoneNumber("");
     setParentName("");
     setParentPhone("");
+    setParentEmail("");
     setActive(true);
     setNotes("");
     setEditingStudent(null);
@@ -285,20 +286,13 @@ function Students() {
   }
 
   function closeAddStudent() {
-  setShowAddStudent(false);
-  resetStudentForm();
+    setShowAddStudent(false);
+    resetStudentForm();
   }
 
   function closeEditLesson() {
     setShowEditLesson(false);
-    setEditingLesson(null);
-
-    setLessonDate("");
-    setStartTime("");
-    setDurationMinutes("30");
-    setLessonType("");
-    setHourlyRate("");
-    setLessonNotes("");
+    resetStudentForm();
   }
 
   async function handleUpdateLesson(e: any) {
@@ -327,20 +321,6 @@ function Students() {
 
     if (error) {
       console.log("Update student lesson error:", error);
-      return;
-    }
-
-    const { error: linkUpdateError } = await supabase
-      .from("coach_students")
-      .update({
-        invoice_contact_target: invoiceContactTarget,
-        invoice_delivery_method: invoiceDeliveryMethod,
-      })
-      .eq("coach_id", coachId)
-      .eq("student_id", editingStudent.id);
-
-    if (linkUpdateError) {
-      console.log("Update student invoice preferences error:", linkUpdateError);
       return;
     }
 
@@ -376,7 +356,7 @@ function Students() {
   async function handleUpdateStudent(e: any) {
     e.preventDefault();
 
-    if (!editingStudent || !coachId) return;
+    if (!coachId || !editingStudent) return;
 
     const cleanStudentName = studentName.trim();
 
@@ -385,7 +365,19 @@ function Students() {
       return;
     }
 
-    const { data, error } = await supabase
+    const existingStudent = students.find(
+      (link: any) =>
+        link.student_id !== editingStudent.id &&
+        link.students?.student_name?.trim().toLowerCase() ===
+          cleanStudentName.toLowerCase()
+    );
+
+    if (existingStudent) {
+      alert("This student already exists.");
+      return;
+    }
+
+    const { data: updatedStudent, error: studentError } = await supabase
       .from("students")
       .update({
         student_name: cleanStudentName,
@@ -401,12 +393,12 @@ function Students() {
       .select()
       .single();
 
-    if (error) {
-      console.log("Update student error:", error);
+    if (studentError) {
+      console.log("Student update error:", studentError);
       return;
     }
 
-    const { error: linkUpdateError } = await supabase
+    const { error: linkError } = await supabase
       .from("coach_students")
       .update({
         invoice_contact_target: invoiceContactTarget,
@@ -415,11 +407,8 @@ function Students() {
       .eq("coach_id", coachId)
       .eq("student_id", editingStudent.id);
 
-    if (linkUpdateError) {
-      console.log(
-        "Update student invoice preferences error:",
-        linkUpdateError
-      );
+    if (linkError) {
+      console.log("Coach-student preference update error:", linkError);
       return;
     }
 
@@ -430,7 +419,7 @@ function Students() {
               ...link,
               invoice_contact_target: invoiceContactTarget,
               invoice_delivery_method: invoiceDeliveryMethod,
-              students: data,
+              students: updatedStudent,
             }
           : link
       )

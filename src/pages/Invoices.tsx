@@ -714,75 +714,6 @@ function Invoices() {
 
 
             <div className="invoices-list-view">
-              {/* <section className="invoices-group">
-                  <div className="invoices-group-title">
-                  <h2>Your Invoices</h2>
-                  <span>
-                      {invoices.length}{" "}
-                      {invoices.length === 1 ? "invoice" : "invoices"}
-                  </span>
-                  </div>
-
-                  {invoices.length === 0 ? (
-                  <p className="invoices-empty">
-                      No invoices yet. Tap + to create one.
-                  </p>
-                  ) : (
-                  <div className="invoices-group-card">
-                      {invoices.map((invoice) => (
-                      <div key={invoice.id} className="invoices-row">
-                          <div className="invoices-avatar">
-                          {invoice.students?.student_name
-                              ? invoice.students.student_name.charAt(0).toUpperCase()
-                              : "I"}
-                          </div>
-
-                          <div className="invoices-info">
-                          <strong>
-                              {invoice.invoice_number || "Invoice"}
-                          </strong>
-
-                          <span>
-                              {invoice.students?.student_name || "Student"} •{" "}
-                              {formatMoney(invoice.total)}
-                          </span>
-
-                          <span>
-                              {invoice.status
-                              ? invoice.status.charAt(0).toUpperCase() +
-                                invoice.status.slice(1)
-                              : "No status"}
-                          </span>
-                          </div>
-
-                          <div className="invoice-actions">
-                            <button
-                              type="button"
-                              className="invoice-edit-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openEditInvoice(invoice);
-                              }}
-                            >
-                              <FaEdit />
-                            </button>
-
-                            <button
-                              type="button"
-                              className="invoice-send-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                sendInvoice(invoice.id);
-                              }}
-                            >
-                              <FaPaperPlane />
-                            </button>
-                          </div>
-                      </div>
-                      ))}
-                  </div>
-                  )}
-              </section> */}
               <section className="invoices-group">
                 <div className="invoices-group-title">
                   <h2>Current Invoices</h2>
@@ -813,10 +744,16 @@ function Invoices() {
                           </span>
 
                           <span>
-                            {invoice.status
-                              ? invoice.status.charAt(0).toUpperCase() +
-                                invoice.status.slice(1)
-                              : "No status"}
+                            <div
+                              className={`calendar-billing-label ${
+                                invoice.status || "unbilled"
+                              }`}
+                            >
+                              {(invoice.status || "unbilled")
+                                .charAt(0)
+                                .toUpperCase() +
+                                (invoice.status || "unbilled").slice(1)}
+                            </div>
                           </span>
                         </div>
 
@@ -878,12 +815,16 @@ function Invoices() {
                             {formatMoney(invoice.total)}
                           </span>
 
-                          <span>
-                            {invoice.status
-                              ? invoice.status.charAt(0).toUpperCase() +
-                                invoice.status.slice(1)
-                              : "No status"}
-                          </span>
+                          <div
+                            className={`calendar-billing-label ${
+                              invoice.status || "unbilled"
+                            }`}
+                          >
+                            {(invoice.status || "unbilled")
+                              .charAt(0)
+                              .toUpperCase() +
+                              (invoice.status || "unbilled").slice(1)}
+                          </div>
                         </div>
 
                         <div className="invoice-actions">

@@ -2808,6 +2808,63 @@ textarea:focus {
   transition: transform 0.22s ease, max-height 0.22s ease;
 }
 
+.invoice-sending-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  background: rgba(15, 23, 42, 0.35);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+}
+
+.invoice-sending-card {
+  width: 100%;
+  max-width: 340px;
+
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+
+  padding: 28px 22px;
+  text-align: center;
+}
+
+.billio-mini-spinner {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 16px;
+
+  border-radius: 50%;
+  border: 4px solid #e0e7ff;
+  border-top-color: var(--primary-purple);
+
+  animation: billioSpin 0.8s linear infinite;
+}
+
+@keyframes billioSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.invoice-sending-card h2 {
+  margin: 0 0 8px;
+  color: var(--main-text);
+  font-size: 23px;
+  font-weight: 800;
+}
+
+.invoice-sending-card p {
+  margin: 0;
+  color: var(--secondary-text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .student-search-block {
   position: relative;
   z-index: 20;

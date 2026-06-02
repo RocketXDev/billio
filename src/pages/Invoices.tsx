@@ -51,6 +51,7 @@ function Invoices() {
   const [editInvoiceLessons, setEditInvoiceLessons] = useState<any[]>([]);
   const [editSelectedLessonIds, setEditSelectedLessonIds] = useState<string[]>([]);
   const [originalInvoiceStatus, setOriginalInvoiceStatus] = useState("unbilled");
+  const [sendingInvoiceId, setSendingInvoiceId] = useState<string | null>(null);
 
   useEffect(() => {
     loadInvoices();
@@ -611,8 +612,22 @@ function Invoices() {
 
     return "billed";
   }
+  const currentInvoices = invoices.filter(
+    (invoice) => (invoice.status || "unbilled") === "unbilled"
+  );
+
+  const pastInvoices = invoices.filter(
+    (invoice) =>
+      invoice.status === "billed" || invoice.status === "paid"
+  );
 
   async function sendInvoice(invoiceId: string) {
+    if (sendingInvoiceId) return;
+
+    setSendingInvoiceId(invoiceId);
+    setSendError("");
+    setSendSuccessEmail("");
+
     const { data, error } = await supabase.functions.invoke(
       "send-single-invoice",
       {
@@ -620,12 +635,31 @@ function Invoices() {
       }
     );
 
+    setSendingInvoiceId(null);
+
     if (error || data?.error) {
-      setSendError(
+      const rawError =
         data?.error ||
-          error?.message ||
-          "Invoice could not be sent. Please try again."
-      );
+        error?.message ||
+        "Invoice could not be sent.";
+
+      let customMessage = "Invoice could not be sent. Please try again.";
+
+      if (rawError.toLowerCase().includes("student email")) {
+        customMessage =
+          "Student email is missing. Please open this student and add their email before sending the invoice.";
+      } else if (rawError.toLowerCase().includes("parent email")) {
+        customMessage =
+          "Parent email is missing. Please open this student and add the parent email before sending the invoice.";
+      } else if (rawError.toLowerCase().includes("no email")) {
+        customMessage =
+          "No email was found for this student. Please add either a student email or parent email before sending.";
+      } else if (rawError.toLowerCase().includes("text delivery")) {
+        customMessage =
+          "Text invoice delivery is not available yet. Please use email delivery for now.";
+      }
+
+      setSendError(customMessage);
       return;
     }
 
@@ -645,14 +679,6 @@ function Invoices() {
 
     setSendSuccessEmail(data.recipientEmail || "recipient");
   }
-  const currentInvoices = invoices.filter(
-    (invoice) => (invoice.status || "unbilled") === "unbilled"
-  );
-
-  const pastInvoices = invoices.filter(
-    (invoice) =>
-      invoice.status === "billed" || invoice.status === "paid"
-  );
 
   if (loading) {
     return (
@@ -772,12 +798,13 @@ function Invoices() {
                           <button
                             type="button"
                             className="invoice-send-btn"
+                            disabled={sendingInvoiceId === invoice.id}
                             onClick={(e) => {
                               e.stopPropagation();
                               sendInvoice(invoice.id);
                             }}
                           >
-                            <FaPaperPlane />
+                            {sendingInvoiceId === invoice.id ? "..." : <FaPaperPlane />}
                           </button>
                         </div>
                       </div>
@@ -1249,6 +1276,16 @@ function Invoices() {
               >
                 Close
               </button>
+            </div>
+          </div>
+        )}
+        {sendingInvoiceId && (
+          <div className="invoice-sending-overlay">
+            <div className="invoice-sending-card">
+              <div className="billio-mini-spinner" />
+
+              <h2>Sending Invoice</h2>
+              <p>Please wait while Billio sends this invoice.</p>
             </div>
           </div>
         )}

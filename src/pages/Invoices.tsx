@@ -13,6 +13,8 @@ import {
   FaReceipt,
   FaClock,
   FaWallet,
+  FaChevronDown, 
+  FaChevronRight
 } from "react-icons/fa";
 import { supabase } from "../lib/supabaseClient";
 
@@ -913,12 +915,13 @@ function Invoices() {
                             }
                           >
                             <span>
-                              <div>
-                                {openMonths[monthLabel] ? "▼" : "▶"} 
-                              </div>
-                              <div>
-                                {monthLabel}
-                              </div>
+                              {openMonths[monthLabel] ? (
+                                <FaChevronDown />
+                              ) : (
+                                <FaChevronRight />
+                              )}
+
+                              {monthLabel}
                             </span>
 
                             <strong>
@@ -945,12 +948,12 @@ function Invoices() {
                                     }
                                   >
                                     <span>
-                                      <div>
-                                        {openWeeks[weekKey] ? "▼" : "▶"}
-                                      </div>
-                                      <div>
-                                        {week.label}
-                                      </div>
+                                      {openWeeks[weekKey] ? (
+                                        <FaChevronDown />
+                                      ) : (
+                                        <FaChevronRight />
+                                      )}
+                                      {week.label}
                                     </span>
 
                                     <strong>{week.invoices.length}</strong>

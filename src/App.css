@@ -3195,20 +3195,6 @@ textarea:focus {
   border-radius: 22px;
   overflow: hidden;
 }
-.invoice-month-toggle > span {
-  display: flex;
-  flex-direction: row;
-  gap: 8px;
-  justify-content: center;
-  align-items: center;
-}
-.invoice-week-toggle > span {
-  display: flex;
-  flex-direction: row;
-  gap: 8px;
-  justify-content: center;
-  align-items: center;
-}
 
 .invoice-month-toggle,
 .invoice-week-toggle {
@@ -3227,6 +3213,24 @@ textarea:focus {
 .invoice-month-toggle {
   padding: 16px 18px;
   font-size: 16px;
+}
+
+.invoice-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.invoice-toggle-label svg {
+  width: 14px;
+  min-width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  top: -1px;
 }
 
 .invoice-week-list {

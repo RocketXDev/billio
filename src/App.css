@@ -3183,6 +3183,77 @@ textarea:focus {
   -webkit-appearance: none;
 }
 
+.invoice-archive {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.invoice-month-group {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  overflow: hidden;
+}
+.invoice-month-toggle > span {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+}
+.invoice-week-toggle > span {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+}
+
+.invoice-month-toggle,
+.invoice-week-toggle {
+  width: 100%;
+  margin: 0;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: transparent;
+  color: var(--main-text);
+  font-weight: 600;
+  text-align: left;
+}
+
+.invoice-month-toggle {
+  padding: 16px 18px;
+  font-size: 16px;
+}
+
+.invoice-week-list {
+  padding: 0 12px 12px;
+}
+
+.invoice-week-group {
+  border-top: 1px solid var(--border);
+}
+
+.invoice-week-toggle {
+  padding: 14px 6px;
+  font-size: 13px;
+  color: var(--secondary-text);
+}
+
+.invoice-month-toggle strong,
+.invoice-week-toggle strong {
+  color: var(--primary-purple);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.invoice-week-group .invoices-group-card {
+  margin-bottom: 12px;
+}
+
 /* PROFILE PAGE */
 .profile-page {
   min-height: 100vh;

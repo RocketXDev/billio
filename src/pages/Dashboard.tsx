@@ -695,10 +695,18 @@ function Dashboard() {
     0
   );
 
-  const weekStart = new Date();
-  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+  const todayDate = new Date();
+
+  const day = todayDate.getDay();
+
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+
+  const weekStart = new Date(todayDate);
+  weekStart.setHours(0, 0, 0, 0);
+  weekStart.setDate(todayDate.getDate() + diffToMonday);
 
   const weekEnd = new Date(weekStart);
+  weekEnd.setHours(23, 59, 59, 999);
   weekEnd.setDate(weekStart.getDate() + 6);
 
   const weekLessons = lessons.filter((lesson) => {

@@ -52,6 +52,8 @@ function Invoices() {
   const [editSelectedLessonIds, setEditSelectedLessonIds] = useState<string[]>([]);
   const [originalInvoiceStatus, setOriginalInvoiceStatus] = useState("unbilled");
   const [sendingInvoiceId, setSendingInvoiceId] = useState<string | null>(null);
+  const [openMonths, setOpenMonths] = useState<any>({});
+  const [openWeeks, setOpenWeeks] = useState<any>({});
 
   useEffect(() => {
     loadInvoices();
@@ -680,6 +682,77 @@ function Invoices() {
     setSendSuccessEmail(data.recipientEmail || "recipient");
   }
 
+  function getWeekStart(dateString: string) {
+    const date = new Date(`${dateString}T00:00:00`);
+    const day = date.getDay();
+    const diff = date.getDate() - day + 1;
+
+    if (day === 0) {
+      date.setDate(date.getDate() - 6);
+    } else {
+      date.setDate(diff);
+    }
+
+    return date;
+  }
+
+  function getWeekEnd(weekStart: Date) {
+    const end = new Date(weekStart);
+    end.setDate(weekStart.getDate() + 6);
+    return end;
+  }
+
+  function formatMonthYear(date: Date) {
+    return date.toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    });
+  }
+
+  function formatWeekRange(start: Date, end: Date) {
+    const startText = start.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+
+    const endText = end.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+
+    return `${startText} – ${endText}`;
+  }
+
+  const groupedPastInvoices = pastInvoices.reduce((groups: any, invoice: any) => {
+    const dateSource =
+      invoice.period_start ||
+      invoice.issue_date ||
+      invoice.created_at;
+
+    const weekStart = getWeekStart(dateSource);
+    const weekEnd = getWeekEnd(weekStart);
+
+    const monthKey = formatMonthYear(weekStart);
+    const weekKey = `${weekStart.toISOString().slice(0, 10)}_${weekEnd
+      .toISOString()
+      .slice(0, 10)}`;
+
+    if (!groups[monthKey]) {
+      groups[monthKey] = {};
+    }
+
+    if (!groups[monthKey][weekKey]) {
+      groups[monthKey][weekKey] = {
+        label: formatWeekRange(weekStart, weekEnd),
+        invoices: [],
+      };
+    }
+
+    groups[monthKey][weekKey].invoices.push(invoice);
+
+    return groups;
+  }, {});
+
   if (loading) {
     return (
       <div className="loading-screen">
@@ -825,49 +898,127 @@ function Invoices() {
                 {pastInvoices.length === 0 ? (
                   <p className="invoices-empty">No past invoices.</p>
                 ) : (
-                  <div className="invoices-group-card">
-                    {pastInvoices.map((invoice) => (
-                      <div key={invoice.id} className="invoices-row past-invoice-row">
-                        <div className="invoices-avatar">
-                          {invoice.students?.student_name
-                            ? invoice.students.student_name.charAt(0).toUpperCase()
-                            : "I"}
-                        </div>
-
-                        <div className="invoices-info">
-                          <strong>{invoice.invoice_number || "Invoice"}</strong>
-
-                          <span>
-                            {invoice.students?.student_name || "Student"} •{" "}
-                            {formatMoney(invoice.total)}
-                          </span>
-
-                          <div
-                            className={`calendar-billing-label ${
-                              invoice.status || "unbilled"
-                            }`}
-                          >
-                            {(invoice.status || "unbilled")
-                              .charAt(0)
-                              .toUpperCase() +
-                              (invoice.status || "unbilled").slice(1)}
-                          </div>
-                        </div>
-
-                        <div className="invoice-actions">
+                  <div className="invoice-archive">
+                    {Object.entries(groupedPastInvoices).map(
+                      ([monthLabel, weeks]: any) => (
+                        <div key={monthLabel} className="invoice-month-group">
                           <button
                             type="button"
-                            className="invoice-edit-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openEditInvoice(invoice);
-                            }}
+                            className="invoice-month-toggle"
+                            onClick={() =>
+                              setOpenMonths((prev: any) => ({
+                                ...prev,
+                                [monthLabel]: !prev[monthLabel],
+                              }))
+                            }
                           >
-                            <FaEdit />
+                            <span>
+                              <div>
+                                {openMonths[monthLabel] ? "▼" : "▶"} 
+                              </div>
+                              <div>
+                                {monthLabel}
+                              </div>
+                            </span>
+
+                            <strong>
+                              {Object.values(weeks).reduce(
+                                (sum: number, week: any) =>
+                                  sum + week.invoices.length,
+                                0
+                              )}
+                            </strong>
                           </button>
+
+                          {openMonths[monthLabel] && (
+                            <div className="invoice-week-list">
+                              {Object.entries(weeks).map(([weekKey, week]: any) => (
+                                <div key={weekKey} className="invoice-week-group">
+                                  <button
+                                    type="button"
+                                    className="invoice-week-toggle"
+                                    onClick={() =>
+                                      setOpenWeeks((prev: any) => ({
+                                        ...prev,
+                                        [weekKey]: !prev[weekKey],
+                                      }))
+                                    }
+                                  >
+                                    <span>
+                                      <div>
+                                        {openWeeks[weekKey] ? "▼" : "▶"}
+                                      </div>
+                                      <div>
+                                        {week.label}
+                                      </div>
+                                    </span>
+
+                                    <strong>{week.invoices.length}</strong>
+                                  </button>
+
+                                  {openWeeks[weekKey] && (
+                                    <div className="invoices-group-card">
+                                      {week.invoices.map((invoice: any) => (
+                                        <div
+                                          key={invoice.id}
+                                          className="invoices-row past-invoice-row"
+                                        >
+                                          <div className="invoices-avatar">
+                                            {invoice.students?.student_name
+                                              ? invoice.students.student_name
+                                                  .charAt(0)
+                                                  .toUpperCase()
+                                              : "I"}
+                                          </div>
+
+                                          <div className="invoices-info">
+                                            <strong>
+                                              {invoice.invoice_number || "Invoice"}
+                                            </strong>
+
+                                            <span>
+                                              {invoice.students?.student_name ||
+                                                "Student"}{" "}
+                                              • {formatMoney(invoice.total)}
+                                            </span>
+
+                                            <div
+                                              className={`calendar-billing-label ${
+                                                (invoice.status || "unbilled")
+                                                  .trim()
+                                                  .toLowerCase()
+                                              }`}
+                                            >
+                                              {(invoice.status || "unbilled")
+                                                .charAt(0)
+                                                .toUpperCase() +
+                                                (invoice.status || "unbilled").slice(1)}
+                                            </div>
+                                          </div>
+
+                                          <div className="invoice-actions">
+                                            <button
+                                              type="button"
+                                              className="invoice-edit-btn"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                openEditInvoice(invoice);
+                                              }}
+                                            >
+                                              <FaEdit />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    ))}
+                      )
+                    )}
                   </div>
                 )}
               </section>

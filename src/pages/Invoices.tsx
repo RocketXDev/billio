@@ -58,6 +58,10 @@ function Invoices() {
   const [openMonths, setOpenMonths] = useState<any>({});
   const [openWeeks, setOpenWeeks] = useState<any>({});
 
+  // Loading
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   useEffect(() => {
     loadInvoices();
   }, []);
@@ -220,67 +224,77 @@ function Invoices() {
   async function handleCreateInvoice(e: any) {
     e.preventDefault();
 
-    if (!coachId || !selectedStudentId || selectedLessonIds.length === 0) return;
+    if (isSaving) return; 
+    setIsSaving(true);
 
-    const selectedLessons = invoiceLessons.filter((lesson) =>
-      selectedLessonIds.includes(lesson.id)
-    );
+    try {
 
-    const total = selectedLessons.reduce(
-      (sum, lesson) => sum + Number(lesson.rate || 0),
-      0
-    );
+      if (!coachId || !selectedStudentId || selectedLessonIds.length === 0) return;
 
-    const invoiceNumber = generateInvoiceNumber();
+      const selectedLessons = invoiceLessons.filter((lesson) =>
+        selectedLessonIds.includes(lesson.id)
+      );
 
-    const { data: invoiceData, error: invoiceError } = await supabase
-      .from("invoices")
-      .insert({
-        invoice_number: invoiceNumber,
-        coach_id: coachId,
-        student_id: selectedStudentId,
-        status: "unbilled",
-        subtotal: total,
-        total,
-        issue_date: new Date().toISOString().split("T")[0],
-        notes: null,
-      })
-      .select(`
-        *,
-        students (
-          student_name
-        )
-      `)
-      .single();
+      const total = selectedLessons.reduce(
+        (sum, lesson) => sum + Number(lesson.rate || 0),
+        0
+      );
 
-    if (invoiceError) {
-      console.log("Create invoice error:", invoiceError);
-      return;
+      const invoiceNumber = generateInvoiceNumber();
+
+      const { data: invoiceData, error: invoiceError } = await supabase
+        .from("invoices")
+        .insert({
+          invoice_number: invoiceNumber,
+          coach_id: coachId,
+          student_id: selectedStudentId,
+          status: "unbilled",
+          subtotal: total,
+          total,
+          issue_date: new Date().toISOString().split("T")[0],
+          notes: null,
+        })
+        .select(`
+          *,
+          students (
+            student_name
+          )
+        `)
+        .single();
+
+      if (invoiceError) {
+        console.log("Create invoice error:", invoiceError);
+        return;
+      }
+
+      const invoiceLessonRows = selectedLessonIds.map((lessonId) => ({
+        invoice_id: invoiceData.id,
+        lesson_id: lessonId,
+      }));
+
+      const { error: linkError } = await supabase
+        .from("invoice_lessons")
+        .insert(invoiceLessonRows);
+
+      if (linkError) {
+        console.log("Invoice lesson link error:", linkError);
+        return;
+      }
+
+      await supabase
+        .from("lessons")
+        .update({
+          status: "unbilled",
+        })
+        .in("id", selectedLessonIds);
+
+      setInvoices((prev) => [invoiceData, ...prev]);
+
+    } finally {
+      setIsSaving(false);
     }
 
-    const invoiceLessonRows = selectedLessonIds.map((lessonId) => ({
-      invoice_id: invoiceData.id,
-      lesson_id: lessonId,
-    }));
-
-    const { error: linkError } = await supabase
-      .from("invoice_lessons")
-      .insert(invoiceLessonRows);
-
-    if (linkError) {
-      console.log("Invoice lesson link error:", linkError);
-      return;
-    }
-
-    await supabase
-      .from("lessons")
-      .update({
-        status: "unbilled",
-      })
-      .in("id", selectedLessonIds);
-
-    setInvoices((prev) => [invoiceData, ...prev]);
-
+    
     setSelectedStudentId("");
     setRangeStart("");
     setRangeEnd("");
@@ -1254,8 +1268,8 @@ function Invoices() {
                   </>
                 )}
 
-                <button type="submit" className="invoices-save-btn">
-                  Create Invoice
+                <button type="submit" className="invoices-save-btn" disabled={isSaving}>
+                  {isSaving ? "Creating..." : "Create Invoice"}
                 </button>
               </form>
             </div>

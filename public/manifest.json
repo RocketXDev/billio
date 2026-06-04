@@ -1,7 +1,7 @@
 {
   "name": "Billio",
   "short_name": "Billio",
-  "start_url": "/",
+  "start_url": "/app",
   "display": "standalone",
   "background_color": "#ebebeb",
   "theme_color": "#3b33d9",

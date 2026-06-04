@@ -31,6 +31,7 @@ function Students() {
   const [active, setActive] = useState(true);
   const [notes, setNotes] = useState("");
   const [parentEmail, setParentEmail] = useState("");
+  const [studentToDelete, setStudentToDelete] = useState<any>(null);
 
   // Student - lessons+invoices popup
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
@@ -427,36 +428,6 @@ function Students() {
 
     closeEditStudent();
   }
-  async function handleDeleteStudent(studentId: string) {
-    if (!coachId) return;
-
-    const { data, error } = await supabase
-      .from("students")
-      .update({
-        active: false,
-      })
-      .eq("id", studentId)
-      .select()
-      .single();
-
-    if (error) {
-      console.log("Archive student error:", error);
-      return;
-    }
-
-    setStudents((prev) =>
-      prev.map((link: any) =>
-        link.student_id === studentId
-          ? {
-              ...link,
-              students: data,
-            }
-          : link
-      )
-    );
-
-    closeEditStudent();
-  }
 
   async function openStudentDetails(link: any) {
     const student = link.students;
@@ -504,6 +475,140 @@ function Students() {
     return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
   }
 
+  const activeStudents = students.filter(
+    (link: any) => link.students?.active !== false
+  );
+
+  const archivedStudents = students.filter(
+    (link: any) => link.students?.active === false
+  );
+
+  async function handleArchiveStudent(studentId: string) {
+    const { data, error } = await supabase
+      .from("students")
+      .update({ active: false })
+      .eq("id", studentId)
+      .select()
+      .single();
+
+    if (error) {
+      console.log("Archive student error:", error);
+      return;
+    }
+
+    setStudents((prev) =>
+      prev.map((link: any) =>
+        link.student_id === studentId
+          ? { ...link, students: data }
+          : link
+      )
+    );
+
+    closeEditStudent();
+  }
+
+  async function handleRestoreStudent(studentId: string) {
+    const { data, error } = await supabase
+      .from("students")
+      .update({ active: true })
+      .eq("id", studentId)
+      .select()
+      .single();
+
+    if (error) {
+      console.log("Restore student error:", error);
+      return;
+    }
+
+    setStudents((prev) =>
+      prev.map((link: any) =>
+        link.student_id === studentId
+          ? { ...link, students: data }
+          : link
+      )
+    );
+
+    closeEditStudent();
+  }
+
+  async function handlePermanentDeleteStudent(studentId: string) {
+
+    if (!coachId) return;
+
+    const { data: studentInvoices, error: invoiceFetchError } = await supabase
+      .from("invoices")
+      .select("id")
+      .eq("coach_id", coachId)
+      .eq("student_id", studentId);
+
+    if (invoiceFetchError) {
+      console.log("Fetch student invoices error:", invoiceFetchError);
+      return;
+    }
+
+    const invoiceIds = studentInvoices?.map((invoice) => invoice.id) || [];
+
+    if (invoiceIds.length > 0) {
+      const { error: invoiceLessonsError } = await supabase
+        .from("invoice_lessons")
+        .delete()
+        .in("invoice_id", invoiceIds);
+
+      if (invoiceLessonsError) {
+        console.log("Delete invoice lessons error:", invoiceLessonsError);
+        return;
+      }
+
+      const { error: invoicesError } = await supabase
+        .from("invoices")
+        .delete()
+        .in("id", invoiceIds);
+
+      if (invoicesError) {
+        console.log("Delete invoices error:", invoicesError);
+        return;
+      }
+    }
+
+    const { error: lessonsError } = await supabase
+      .from("lessons")
+      .delete()
+      .eq("coach_id", coachId)
+      .eq("student_id", studentId);
+
+    if (lessonsError) {
+      console.log("Delete lessons error:", lessonsError);
+      return;
+    }
+
+    const { error: linkError } = await supabase
+      .from("coach_students")
+      .delete()
+      .eq("coach_id", coachId)
+      .eq("student_id", studentId);
+
+    if (linkError) {
+      console.log("Delete coach student link error:", linkError);
+      return;
+    }
+
+    const { error: studentError } = await supabase
+      .from("students")
+      .delete()
+      .eq("id", studentId);
+
+    if (studentError) {
+      console.log("Delete student error:", studentError);
+      return;
+    }
+
+    setStudents((prev) =>
+      prev.filter((link: any) => link.student_id !== studentId)
+    );
+
+    closeEditStudent();
+  }
+
   if (loading) {
     return (
       <div className="loading-screen">
@@ -538,18 +643,18 @@ function Students() {
               <div className="students-group-title">
                 <h2>Your Students</h2>
                 <span>
-                  {students.length}{" "}
-                  {students.length === 1 ? "student" : "students"}
+                  {activeStudents.length}{" "}
+                  {activeStudents.length === 1 ? "student" : "students"}
                 </span>
               </div>
 
-              {students.length === 0 ? (
+              {activeStudents.length === 0 ? (
                 <p className="students-empty">
                   No students yet. Tap + to add one.
                 </p>
               ) : (
                 <div className="students-group-card">
-                  {students.map((link: any) => {
+                  {activeStudents.map((link: any) => {
                     const student = link.students;
 
                     return (
@@ -575,6 +680,55 @@ function Students() {
                         onClick={(e) => {e.stopPropagation(), openEditStudent(link)}}
                         >
                         <FaEdit />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+            <section className="students-group archived-students-group">
+              <div className="students-group-title">
+                <h2>Archived Students</h2>
+                <span>
+                  {archivedStudents.length}{" "}
+                  {archivedStudents.length === 1 ? "student" : "students"}
+                </span>
+              </div>
+
+              {archivedStudents.length === 0 ? (
+                <p className="students-empty">No archived students.</p>
+              ) : (
+                <div className="students-group-card">
+                  {archivedStudents.map((link: any) => {
+                    const student = link.students;
+
+                    return (
+                      <div
+                        key={link.student_id}
+                        className="students-row archived-student-row"
+                        onClick={() => openEditStudent(link)}
+                      >
+                        <div className="students-avatar archived">
+                          {student?.student_name
+                            ? student.student_name.charAt(0).toUpperCase()
+                            : "S"}
+                        </div>
+
+                        <div className="students-info">
+                          <strong>{student?.student_name || "Student"}</strong>
+                          <span>Archived</span>
+                        </div>
+
+                        <button
+                          type="button"
+                          className="students-edit-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditStudent(link);
+                          }}
+                        >
+                          <FaEdit />
                         </button>
                       </div>
                     );
@@ -797,10 +951,10 @@ function Students() {
                 <button
                 type="button"
                 className={`student-active-button ${active ? "active" : "inactive"}`}
-                onClick={() => setActive((prev) => !prev)}
+                // onClick={() => setActive((prev) => !prev)}
                 >
                 <div>
-                    <strong>Active Student</strong>
+                    <strong>Student Activity</strong>
                     <span>
                     {active
                         ? "This student is currently active"
@@ -995,10 +1149,10 @@ function Students() {
                 <button
                 type="button"
                 className={`student-active-button ${active ? "active" : "inactive"}`}
-                onClick={() => setActive((prev) => !prev)}
+                // onClick={() => setActive((prev) => !prev)}
                 >
                 <div>
-                    <strong>Active Student</strong>
+                    <strong>Student Activity</strong>
                     <span>
                     {active
                         ? "This student is currently active"
@@ -1015,12 +1169,28 @@ function Students() {
                 Save Changes
                 </button>
 
+                {!active && (
+                  <button
+                    type="button"
+                    className="students-restore-btn"
+                    onClick={() => handleRestoreStudent(editingStudent.id)}
+                  >
+                    Restore Student
+                  </button>
+                )}
+
                 <button
-                type="button"
-                className="students-delete-btn"
-                onClick={() => handleDeleteStudent(editingStudent.id)}
+                  type="button"
+                  className={active ? "students-delete-btn" : "students-permanent-delete-btn"}
+                  onClick={() => {
+                    if (active) {
+                      handleArchiveStudent(editingStudent.id);
+                    } else {
+                      setStudentToDelete(editingStudent);
+                    }
+                  }}
                 >
-                  Archive Student
+                  {active ? "Archive Student" : "Permanently Delete Student"}
                 </button>
             </form>
             </div>
@@ -1154,6 +1324,48 @@ function Students() {
                 </div>
               )}
             </section>
+          </div>
+        </div>
+      )}
+      {studentToDelete && (
+        <div
+          className="billio-confirm-overlay"
+          onClick={() => setStudentToDelete(null)}
+        >
+          <div
+            className="billio-confirm-card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="billio-confirm-icon">!</div>
+
+            <h2>Permanently Delete?</h2>
+
+            <p>
+              This will permanently delete{" "}
+              <strong>{studentToDelete.student_name}</strong>, including all lessons,
+              invoices, and invoice links. This cannot be undone.
+            </p>
+
+            <div className="billio-confirm-actions">
+              <button
+                type="button"
+                className="billio-cancel-btn"
+                onClick={() => setStudentToDelete(null)}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="billio-danger-btn"
+                onClick={() => {
+                  handlePermanentDeleteStudent(studentToDelete.id);
+                  setStudentToDelete(null);
+                }}
+              >
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

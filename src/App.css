@@ -2422,6 +2422,130 @@ textarea:focus {
   color: #dc2626;
 }
 
+.archived-students-group {
+  margin-top: 22px;
+}
+
+.archived-student-row {
+  opacity: 0.72;
+}
+
+.students-avatar.archived {
+  background: #e5e7eb;
+  color: #64748b;
+}
+
+.students-restore-btn {
+  font-size: 20px;
+  font-weight: 400;
+  width: 90%;
+  margin-top: 4px;
+  background: #eef2ff;
+  color: var(--primary-purple);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.students-permanent-delete-btn {
+  width: 90%;
+  font-size: 20px;
+  font-weight: 400;
+  margin-top: 4px;
+  background: #fee2e2;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.billio-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 700;
+  background: rgba(15, 23, 42, 0.38);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+}
+
+.billio-confirm-card {
+  width: 100%;
+  max-width: 360px;
+
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+
+  padding: 28px 22px;
+  text-align: center;
+}
+
+.billio-confirm-icon {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 16px;
+
+  border-radius: 50%;
+  background: #fee2e2;
+  color: #dc2626;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.billio-confirm-card h2 {
+  margin: 0 0 8px;
+  color: var(--main-text);
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.billio-confirm-card p {
+  margin: 0 0 22px;
+  color: var(--secondary-text);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.billio-confirm-card p strong {
+  color: var(--main-text);
+}
+
+.billio-confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.billio-cancel-btn,
+.billio-danger-btn {
+  height: 48px;
+  margin: 0;
+  border-radius: 15px;
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.billio-cancel-btn {
+  background: var(--input-bg);
+  color: var(--main-text);
+}
+
+.billio-danger-btn {
+  background: #e74040;
+  color: white;
+}
+
 /* INVOICES SPECIFIC PAGE */
 
 .invoice-stat-grid {

@@ -45,6 +45,7 @@ function Lessons() {
 
   const [isSaving, setIsSaving] = useState(false); 
   const [isDeleting, setIsDeleting] = useState(false);
+  const [lessonsLoading, setLessonsLoading] = useState(false);
 
 
   // Calendar 
@@ -63,6 +64,7 @@ function Lessons() {
   useEffect(() => {
     async function loadLessons() {
       setLoading(true);
+      setLessonsLoading(true);
 
       const { data: sessionData } = await supabase.auth.getSession();
       const user = sessionData.session?.user;
@@ -118,6 +120,7 @@ function Lessons() {
 
       setLessons(lessonData || []);
       setLoading(false);
+      setLessonsLoading(false);
     }
 
     loadLessons();
@@ -788,207 +791,214 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                 List
             </button>
             </div>
-            {viewMode === "calendar" && (
-              <div className="calendar-view">
-                <div className="calendar-top">
-                  <button type="button" onClick={() => changeCalendarYear("prev")}>
-                    «
-                  </button>
-
-                  <button type="button" onClick={() => changeCalendarMonth("prev")}>
-                    <FaChevronLeft />
-                  </button>
-
-                  <h2>{calendarMonthLabel}</h2>
-
-                  <button type="button" onClick={() => changeCalendarMonth("next")}>
-                    <FaChevronRight />
-                  </button>
-
-                  <button type="button" onClick={() => changeCalendarYear("next")}>
-                    »
-                  </button>
-                </div>
-
-                <div className="calendar-days">
-                  {calendarWeekLabels.map((day) => (
-                    <span key={day}>{day}</span>
-                  ))}
-                </div>
-
-                <div className="calendar-grid">
-                  {calendarMonthDays.map((day) => (
-                    <button
-                      key={day.full}
-                      type="button"
-                      className={`calendar-day-card ${
-                        selectedCalendarDate === day.full ? "active" : ""
-                      } ${!day.isCurrentMonth ? "muted" : ""}`}
-                      onClick={() => setSelectedCalendarDate(day.full)}
-                    >
-                      <strong>{day.dayNumber}</strong>
-
-                      {day.lessons.length > 0 && (
-                        <>
-                          <div className="calendar-lesson-dot purple-dot" />
-                          {/* <p>
-                            {day.lessons.length}{" "}
-                            {day.lessons.length === 1 ? "lesson" : "lessons"}
-                          </p> */}
-                        </>
-                      )}
+            {lessonsLoading ? (
+              <div className="lessons-loading-card">
+                <div className="billio-mini-spinner"></div>
+                <p>Loading lessons...</p>
+              </div>
+            ) : (<>
+                {viewMode === "calendar" && (
+                <div className="calendar-view">
+                  <div className="calendar-top">
+                    <button type="button" onClick={() => changeCalendarYear("prev")}>
+                      «
                     </button>
-                  ))}
-                </div>
 
-                <section className="calendar-detail-card">
-                <div className="calendar-detail-header">
-                  <div>
-                    <h3>
-                      {new Date(`${selectedCalendarDate}T00:00:00`).toLocaleDateString(
-                        "en-US",
-                        {
-                          month: "long",
-                          day: "numeric",
-                          year: "numeric",
-                        }
-                      )}
-                    </h3>
+                    <button type="button" onClick={() => changeCalendarMonth("prev")}>
+                      <FaChevronLeft />
+                    </button>
 
-                    <span className="calendar-detail-count">
-                      {selectedCalendarLessons.length}{" "}
-                      {selectedCalendarLessons.length === 1
-                        ? "lesson"
-                        : "lessons"}
-                    </span>
+                    <h2>{calendarMonthLabel}</h2>
+
+                    <button type="button" onClick={() => changeCalendarMonth("next")}>
+                      <FaChevronRight />
+                    </button>
+
+                    <button type="button" onClick={() => changeCalendarYear("next")}>
+                      »
+                    </button>
                   </div>
 
-                  <button
-                    type="button"
-                    className="calendar-add-lesson-btn"
-                    onClick={()=> {setLessonDate(selectedCalendarDate);
-                    openAddLesson();}}
-                  >
-                    <FaPlus />
-                  </button>
-                </div>
-                {selectedCalendarLessons.length === 0 ? (
-                    <p className="empty-lessons">No lessons for this day.</p>
-                  ) : (
-                    selectedCalendarLessons.map((lesson) => (
-                      <div key={lesson.id} className="calendar-detail-row">
-                        <div
-                          className={`calendar-time-icon ${
-                            lesson.billing_status || "unbilled"
-                          }`}
-                        >
-                          <FaClock />
-                        </div>
+                  <div className="calendar-days">
+                    {calendarWeekLabels.map((day) => (
+                      <span key={day}>{day}</span>
+                    ))}
+                  </div>
 
-                        <div>
-                          <strong>
-                            {lesson.students?.student_name || "Student"} •{" "}
-                            {formatTime(lesson.start_time)}
-                          </strong>
-                          <span>
-                            {lesson.duration_minutes} min
-                            {lesson.lesson_type
-                              ? ` • ${lesson.lesson_type}`
-                              : ""}
-                            {" • $"}
-                            {formatMoney(lesson.rate)} 
-                            {" • "}
-                            <div
-                            className={`calendar-billing-label ${
+                  <div className="calendar-grid">
+                    {calendarMonthDays.map((day) => (
+                      <button
+                        key={day.full}
+                        type="button"
+                        className={`calendar-day-card ${
+                          selectedCalendarDate === day.full ? "active" : ""
+                        } ${!day.isCurrentMonth ? "muted" : ""}`}
+                        onClick={() => setSelectedCalendarDate(day.full)}
+                      >
+                        <strong>{day.dayNumber}</strong>
+
+                        {day.lessons.length > 0 && (
+                          <>
+                            <div className="calendar-lesson-dot purple-dot" />
+                            {/* <p>
+                              {day.lessons.length}{" "}
+                              {day.lessons.length === 1 ? "lesson" : "lessons"}
+                            </p> */}
+                          </>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  <section className="calendar-detail-card">
+                  <div className="calendar-detail-header">
+                    <div>
+                      <h3>
+                        {new Date(`${selectedCalendarDate}T00:00:00`).toLocaleDateString(
+                          "en-US",
+                          {
+                            month: "long",
+                            day: "numeric",
+                            year: "numeric",
+                          }
+                        )}
+                      </h3>
+
+                      <span className="calendar-detail-count">
+                        {selectedCalendarLessons.length}{" "}
+                        {selectedCalendarLessons.length === 1
+                          ? "lesson"
+                          : "lessons"}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="calendar-add-lesson-btn"
+                      onClick={()=> {setLessonDate(selectedCalendarDate);
+                      openAddLesson();}}
+                    >
+                      <FaPlus />
+                    </button>
+                  </div>
+                  {selectedCalendarLessons.length === 0 ? (
+                      <p className="empty-lessons">No lessons for this day.</p>
+                    ) : (
+                      selectedCalendarLessons.map((lesson) => (
+                        <div key={lesson.id} className="calendar-detail-row">
+                          <div
+                            className={`calendar-time-icon ${
                               lesson.billing_status || "unbilled"
                             }`}
                           >
-                            {(lesson.billing_status || "unbilled")
-                              .charAt(0)
-                              .toUpperCase() +
-                              (lesson.billing_status || "unbilled").slice(1)}
+                            <FaClock />
                           </div>
-                          </span>
+
+                          <div>
+                            <strong>
+                              {lesson.students?.student_name || "Student"} •{" "}
+                              {formatTime(lesson.start_time)}
+                            </strong>
+                            <span>
+                              {lesson.duration_minutes} min
+                              {lesson.lesson_type
+                                ? ` • ${lesson.lesson_type}`
+                                : ""}
+                              {" • $"}
+                              {formatMoney(lesson.rate)} 
+                              {" • "}
+                              <div
+                              className={`calendar-billing-label ${
+                                lesson.billing_status || "unbilled"
+                              }`}
+                            >
+                              {(lesson.billing_status || "unbilled")
+                                .charAt(0)
+                                .toUpperCase() +
+                                (lesson.billing_status || "unbilled").slice(1)}
+                            </div>
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            className="lesson-edit-btn"
+                            onClick={() => openEditLesson(lesson)}
+                          >
+                            <FaEdit />
+                          </button>
                         </div>
-
-                        <button
-                          type="button"
-                          className="lesson-edit-btn"
-                          onClick={() => openEditLesson(lesson)}
-                        >
-                          <FaEdit />
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </section>
-              </div>
-            )}
-            {viewMode === "list" && (
-              <div className="lessons-list-view">
-                {lessons.length === 0 ? (
-                  <p className="empty-lessons">No lessons yet. Tap + to add one.</p>
-                ) : (
-                  <>
-                    {[
-                      { title: "Current Lessons", items: currentLessons },
-                      { title: "Upcoming Lessons", items: upcomingLessons },
-                      { title: "Past Lessons", items: pastLessons },
-                    ].map(
-                      (group) =>
-                        group.items.length > 0 && (
-                          <section className="lesson-group" key={group.title}>
-                            <div className="lesson-group-title">
-                              <h2>{group.title}</h2>
-                              <span>
-                                {group.items.length}{" "}
-                                {group.items.length === 1 ? "lesson" : "lessons"}
-                              </span>
-                            </div>
-
-                            <div className="lesson-group-card">
-                              {group.items.map((lesson) => (
-                                <div key={lesson.id} className="lesson-page-row">
-                                  <div className="lesson-page-time">
-                                    <strong>{formatTime(lesson.start_time)}</strong>
-                                    <span>{lesson.lesson_date}</span>
-                                  </div>
-
-                                  <div className="lesson-page-info">
-                                    <strong>
-                                      {lesson.students?.student_name || "Student"}
-                                    </strong>
-                                    <span>
-                                      {lesson.duration_minutes} min •{" "}$
-                                      {formatMoney(lesson.rate)}
-                                    </span>
-                                  </div>
-
-                                  <span
-                                    className={`lesson-page-status ${getLessonStatus(
-                                      lesson
-                                    )}`}
-                                  >
-                                    {getLessonStatus(lesson)}
-                                  </span>
-
-                                  <button
-                                    type="button"
-                                    className="lesson-edit-btn"
-                                    onClick={() => openEditLesson(lesson)}
-                                  >
-                                    <FaEdit />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          </section>
-                        )
+                      ))
                     )}
-                  </>
-                )}
-              </div>
-            )}
+                  </section>
+                </div>
+              )}
+              {viewMode === "list" && (
+                <div className="lessons-list-view">
+                  {lessons.length === 0 ? (
+                    <p className="empty-lessons">No lessons yet. Tap + to add one.</p>
+                  ) : (
+                    <>
+                      {[
+                        { title: "Current Lessons", items: currentLessons },
+                        { title: "Upcoming Lessons", items: upcomingLessons },
+                        { title: "Past Lessons", items: pastLessons },
+                      ].map(
+                        (group) =>
+                          group.items.length > 0 && (
+                            <section className="lesson-group" key={group.title}>
+                              <div className="lesson-group-title">
+                                <h2>{group.title}</h2>
+                                <span>
+                                  {group.items.length}{" "}
+                                  {group.items.length === 1 ? "lesson" : "lessons"}
+                                </span>
+                              </div>
+
+                              <div className="lesson-group-card">
+                                {group.items.map((lesson) => (
+                                  <div key={lesson.id} className="lesson-page-row">
+                                    <div className="lesson-page-time">
+                                      <strong>{formatTime(lesson.start_time)}</strong>
+                                      <span>{lesson.lesson_date}</span>
+                                    </div>
+
+                                    <div className="lesson-page-info">
+                                      <strong>
+                                        {lesson.students?.student_name || "Student"}
+                                      </strong>
+                                      <span>
+                                        {lesson.duration_minutes} min •{" "}$
+                                        {formatMoney(lesson.rate)}
+                                      </span>
+                                    </div>
+
+                                    <span
+                                      className={`lesson-page-status ${getLessonStatus(
+                                        lesson
+                                      )}`}
+                                    >
+                                      {getLessonStatus(lesson)}
+                                    </span>
+
+                                    <button
+                                      type="button"
+                                      className="lesson-edit-btn"
+                                      onClick={() => openEditLesson(lesson)}
+                                    >
+                                      <FaEdit />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </section>
+                          )
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </>)}
         </div>
 
         <nav className="bottom-nav">

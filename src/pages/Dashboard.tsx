@@ -928,6 +928,17 @@ function Dashboard() {
     setInvoices(data || []);
   }
 
+  function formatUSPhoneInput(value: string) {
+    const digits = value.replace(/\D/g, "").slice(0, 10);
+
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) {
+      return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    }
+
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+
   if (loading) {
     return (
       <div className="loading-screen">
@@ -1474,10 +1485,19 @@ function Dashboard() {
                   id="phoneNumber"
                   type="tel"
                   value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="(555) 555-5555"
+                  onChange={(e) => setPhoneNumber(formatUSPhoneInput(e.target.value))}
+                  placeholder="(719) 123-4567"
                   required
                 />
+                <p className="sms-consent-note">
+                  By adding a phone number, you confirm this person agreed to receive lesson
+                  reminders, invoice notifications, and account-related texts from Billio.
+                  Message and data rates may apply. Reply STOP to opt out.{" "}
+                  <a href="/terms" target="_blank" rel="noreferrer">
+                    Read terms
+                  </a>
+                  .
+                </p>
               </div>
 
               <div className="input-block">

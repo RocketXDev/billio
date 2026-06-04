@@ -13,6 +13,8 @@ import Students from "./pages/Students";
 import Invoices from "./pages/Invoices";
 import Profile from "./pages/Profile";
 import ComingSoon from "./pages/ComingSoon";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 
 function App() {
   return (
@@ -25,6 +27,8 @@ function App() {
       <Route path="/update-password" element={<UpdatePassword />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/password-updated" element={<PasswordUpdated />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/terms" element={<Terms />} />
 
       <Route
         path="/dashboard"

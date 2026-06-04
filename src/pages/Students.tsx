@@ -428,30 +428,31 @@ function Students() {
     closeEditStudent();
   }
   async function handleDeleteStudent(studentId: string) {
+    if (!coachId) return;
 
-    const { error: linkError } = await supabase
-        .from("coach_students")
-        .delete()
-        .eq("coach_id", coachId)
-        .eq("student_id", studentId);
+    const { data, error } = await supabase
+      .from("students")
+      .update({
+        active: false,
+      })
+      .eq("id", studentId)
+      .select()
+      .single();
 
-    if (linkError) {
-        console.log("Delete student link error:", linkError);
-        return;
-    }
-
-    const { error: studentError } = await supabase
-        .from("students")
-        .delete()
-        .eq("id", studentId);
-
-    if (studentError) {
-        console.log("Delete student error:", studentError);
-        return;
+    if (error) {
+      console.log("Archive student error:", error);
+      return;
     }
 
     setStudents((prev) =>
-        prev.filter((link: any) => link.student_id !== studentId)
+      prev.map((link: any) =>
+        link.student_id === studentId
+          ? {
+              ...link,
+              students: data,
+            }
+          : link
+      )
     );
 
     closeEditStudent();
@@ -667,6 +668,14 @@ function Students() {
                     placeholder="(719) 555-1234"
                     autoComplete="off"
                     />
+                    <div className="sms-consent-note">
+                      By adding a phone number, you confirm this person agreed to receive lesson
+                      reminders, invoice notifications, and account-related texts from Billio.{" "}
+                      <a href="/terms" target="_blank" rel="noreferrer">
+                        Read terms
+                      </a>
+                      .
+                    </div>
                 </div>
 
                 <div className="input-block">
@@ -706,6 +715,14 @@ function Students() {
                     placeholder="(719) 555-1234"
                     autoComplete="off"
                     />
+                    <div className="sms-consent-note">
+                      By adding a phone number, you confirm this person agreed to receive lesson
+                      reminders, invoice notifications, and account-related texts from Billio.{" "}
+                      <a href="/terms" target="_blank" rel="noreferrer">
+                        Read terms
+                      </a>
+                      .
+                    </div>
                 </div>
 
                 <div className="input-block">
@@ -847,15 +864,23 @@ function Students() {
                 </div>
 
                 <div className="input-block">
-                <label htmlFor="editStudentPhone">Phone Number</label>
-                <input
-                    id="editStudentPhone"
-                    type="tel"
-                    placeholder="(719) 555-1234"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(formatUSPhoneInput(e.target.value))}
-                    autoComplete="off"
-                />
+                  <label htmlFor="editStudentPhone">Phone Number</label>
+                  <input
+                      id="editStudentPhone"
+                      type="tel"
+                      placeholder="(719) 555-1234"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(formatUSPhoneInput(e.target.value))}
+                      autoComplete="off"
+                  />
+                  <div className="sms-consent-note">
+                    By adding a phone number, you confirm this person agreed to receive lesson
+                    reminders, invoice notifications, and account-related texts from Billio.{" "}
+                    <a href="/terms" target="_blank" rel="noreferrer">
+                      Read terms
+                    </a>
+                    .
+                  </div>
                 </div>
 
                 <div className="input-block">
@@ -881,15 +906,23 @@ function Students() {
                 </div>
 
                 <div className="input-block">
-                <label htmlFor="editParentPhone">Parent Phone</label>
-                <input
-                    id="editParentPhone"
-                    type="tel"
-                    value={parentPhone}
-                    placeholder="(719) 555-1234"
-                    onChange={(e) => setParentPhone(formatUSPhoneInput(e.target.value))}
-                    autoComplete="off"
-                />
+                  <label htmlFor="editParentPhone">Parent Phone</label>
+                  <input
+                      id="editParentPhone"
+                      type="tel"
+                      value={parentPhone}
+                      placeholder="(719) 555-1234"
+                      onChange={(e) => setParentPhone(formatUSPhoneInput(e.target.value))}
+                      autoComplete="off"
+                  />
+                  <div className="sms-consent-note">
+                    By adding a phone number, you confirm this person agreed to receive lesson
+                    reminders, invoice notifications, and account-related texts from Billio.{" "}
+                    <a href="/terms" target="_blank" rel="noreferrer">
+                      Read terms
+                    </a>
+                    .
+                  </div>
                 </div>
 
                 <div className="input-block">
@@ -987,7 +1020,7 @@ function Students() {
                 className="students-delete-btn"
                 onClick={() => handleDeleteStudent(editingStudent.id)}
                 >
-                Delete Student
+                  Archive Student
                 </button>
             </form>
             </div>

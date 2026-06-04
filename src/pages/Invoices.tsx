@@ -26,7 +26,8 @@ function Invoices() {
   const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
-  const [sendSuccessEmail, setSendSuccessEmail] = useState("");
+  const [sendSuccessRecipient, setSendSuccessRecipient] = useState("");
+  const [sendSuccessMethod, setSendSuccessMethod] = useState("");
   const [sendError, setSendError] = useState("");
 
   // Invoices Creation States
@@ -630,7 +631,7 @@ function Invoices() {
 
     setSendingInvoiceId(invoiceId);
     setSendError("");
-    setSendSuccessEmail("");
+    setSendSuccessRecipient("");
 
     const { data, error } = await supabase.functions.invoke(
       "send-single-invoice",
@@ -681,7 +682,11 @@ function Invoices() {
       )
     );
 
-    setSendSuccessEmail(data.recipientEmail || "recipient");
+    setSendSuccessRecipient(
+      data.recipientPhone || data.recipientEmail || "recipient"
+    );
+
+    setSendSuccessMethod(data.deliveryMethod || "email");
   }
 
   function getWeekStart(dateString: string) {
@@ -1376,10 +1381,13 @@ function Invoices() {
             </div>
           </div>
         )}
-        {sendSuccessEmail && (
+        {sendSuccessRecipient && (
           <div
             className="invoice-success-overlay"
-            onClick={() => setSendSuccessEmail("")}
+            onClick={() => {
+              setSendSuccessRecipient("");
+              setSendSuccessMethod("");
+            }}
           >
             <div
               className="invoice-success-card"
@@ -1392,13 +1400,23 @@ function Invoices() {
               <h2>Invoice Sent</h2>
 
               <p>
-                Invoice was successfully sent to{" "}
-                <strong>{sendSuccessEmail}</strong>.
+                Invoice was successfully sent by{" "}
+                <strong>
+                  {sendSuccessMethod === "text"
+                    ? "text message"
+                    : sendSuccessMethod === "both"
+                    ? "email and text message"
+                    : "email"}
+                </strong>{" "}
+                to <strong>{sendSuccessRecipient}</strong>.
               </p>
 
               <button
                 type="button"
-                onClick={() => setSendSuccessEmail("")}
+                onClick={() => {
+                  setSendSuccessRecipient("");
+                  setSendSuccessMethod("");
+                }}
               >
                 Done
               </button>

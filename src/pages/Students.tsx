@@ -492,6 +492,17 @@ function Students() {
     }
   }
 
+  function formatUSPhoneInput(value: string) {
+    const digits = value.replace(/\D/g, "").slice(0, 10);
+
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) {
+      return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    }
+
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+
   if (loading) {
     return (
       <div className="loading-screen">
@@ -652,8 +663,8 @@ function Students() {
                     id="studentPhone"
                     type="tel"
                     value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder="(555) 555-5555"
+                    onChange={(e) => setPhoneNumber(formatUSPhoneInput(e.target.value))}
+                    placeholder="(719) 555-1234"
                     autoComplete="off"
                     />
                 </div>
@@ -691,8 +702,8 @@ function Students() {
                     id="parentPhone"
                     type="tel"
                     value={parentPhone}
-                    onChange={(e) => setParentPhone(e.target.value)}
-                    placeholder="(555) 555-5555"
+                    onChange={(e) => setParentPhone(formatUSPhoneInput(e.target.value))}
+                    placeholder="(719) 555-1234"
                     autoComplete="off"
                     />
                 </div>
@@ -840,8 +851,9 @@ function Students() {
                 <input
                     id="editStudentPhone"
                     type="tel"
+                    placeholder="(719) 555-1234"
                     value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    onChange={(e) => setPhoneNumber(formatUSPhoneInput(e.target.value))}
                     autoComplete="off"
                 />
                 </div>
@@ -874,7 +886,8 @@ function Students() {
                     id="editParentPhone"
                     type="tel"
                     value={parentPhone}
-                    onChange={(e) => setParentPhone(e.target.value)}
+                    placeholder="(719) 555-1234"
+                    onChange={(e) => setParentPhone(formatUSPhoneInput(e.target.value))}
                     autoComplete="off"
                 />
                 </div>

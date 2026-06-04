@@ -443,7 +443,7 @@ function Dashboard() {
   async function handleCreateLesson(e: any) {
     e.preventDefault();
 
-    if (isSaving) return; 
+    if (isSubmitting) return; 
     setIsSubmitting(true);
 
     try {

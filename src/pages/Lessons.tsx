@@ -43,6 +43,9 @@ function Lessons() {
   const hiddenRates = rateOptions.slice(3);
   const [showRateSheet, setShowRateSheet] = useState(false);
 
+  const [isSaving, setIsSaving] = useState(false); 
+  const [isDeleting, setIsDeleting] = useState(false);
+
 
   // Calendar 
   function getLocalDateString(date: Date) {
@@ -123,114 +126,124 @@ function Lessons() {
   async function handleCreateLesson(e: any) {
     e.preventDefault();
 
-    if (!coachId) return;
+    if (isSaving) return; 
+    setIsSaving(true);
 
-    const cleanStudentName = studentName.trim();
+    try {
 
-    if (!cleanStudentName) {
-      alert("Please enter a student name.");
-      return;
-    }
+      if (!coachId) return;
 
-    const { data: existingLinks, error: existingStudentError } = await supabase
-      .from("coach_students")
-      .select(`
-        student_id,
-        students (
-          id,
-          student_name
-        )
-      `)
-      .eq("coach_id", coachId);
+      const cleanStudentName = studentName.trim();
 
-    if (existingStudentError) {
-      console.log("Student lookup error:", existingStudentError);
-      return;
-    }
-
-    const existingLink = existingLinks?.find((link: any) => {
-      return (
-        link.students?.student_name?.trim().toLowerCase() ===
-        cleanStudentName.toLowerCase()
-      );
-    });
-
-    let finalStudentId = existingLink?.student_id;
-    if (selectedStudentId) {
-      finalStudentId = selectedStudentId;
-    }
-
-    if (!finalStudentId) {
-      const { data: newStudent, error: newStudentError } = await supabase
-        .from("students")
-        .insert({
-          student_name: cleanStudentName,
-          active: true,
-        })
-        .select()
-        .single();
-
-      if (newStudentError) {
-        console.log("Student create error:", newStudentError);
+      if (!cleanStudentName) {
+        alert("Please enter a student name.");
         return;
       }
 
-      finalStudentId = newStudent.id;
-
-      const { error: linkError } = await supabase
+      const { data: existingLinks, error: existingStudentError } = await supabase
         .from("coach_students")
+        .select(`
+          student_id,
+          students (
+            id,
+            student_name
+          )
+        `)
+        .eq("coach_id", coachId);
+
+      if (existingStudentError) {
+        console.log("Student lookup error:", existingStudentError);
+        return;
+      }
+
+      const existingLink = existingLinks?.find((link: any) => {
+        return (
+          link.students?.student_name?.trim().toLowerCase() ===
+          cleanStudentName.toLowerCase()
+        );
+      });
+
+      let finalStudentId = existingLink?.student_id;
+      if (selectedStudentId) {
+        finalStudentId = selectedStudentId;
+      }
+
+      if (!finalStudentId) {
+        const { data: newStudent, error: newStudentError } = await supabase
+          .from("students")
+          .insert({
+            student_name: cleanStudentName,
+            active: true,
+          })
+          .select()
+          .single();
+
+        if (newStudentError) {
+          console.log("Student create error:", newStudentError);
+          return;
+        }
+
+        finalStudentId = newStudent.id;
+
+        const { error: linkError } = await supabase
+          .from("coach_students")
+          .insert({
+            coach_id: coachId,
+            student_id: finalStudentId,
+          });
+
+        if (linkError) {
+          console.log("Coach-student link error:", linkError);
+          return;
+        }
+      }
+
+      const calculatedRate =
+        Number(hourlyRate) * (Number(durationMinutes) / 60);
+
+      const { data: lessonData, error: lessonError } = await supabase
+        .from("lessons")
         .insert({
           coach_id: coachId,
           student_id: finalStudentId,
-        });
+          lesson_date: lessonDate,
+          start_time: startTime,
+          duration_minutes: Number(durationMinutes),
+          lesson_type: lessonType || null,
+          hourly_rate: Number(hourlyRate),
+          rate: calculatedRate,
+          notes: notes || null,
+          billing_status: "unbilled"
+        })
+        .select(`
+          *,
+          students (
+            student_name
+          )
+        `)
+        .single();
 
-      if (linkError) {
-        console.log("Coach-student link error:", linkError);
+      if (lessonError) {
+        console.log("Lesson create error:", lessonError);
         return;
       }
+
+      setLessons((prev) => [...prev, lessonData]);
+
+      setStudentName("");
+      setSelectedStudentId(null);
+      setLessonDate("");
+      setStartTime("");
+      setDurationMinutes("30");
+      setLessonType("");
+      setHourlyRate("");
+      setNotes("");
+      setShowAddLesson(false);
+
+    } finally {
+      setIsSaving(false)
     }
 
-    const calculatedRate =
-      Number(hourlyRate) * (Number(durationMinutes) / 60);
-
-    const { data: lessonData, error: lessonError } = await supabase
-      .from("lessons")
-      .insert({
-        coach_id: coachId,
-        student_id: finalStudentId,
-        lesson_date: lessonDate,
-        start_time: startTime,
-        duration_minutes: Number(durationMinutes),
-        lesson_type: lessonType || null,
-        hourly_rate: Number(hourlyRate),
-        rate: calculatedRate,
-        notes: notes || null,
-        billing_status: "unbilled"
-      })
-      .select(`
-        *,
-        students (
-          student_name
-        )
-      `)
-      .single();
-
-    if (lessonError) {
-      console.log("Lesson create error:", lessonError);
-      return;
-    }
-
-    setLessons((prev) => [...prev, lessonData]);
-
-    setStudentName("");
-    setSelectedStudentId(null);
-    setLessonDate("");
-    setStartTime("");
-    setDurationMinutes("30");
-    setLessonType("");
-    setHourlyRate("");
-    setNotes("");
-    setShowAddLesson(false);
   }
 
   const groupedLessons = lessons.reduce((groups: any, lesson) => {
@@ -296,64 +309,85 @@ function Lessons() {
   async function handleUpdateLesson(e: any) {
     e.preventDefault();
 
-    if (!editingLesson || !coachId) return;
+    if (isSaving) return; 
+    setIsSaving(true);
 
-    const calculatedRate =
-      Number(hourlyRate) * (Number(durationMinutes) / 60);
+    try {
 
-    const { data, error } = await supabase
-      .from("lessons")
-      .update({
-        lesson_date: lessonDate,
-        start_time: startTime,
-        duration_minutes: Number(durationMinutes),
-        lesson_type: lessonType || null,
-        hourly_rate: Number(hourlyRate),
-        rate: calculatedRate,
-        notes: notes || null,
-        billing_status: billingStatus,
-      })
-      .eq("id", editingLesson.id)
-      .eq("coach_id", coachId)
-      .select(`
-        *,
-        students (
-          student_name
-        )
-      `)
-      .single();
+      if (!editingLesson || !coachId) return;
 
-    if (error) {
-      console.log("Update lesson error:", error);
-      return;
+      const calculatedRate =
+        Number(hourlyRate) * (Number(durationMinutes) / 60);
+
+      const { data, error } = await supabase
+        .from("lessons")
+        .update({
+          lesson_date: lessonDate,
+          start_time: startTime,
+          duration_minutes: Number(durationMinutes),
+          lesson_type: lessonType || null,
+          hourly_rate: Number(hourlyRate),
+          rate: calculatedRate,
+          notes: notes || null,
+          billing_status: billingStatus,
+        })
+        .eq("id", editingLesson.id)
+        .eq("coach_id", coachId)
+        .select(`
+          *,
+          students (
+            student_name
+          )
+        `)
+        .single();
+
+      if (error) {
+        console.log("Update lesson error:", error);
+        return;
+      }
+
+      setLessons((prev) =>
+        prev.map((lesson) => (lesson.id === editingLesson.id ? data : lesson))
+      );
+
+      await syncInvoiceStatusFromLesson(editingLesson.id);
+
+      closeEditLesson();
+
+    } finally {
+      setIsSaving(false);
     }
 
-    setLessons((prev) =>
-      prev.map((lesson) => (lesson.id === editingLesson.id ? data : lesson))
-    );
 
-    await syncInvoiceStatusFromLesson(editingLesson.id);
-
-    closeEditLesson();
   }
 
   async function handleDeleteLesson(lessonId: string) {
 
-    await cleanupInvoicesAfterLessonDelete(lessonId);
+    if (isDeleting) return; 
+    setIsDeleting(true);
 
-    const { error } = await supabase
-      .from("lessons")
-      .delete()
-      .eq("id", lessonId)
-      .eq("coach_id", coachId);
+    try {
 
-    if (error) {
-      console.log("Delete lesson error:", error);
-      return;
+      await cleanupInvoicesAfterLessonDelete(lessonId);
+
+      const { error } = await supabase
+        .from("lessons")
+        .delete()
+        .eq("id", lessonId)
+        .eq("coach_id", coachId);
+
+      if (error) {
+        console.log("Delete lesson error:", error);
+        return;
+      }
+
+      setLessons((prev) => prev.filter((lesson) => lesson.id !== lessonId));
+      setShowEditLesson(false);
+      
+    } finally {
+      setIsDeleting(false)
     }
 
-    setLessons((prev) => prev.filter((lesson) => lesson.id !== lessonId));
-    setShowEditLesson(false);
   }
 
   function getLessonStatus(lesson: any) {
@@ -1133,8 +1167,8 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                 />
               </div>
 
-              <button type="submit" className="save-lesson-btn">
-                Save Lesson
+              <button type="submit" className="save-lesson-btn" disabled={isSaving}>
+                {isSaving ? "Saving..." : "Save Lesson"}
               </button>
             </form>
           </div>
@@ -1270,17 +1304,19 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                 />
               </div>
 
-              <button type="submit" className="save-lesson-btn">
-                Save Changes
+              <button type="submit" className="save-lesson-btn" disabled={isSaving}>
+                {isSaving ? "Saving..." : "Save Changes"}
               </button>
 
               <button
                 type="button"
                 className="delete-lesson-btn"
                 onClick={() => handleDeleteLesson(editingLesson.id)}
-              >
+                disabled={isDeleting}
+                >
+                
                 <FaTrash />
-                Delete Lesson
+                {isDeleting ? "Deleting..." : "Delete Lesson"}
               </button>
             </form>
           </div>

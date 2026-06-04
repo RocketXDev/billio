@@ -37,7 +37,7 @@ function Privacy() {
         <p>
           We do not sell personal information. We may share information with
           service providers that help us operate Billio, such as payment,
-          email, messaging, hosting, database, and authentication providers.
+          email, messaging, hosting, database, and authentication providers. SMS opt-in data and consent will not be shared with third parties or affiliates for marketing purposes.
         </p>
 
         <h2>Data Security</h2>

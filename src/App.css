@@ -2084,7 +2084,7 @@ textarea:focus {
   font-weight: 650;
 }
 
-.save-lesson-btn, .studnets-save-btn {
+.save-lesson-btn, .students-save-btn {
   margin-top: 6px;
 }
 
@@ -2099,7 +2099,13 @@ textarea:focus {
   gap: 10px;
 }
 
-.delete-lesson-btn:hover, .students-delete-btn:hover {
+.students-delete-btn {
+  background: #e1e4e7;
+  color: #475569;
+  border: 1px solid var(--border);
+}
+
+.delete-lesson-btn:hover {
   background: #fecaca;
 }
 
@@ -2486,22 +2492,18 @@ textarea:focus {
   inset: 0;
   z-index: 700;
   background: rgba(15, 23, 42, 0.38);
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   padding: 20px;
 }
 
 .billio-confirm-card {
   width: 100%;
   max-width: 360px;
-
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 28px;
-
   padding: 28px 22px;
   text-align: center;
 }
@@ -2510,15 +2512,12 @@ textarea:focus {
   width: 58px;
   height: 58px;
   margin: 0 auto 16px;
-
   border-radius: 50%;
   background: #fee2e2;
   color: #dc2626;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   font-size: 30px;
   font-weight: 800;
 }

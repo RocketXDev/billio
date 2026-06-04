@@ -56,6 +56,11 @@ function Students() {
   const [invoiceContactTarget, setInvoiceContactTarget] = useState("auto");
   const [invoiceDeliveryMethod, setInvoiceDeliveryMethod] = useState("auto");
 
+  // Loading
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isMoving, setIsMoving] = useState(false);
+
 
   useEffect(() => {
     loadStudents();
@@ -134,69 +139,78 @@ function Students() {
   async function handleCreateStudent(e: any) {
     e.preventDefault();
 
-    if (!coachId) return;
+    if (isSaving) return; 
+    setIsSaving(true);
 
-    const cleanStudentName = studentName.trim();
+    try {
 
-    if (!cleanStudentName) {
-      alert("Please enter a student name.");
-      return;
+      if (!coachId) return;
+
+      const cleanStudentName = studentName.trim();
+
+      if (!cleanStudentName) {
+        alert("Please enter a student name.");
+        return;
+      }
+
+      const existingStudent = students.find(
+        (link: any) =>
+          link.students?.student_name?.trim().toLowerCase() ===
+          cleanStudentName.toLowerCase()
+      );
+
+      if (existingStudent) {
+        alert("This student already exists.");
+        return;
+      }
+
+      const { data: newStudent, error: studentError } = await supabase
+        .from("students")
+        .insert({
+          student_name: cleanStudentName,
+          email: email || null,
+          phone_number: phoneNumber || null,
+          parent_name: parentName || null,
+          parent_email: parentEmail || null,
+          parent_phone: parentPhone || null,
+          active,
+          notes: notes || null,
+        })
+        .select()
+        .single();
+
+      if (studentError) {
+        console.log("Student create error:", studentError);
+        return;
+      }
+
+      const { error: linkError } = await supabase
+        .from("coach_students")
+        .insert({
+          coach_id: coachId,
+          student_id: newStudent.id,
+          invoice_contact_target: invoiceContactTarget,
+          invoice_delivery_method: invoiceDeliveryMethod,
+        });
+
+      if (linkError) {
+        console.log("Coach-student link error:", linkError);
+        return;
+      }
+
+      setStudents((prev) => [
+        ...prev,
+        {
+          student_id: newStudent.id,
+          invoice_contact_target: invoiceContactTarget,
+          invoice_delivery_method: invoiceDeliveryMethod,
+          students: newStudent,
+        },
+      ]);
+
+    } finally {
+      setIsSaving(false)
     }
-
-    const existingStudent = students.find(
-      (link: any) =>
-        link.students?.student_name?.trim().toLowerCase() ===
-        cleanStudentName.toLowerCase()
-    );
-
-    if (existingStudent) {
-      alert("This student already exists.");
-      return;
-    }
-
-    const { data: newStudent, error: studentError } = await supabase
-      .from("students")
-      .insert({
-        student_name: cleanStudentName,
-        email: email || null,
-        phone_number: phoneNumber || null,
-        parent_name: parentName || null,
-        parent_email: parentEmail || null,
-        parent_phone: parentPhone || null,
-        active,
-        notes: notes || null,
-      })
-      .select()
-      .single();
-
-    if (studentError) {
-      console.log("Student create error:", studentError);
-      return;
-    }
-
-    const { error: linkError } = await supabase
-      .from("coach_students")
-      .insert({
-        coach_id: coachId,
-        student_id: newStudent.id,
-        invoice_contact_target: invoiceContactTarget,
-        invoice_delivery_method: invoiceDeliveryMethod,
-      });
-
-    if (linkError) {
-      console.log("Coach-student link error:", linkError);
-      return;
-    }
-
-    setStudents((prev) => [
-      ...prev,
-      {
-        student_id: newStudent.id,
-        invoice_contact_target: invoiceContactTarget,
-        invoice_delivery_method: invoiceDeliveryMethod,
-        students: newStudent,
-      },
-    ]);
 
     resetStudentForm();
     setShowAddStudent(false);
@@ -299,57 +313,75 @@ function Students() {
   async function handleUpdateLesson(e: any) {
     e.preventDefault();
 
-    if (!editingLesson || !coachId) return;
+    if (isSaving) return; 
+    setIsSaving(true);
 
-    const calculatedRate =
-      Number(hourlyRate) * (Number(durationMinutes) / 60);
+    try {
 
-    const { data, error } = await supabase
-      .from("lessons")
-      .update({
-        lesson_date: lessonDate,
-        start_time: startTime,
-        duration_minutes: Number(durationMinutes),
-        lesson_type: lessonType || null,
-        hourly_rate: Number(hourlyRate),
-        rate: calculatedRate,
-        notes: lessonNotes || null,
-      })
-      .eq("id", editingLesson.id)
-      .eq("coach_id", coachId)
-      .select()
-      .single();
+      if (!editingLesson || !coachId) return;
 
-    if (error) {
-      console.log("Update student lesson error:", error);
-      return;
+      const calculatedRate =
+        Number(hourlyRate) * (Number(durationMinutes) / 60);
+
+      const { data, error } = await supabase
+        .from("lessons")
+        .update({
+          lesson_date: lessonDate,
+          start_time: startTime,
+          duration_minutes: Number(durationMinutes),
+          lesson_type: lessonType || null,
+          hourly_rate: Number(hourlyRate),
+          rate: calculatedRate,
+          notes: lessonNotes || null,
+        })
+        .eq("id", editingLesson.id)
+        .eq("coach_id", coachId)
+        .select()
+        .single();
+
+      if (error) {
+        console.log("Update student lesson error:", error);
+        return;
+      }
+
+      setStudentLessons((prev) =>
+        prev.map((lesson) =>
+          lesson.id === editingLesson.id ? data : lesson
+        )
+      );
+
+    } finally {
+      setIsSaving (false);
     }
-
-    setStudentLessons((prev) =>
-      prev.map((lesson) =>
-        lesson.id === editingLesson.id ? data : lesson
-      )
-    );
 
     closeEditLesson();
   }
 
   async function handleDeleteStudentLesson(lessonId: string) {
 
-    const { error } = await supabase
+    if (isDeleting) return; 
+    setIsDeleting(true);
+
+    try {
+
+      const { error } = await supabase
       .from("lessons")
       .delete()
       .eq("id", lessonId)
       .eq("coach_id", coachId);
 
-    if (error) {
-      console.log("Delete student lesson error:", error);
-      return;
-    }
+      if (error) {
+        console.log("Delete student lesson error:", error);
+        return;
+      }
 
-    setStudentLessons((prev) =>
-      prev.filter((lesson) => lesson.id !== lessonId)
-    );
+      setStudentLessons((prev) =>
+        prev.filter((lesson) => lesson.id !== lessonId)
+      );
+
+    } finally {
+      setIsDeleting(false);
+    }
 
     setSelectedLessonActionId(null);
   }
@@ -357,74 +389,83 @@ function Students() {
   async function handleUpdateStudent(e: any) {
     e.preventDefault();
 
-    if (!coachId || !editingStudent) return;
+    if (isSaving) return; 
+    setIsSaving(true);
 
-    const cleanStudentName = studentName.trim();
+    try {
 
-    if (!cleanStudentName) {
-      alert("Please enter a student name.");
-      return;
+      if (!coachId || !editingStudent) return;
+
+      const cleanStudentName = studentName.trim();
+
+      if (!cleanStudentName) {
+        alert("Please enter a student name.");
+        return;
+      }
+
+      const existingStudent = students.find(
+        (link: any) =>
+          link.student_id !== editingStudent.id &&
+          link.students?.student_name?.trim().toLowerCase() ===
+            cleanStudentName.toLowerCase()
+      );
+
+      if (existingStudent) {
+        alert("This student already exists.");
+        return;
+      }
+
+      const { data: updatedStudent, error: studentError } = await supabase
+        .from("students")
+        .update({
+          student_name: cleanStudentName,
+          email: email || null,
+          phone_number: phoneNumber || null,
+          parent_name: parentName || null,
+          parent_email: parentEmail || null,
+          parent_phone: parentPhone || null,
+          active,
+          notes: notes || null,
+        })
+        .eq("id", editingStudent.id)
+        .select()
+        .single();
+
+      if (studentError) {
+        console.log("Student update error:", studentError);
+        return;
+      }
+
+      const { error: linkError } = await supabase
+        .from("coach_students")
+        .update({
+          invoice_contact_target: invoiceContactTarget,
+          invoice_delivery_method: invoiceDeliveryMethod,
+        })
+        .eq("coach_id", coachId)
+        .eq("student_id", editingStudent.id);
+
+      if (linkError) {
+        console.log("Coach-student preference update error:", linkError);
+        return;
+      }
+
+      setStudents((prev) =>
+        prev.map((link: any) =>
+          link.student_id === editingStudent.id
+            ? {
+                ...link,
+                invoice_contact_target: invoiceContactTarget,
+                invoice_delivery_method: invoiceDeliveryMethod,
+                students: updatedStudent,
+              }
+            : link
+        )
+      );
+
+    } finally {
+      setIsSaving(false);
     }
-
-    const existingStudent = students.find(
-      (link: any) =>
-        link.student_id !== editingStudent.id &&
-        link.students?.student_name?.trim().toLowerCase() ===
-          cleanStudentName.toLowerCase()
-    );
-
-    if (existingStudent) {
-      alert("This student already exists.");
-      return;
-    }
-
-    const { data: updatedStudent, error: studentError } = await supabase
-      .from("students")
-      .update({
-        student_name: cleanStudentName,
-        email: email || null,
-        phone_number: phoneNumber || null,
-        parent_name: parentName || null,
-        parent_email: parentEmail || null,
-        parent_phone: parentPhone || null,
-        active,
-        notes: notes || null,
-      })
-      .eq("id", editingStudent.id)
-      .select()
-      .single();
-
-    if (studentError) {
-      console.log("Student update error:", studentError);
-      return;
-    }
-
-    const { error: linkError } = await supabase
-      .from("coach_students")
-      .update({
-        invoice_contact_target: invoiceContactTarget,
-        invoice_delivery_method: invoiceDeliveryMethod,
-      })
-      .eq("coach_id", coachId)
-      .eq("student_id", editingStudent.id);
-
-    if (linkError) {
-      console.log("Coach-student preference update error:", linkError);
-      return;
-    }
-
-    setStudents((prev) =>
-      prev.map((link: any) =>
-        link.student_id === editingStudent.id
-          ? {
-              ...link,
-              invoice_contact_target: invoiceContactTarget,
-              invoice_delivery_method: invoiceDeliveryMethod,
-              students: updatedStudent,
-            }
-          : link
-      )
-    );
 
     closeEditStudent();
   }
@@ -484,49 +525,69 @@ function Students() {
   );
 
   async function handleArchiveStudent(studentId: string) {
-    const { data, error } = await supabase
+
+    if (isMoving) return; 
+    setIsMoving(true);
+
+    try {
+
+      const { data, error } = await supabase
       .from("students")
       .update({ active: false })
       .eq("id", studentId)
       .select()
       .single();
 
-    if (error) {
-      console.log("Archive student error:", error);
-      return;
-    }
+      if (error) {
+        console.log("Archive student error:", error);
+        return;
+      }
 
-    setStudents((prev) =>
-      prev.map((link: any) =>
-        link.student_id === studentId
-          ? { ...link, students: data }
-          : link
-      )
-    );
+      setStudents((prev) =>
+        prev.map((link: any) =>
+          link.student_id === studentId
+            ? { ...link, students: data }
+            : link
+        )
+      );
+
+    } finally {
+      setIsMoving(false);
+    }
 
     closeEditStudent();
   }
 
   async function handleRestoreStudent(studentId: string) {
-    const { data, error } = await supabase
+
+    if (isMoving) return; 
+    setIsMoving(true);
+
+    try {
+
+      const { data, error } = await supabase
       .from("students")
       .update({ active: true })
       .eq("id", studentId)
       .select()
       .single();
 
-    if (error) {
-      console.log("Restore student error:", error);
-      return;
-    }
+      if (error) {
+        console.log("Restore student error:", error);
+        return;
+      }
 
-    setStudents((prev) =>
-      prev.map((link: any) =>
-        link.student_id === studentId
-          ? { ...link, students: data }
-          : link
-      )
-    );
+      setStudents((prev) =>
+        prev.map((link: any) =>
+          link.student_id === studentId
+            ? { ...link, students: data }
+            : link
+        )
+      );
+
+    } finally {
+      setIsMoving(false);
+    }
 
     closeEditStudent();
   }
@@ -535,76 +596,85 @@ function Students() {
 
     if (!coachId) return;
 
-    const { data: studentInvoices, error: invoiceFetchError } = await supabase
+    if (isDeleting) return; 
+    setIsDeleting(true);
+
+    try {
+
+      const { data: studentInvoices, error: invoiceFetchError } = await supabase
       .from("invoices")
       .select("id")
       .eq("coach_id", coachId)
       .eq("student_id", studentId);
 
-    if (invoiceFetchError) {
-      console.log("Fetch student invoices error:", invoiceFetchError);
-      return;
-    }
-
-    const invoiceIds = studentInvoices?.map((invoice) => invoice.id) || [];
-
-    if (invoiceIds.length > 0) {
-      const { error: invoiceLessonsError } = await supabase
-        .from("invoice_lessons")
-        .delete()
-        .in("invoice_id", invoiceIds);
-
-      if (invoiceLessonsError) {
-        console.log("Delete invoice lessons error:", invoiceLessonsError);
+      if (invoiceFetchError) {
+        console.log("Fetch student invoices error:", invoiceFetchError);
         return;
       }
 
-      const { error: invoicesError } = await supabase
-        .from("invoices")
-        .delete()
-        .in("id", invoiceIds);
+      const invoiceIds = studentInvoices?.map((invoice) => invoice.id) || [];
 
-      if (invoicesError) {
-        console.log("Delete invoices error:", invoicesError);
+      if (invoiceIds.length > 0) {
+        const { error: invoiceLessonsError } = await supabase
+          .from("invoice_lessons")
+          .delete()
+          .in("invoice_id", invoiceIds);
+
+        if (invoiceLessonsError) {
+          console.log("Delete invoice lessons error:", invoiceLessonsError);
+          return;
+        }
+
+        const { error: invoicesError } = await supabase
+          .from("invoices")
+          .delete()
+          .in("id", invoiceIds);
+
+        if (invoicesError) {
+          console.log("Delete invoices error:", invoicesError);
+          return;
+        }
+      }
+
+      const { error: lessonsError } = await supabase
+        .from("lessons")
+        .delete()
+        .eq("coach_id", coachId)
+        .eq("student_id", studentId);
+
+      if (lessonsError) {
+        console.log("Delete lessons error:", lessonsError);
         return;
       }
+
+      const { error: linkError } = await supabase
+        .from("coach_students")
+        .delete()
+        .eq("coach_id", coachId)
+        .eq("student_id", studentId);
+
+      if (linkError) {
+        console.log("Delete coach student link error:", linkError);
+        return;
+      }
+
+      const { error: studentError } = await supabase
+        .from("students")
+        .delete()
+        .eq("id", studentId);
+
+      if (studentError) {
+        console.log("Delete student error:", studentError);
+        return;
+      }
+
+      setStudents((prev) =>
+        prev.filter((link: any) => link.student_id !== studentId)
+      );
+
+    } finally {
+      setIsDeleting(false);
     }
-
-    const { error: lessonsError } = await supabase
-      .from("lessons")
-      .delete()
-      .eq("coach_id", coachId)
-      .eq("student_id", studentId);
-
-    if (lessonsError) {
-      console.log("Delete lessons error:", lessonsError);
-      return;
-    }
-
-    const { error: linkError } = await supabase
-      .from("coach_students")
-      .delete()
-      .eq("coach_id", coachId)
-      .eq("student_id", studentId);
-
-    if (linkError) {
-      console.log("Delete coach student link error:", linkError);
-      return;
-    }
-
-    const { error: studentError } = await supabase
-      .from("students")
-      .delete()
-      .eq("id", studentId);
-
-    if (studentError) {
-      console.log("Delete student error:", studentError);
-      return;
-    }
-
-    setStudents((prev) =>
-      prev.filter((link: any) => link.student_id !== studentId)
-    );
 
     closeEditStudent();
   }
@@ -967,8 +1037,8 @@ function Students() {
                 </div>
                 </button>
 
-                <button type="submit" className="students-save-btn">
-                    Save Student
+                <button type="submit" className="students-save-btn" disabled={isSaving}>
+                    {isSaving ? "Saving..." : "Save Lesson"}
                 </button>
                 </form>
           </div>
@@ -1165,8 +1235,8 @@ function Students() {
                 </div>
                 </button>
 
-                <button type="submit" className="students-save-btn">
-                Save Changes
+                <button type="submit" className="students-save-btn" disabled={isSaving}>
+                {isSaving ? "Saving..." : "Save Changes"}
                 </button>
 
                 {!active && (
@@ -1174,14 +1244,16 @@ function Students() {
                     type="button"
                     className="students-restore-btn"
                     onClick={() => handleRestoreStudent(editingStudent.id)}
+                    disabled={isMoving}
                   >
-                    Restore Student
+                    {isMoving ? "Restoring..." : "Restore Student"}
                   </button>
                 )}
 
                 <button
                   type="button"
                   className={active ? "students-delete-btn" : "students-permanent-delete-btn"}
+                  disabled={isMoving || isDeleting}
                   onClick={() => {
                     if (active) {
                       handleArchiveStudent(editingStudent.id);
@@ -1190,7 +1262,13 @@ function Students() {
                     }
                   }}
                 >
-                  {active ? "Archive Student" : "Permanently Delete Student"}
+                  {active
+                  ? isMoving
+                    ? "Archiving..."
+                    : "Archive Student"
+                  : isDeleting
+                  ? "Deleting..."
+                  : "Permanently Delete Student"}
                 </button>
             </form>
             </div>
@@ -1358,12 +1436,13 @@ function Students() {
               <button
                 type="button"
                 className="billio-danger-btn"
+                disabled={isDeleting}
                 onClick={() => {
                   handlePermanentDeleteStudent(studentToDelete.id);
                   setStudentToDelete(null);
                 }}
               >
-                Delete
+                {isDeleting ? "Deleting..." : "Delete"}
               </button>
             </div>
           </div>
@@ -1476,8 +1555,8 @@ function Students() {
                 />
               </div>
 
-              <button type="submit" className="save-lesson-btn">
-                Save Changes
+              <button type="submit" className="save-lesson-btn" disabled={isSaving}>
+                {isSaving ? "Saving..." : "Save Changes"}
               </button>
 
               <button
@@ -1485,7 +1564,7 @@ function Students() {
                 className="delete-lesson-btn"
                 onClick={() => handleDeleteStudentLesson(editingLesson.id)}
               >
-                Delete Lesson
+                {isDeleting ? "Deleting..." : "Delete Lesson"}
               </button>
             </form>
           </div>

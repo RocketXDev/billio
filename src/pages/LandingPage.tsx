@@ -135,6 +135,59 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <section className="pricing-section" id="pricing">
+        <p className="section-badge">Simple pricing</p>
+        <h2>Start free. Upgrade when you need more.</h2>
+        <p className="pricing-subtitle">
+          Billio is built so new coaches can start organizing right away, while growing coaches can unlock automation.
+        </p>
+
+        <div className="pricing-grid">
+          <div className="pricing-card">
+            <h3>Free</h3>
+            <p className="price">$0</p>
+            <p className="price-note">For getting started</p>
+
+            <ul>
+              <li>Up to 5 active students</li>
+              <li>Manual lesson tracking</li>
+              <li>Basic student profiles</li>
+              <li>Email invoice sedning only</li>
+              <li>Manual invoice tracking</li>
+              <li>Weekly calendar only</li>
+            </ul>
+
+            <Link to="/login" className="pricing-btn secondary-pricing">
+              Start Free
+            </Link>
+          </div>
+
+          <div className="pricing-card pro-card">
+            <div className="popular-badge">Best value</div>
+
+            <h3>Pro</h3>
+            <p className="price">$6.99<span>/month</span></p>
+            <p className="price-note">For active coaches</p>
+
+            <ul>
+              <li>Unlimited active students</li>
+              <li>Full lesson scheduling</li>
+              <li>Advanced student details</li>
+              <li>Automated Invoice creation</li>
+              <li>Automated Billing</li>
+              <li>Email and text invoice sending</li>
+              <li>Text message reminders</li>
+              <li>Weekly billing workflow</li>
+              <li>Unlimited calendar</li>
+            </ul>
+
+            <Link to="/login" className="pricing-btn primary-pricing">
+              Upgrade to Pro
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <div className="landing-divider"></div>
 
       <section className="landing-final-cta">

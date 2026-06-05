@@ -17,6 +17,7 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import LandingPage from "./pages/LandingPage";
 import AppEntry from "./pages/AppEntry";
+import SmsOptIn from "./pages/SmsOptIn";
 
 function App() {
 
@@ -32,6 +33,7 @@ function App() {
       <Route path="/password-updated" element={<PasswordUpdated />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<Terms />} />
+      <Route path="/sms-opt-in" element={<SmsOptIn />} />
 
       <Route
         path="/app"

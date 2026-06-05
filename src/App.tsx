@@ -17,8 +17,11 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import LandingPage from "./pages/LandingPage";
 import AppEntry from "./pages/AppEntry";
+import { usePullToRefresh } from "./hooks/usePullToRefresh";
 
 function App() {
+
+  usePullToRefresh();
 
   return (
     <Routes>
@@ -37,7 +40,7 @@ function App() {
         path="/app"
         element={
           <ProtectedRoute>
-            <Dashboard />
+            <AppEntry />
           </ProtectedRoute>
         }
       />

@@ -86,7 +86,7 @@
 .landing-hero-card h1 {
   font-size: 38px;
   line-height: 1.05;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: -1.7px;
   margin-bottom: 16px;
 }
@@ -157,7 +157,7 @@
 .preview-top h3 {
   color: var(--main-text);
   font-size: 24px;
-  font-weight: 750;
+  font-weight: 600;
 }
 
 .preview-top button {
@@ -191,6 +191,7 @@
   display: block;
   color: var(--main-text);
   font-size: 16px;
+  font-weight: 550;
 }
 
 .preview-lesson span {
@@ -235,7 +236,7 @@
 .landing-final-cta h2 {
   color: var(--main-text);
   font-size: 30px;
-  font-weight: 800;
+  font-weight: 600;
   line-height: 1.15;
   letter-spacing: -1px;
   margin-bottom: 18px;
@@ -263,7 +264,7 @@
 .landing-feature-card h3 {
   color: var(--main-text);
   font-size: 18px;
-  font-weight: 750;
+  font-weight: 550;
   margin-bottom: 6px;
 }
 
@@ -306,6 +307,7 @@
 .landing-steps strong {
   color: var(--main-text);
   font-size: 16px;
+  font-weight: 550;
 }
 
 .landing-steps p {

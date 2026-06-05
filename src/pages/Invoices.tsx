@@ -14,7 +14,8 @@ import {
   FaClock,
   FaWallet,
   FaChevronDown, 
-  FaChevronRight
+  FaChevronRight,
+  FaCog
 } from "react-icons/fa";
 import { supabase } from "../lib/supabaseClient";
 
@@ -57,6 +58,15 @@ function Invoices() {
   const [sendingInvoiceId, setSendingInvoiceId] = useState<string | null>(null);
   const [openMonths, setOpenMonths] = useState<any>({});
   const [openWeeks, setOpenWeeks] = useState<any>({});
+
+  // Invoices settings
+  const [showInvoiceSettings, setShowInvoiceSettings] = useState(false);
+  const [invoiceGenerationDay, setInvoiceGenerationDay] = useState("0");
+  const [invoiceGenerationTime, setInvoiceGenerationTime] = useState("15:00");
+  const [invoiceReviewDay, setInvoiceReviewDay] = useState("0");
+  const [invoiceReviewTime, setInvoiceReviewTime] = useState("15:05");
+  const [invoiceTimezone, setInvoiceTimezone] = useState("America/Denver");
+  const [savingInvoiceSettings, setSavingInvoiceSettings] = useState(false);
 
   // Loading
   const [isSaving, setIsSaving] = useState(false);
@@ -129,6 +139,7 @@ function Invoices() {
     }
 
     setInvoices(data || []);
+    await loadInvoiceSettings(coachData.id);
     setLoading(false);
   }
 
@@ -774,6 +785,59 @@ function Invoices() {
     return groups;
   }, {});
 
+  async function loadInvoiceSettings(currentCoachId: string) {
+    const { data, error } = await supabase
+      .from("coaches")
+      .select(`
+        invoice_generation_day,
+        invoice_generation_time,
+        invoice_review_day,
+        invoice_review_time,
+        invoice_timezone
+      `)
+      .eq("id", currentCoachId)
+      .single();
+
+    if (error || !data) {
+      console.log("Load invoice settings error:", error);
+      return;
+    }
+
+    setInvoiceGenerationDay(String(data.invoice_generation_day ?? 0));
+    setInvoiceGenerationTime(data.invoice_generation_time || "15:00");
+    setInvoiceReviewDay(String(data.invoice_review_day ?? 0));
+    setInvoiceReviewTime(data.invoice_review_time || "15:05");
+    setInvoiceTimezone(data.invoice_timezone || "America/Denver");
+  }
+
+  async function handleSaveInvoiceSettings(e: any) {
+    e.preventDefault();
+
+    if (!coachId || savingInvoiceSettings) return;
+
+    setSavingInvoiceSettings(true);
+
+    const { error } = await supabase
+      .from("coaches")
+      .update({
+        invoice_generation_day: Number(invoiceGenerationDay),
+        invoice_generation_time: invoiceGenerationTime,
+        invoice_review_day: Number(invoiceReviewDay),
+        invoice_review_time: invoiceReviewTime,
+        invoice_timezone: invoiceTimezone,
+      })
+      .eq("id", coachId);
+
+    setSavingInvoiceSettings(false);
+
+    if (error) {
+      console.log("Save invoice settings error:", error);
+      return;
+    }
+
+    setShowInvoiceSettings(false);
+  }
+
   if (loading) {
     return (
       <div className="loading-screen">
@@ -793,13 +857,23 @@ function Invoices() {
                 <div className="invoices-header-add">
                     <h1>Invoices</h1>
 
-                    <button
-                    type="button"
-                    className="invoices-add-btn"
-                    onClick={openAddInvoice}
-                    >
-                    <FaPlus />
-                    </button>
+                     <div className="invoices-header-actions">
+                      <button
+                        type="button"
+                        className="invoices-settings-btn"
+                        onClick={() => setShowInvoiceSettings(true)}
+                      >
+                        <FaCog />
+                      </button>
+
+                      <button
+                      type="button"
+                      className="invoices-add-btn"
+                      onClick={openAddInvoice}
+                      >
+                        <FaPlus />
+                      </button>
+                    </div>
                 </div>
             </div>
             <div className="invoice-stat-grid">
@@ -1472,6 +1546,124 @@ function Invoices() {
 
               <h2>Sending Invoice</h2>
               <p>Please wait while Billio sends this invoice.</p>
+            </div>
+          </div>
+        )}
+        {showInvoiceSettings && (
+          <div
+            className="invoice-settings-overlay"
+            onClick={() => setShowInvoiceSettings(false)}
+          >
+            <div
+              className="invoice-settings-sheet"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="invoice-settings-header">
+                <h2>Invoice Settings</h2>
+
+                <button
+                  type="button"
+                  onClick={() => setShowInvoiceSettings(false)}
+                >
+                  ×
+                </button>
+              </div>
+
+              <form className="invoice-settings-form" onSubmit={handleSaveInvoiceSettings}>
+                <section className="invoice-settings-section">
+                  <h3>Generate Invoices</h3>
+                  <p>
+                    Choose when Billio should automatically create invoices from
+                    unbilled lessons.
+                  </p>
+
+                  <div className="input-block">
+                    <label>Day</label>
+                    <select
+                      value={invoiceGenerationDay}
+                      onChange={(e) => setInvoiceGenerationDay(e.target.value)}
+                    >
+                      <option value="0">Sunday</option>
+                      <option value="1">Monday</option>
+                      <option value="2">Tuesday</option>
+                      <option value="3">Wednesday</option>
+                      <option value="4">Thursday</option>
+                      <option value="5">Friday</option>
+                      <option value="6">Saturday</option>
+                    </select>
+                  </div>
+
+                  <div className="input-block">
+                    <label>Time</label>
+                    <input
+                      type="time"
+                      value={invoiceGenerationTime}
+                      onChange={(e) => setInvoiceGenerationTime(e.target.value)}
+                    />
+                  </div>
+                </section>
+
+                <section className="invoice-settings-section">
+                  <h3>Send Review Reminder</h3>
+                  <p>
+                    Choose when Billio should notify you that invoices are ready to
+                    review.
+                  </p>
+
+                  <div className="input-block">
+                    <label>Day</label>
+                    <select
+                      value={invoiceReviewDay}
+                      onChange={(e) => setInvoiceReviewDay(e.target.value)}
+                    >
+                      <option value="0">Sunday</option>
+                      <option value="1">Monday</option>
+                      <option value="2">Tuesday</option>
+                      <option value="3">Wednesday</option>
+                      <option value="4">Thursday</option>
+                      <option value="5">Friday</option>
+                      <option value="6">Saturday</option>
+                    </select>
+                  </div>
+
+                  <div className="input-block">
+                    <label>Time</label>
+                    <input
+                      type="time"
+                      value={invoiceReviewTime}
+                      onChange={(e) => setInvoiceReviewTime(e.target.value)}
+                    />
+                  </div>
+                </section>
+
+                <section className="invoice-settings-section">
+                  <h3>Timezone</h3>
+                  <p>
+                    Used for invoice automation timing.
+                  </p>
+
+                  <div className="input-block">
+                    <label>Timezone</label>
+                    <select
+                      value={invoiceTimezone}
+                      onChange={(e) => setInvoiceTimezone(e.target.value)}
+                    >
+                      <option value="America/Denver">Mountain Time</option>
+                      <option value="America/Los_Angeles">Pacific Time</option>
+                      <option value="America/Chicago">Central Time</option>
+                      <option value="America/New_York">Eastern Time</option>
+                    </select>
+                  </div>
+                </section>
+
+                <button
+                  type="submit"
+                  className="invoice-settings-save-btn"
+                  disabled={savingInvoiceSettings}
+                >
+                  {savingInvoiceSettings ? "Saving..." : "Save Settings"}
+                </button>
+              </form>
             </div>
           </div>
         )}

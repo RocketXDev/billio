@@ -28,6 +28,7 @@ function Profile() {
   const [visibleName, setVisibleName] = useState("");
   const [bio, setBio] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [coachSmsConsent, setCoachSmsConsent] = useState(false);
   const [preferredCommunication, setPreferredCommunication] = useState("email");
 
   const [defaultHourlyRate, setDefaultHourlyRate] = useState("");
@@ -100,6 +101,7 @@ function Profile() {
     setPreferredCommunication(
       coachData.preferred_communication || "email"
     );
+    setCoachSmsConsent(coachData.sms_consent || false);
 
     setLoading(false);
   }
@@ -135,6 +137,9 @@ function Profile() {
           default_hourly_rate: Number(defaultHourlyRate || 0),
           custom_rates: customRates,
           avatar_url: avatarUrl || null,
+          sms_consent: coachSmsConsent,
+          sms_consent_at: coachSmsConsent ? new Date().toISOString() : null,
+          sms_consent_source: coachSmsConsent ? "coach_onboarding" : null,
         })
         .eq("id", coachId);
 
@@ -425,6 +430,27 @@ function Profile() {
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   placeholder="(555) 555-5555"
                 />
+                <label className="sms-consent-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={coachSmsConsent}
+                    onChange={(e) => setCoachSmsConsent(e.target.checked)}
+                  />
+                  <span>
+                    I agree to receive transactional SMS messages from Billio about my account,
+                    invoice review reminders, billing notifications, and coaching-related app
+                    updates. Message frequency varies. Message and data rates may apply. Reply
+                    STOP to opt out. Reply HELP for help.{" "}
+                    <a href="/terms" target="_blank" rel="noreferrer">
+                      Terms
+                    </a>{" "}
+                    and{" "}
+                    <a href="/privacy" target="_blank" rel="noreferrer">
+                      Privacy Policy
+                    </a>
+                    .
+                  </span>
+              </label>
               </div>
 
               <div className="input-block">

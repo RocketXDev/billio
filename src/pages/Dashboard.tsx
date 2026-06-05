@@ -50,14 +50,15 @@ function Dashboard() {
   const visibleRates = rateOptions.slice(0, 3);
   const hiddenRates = rateOptions.slice(3);
   const [showRateSheet, setShowRateSheet] = useState(false);
-
   const [showEditLesson, setShowEditLesson] = useState(false);
   const [editingLesson, setEditingLesson] = useState<any>(null);
+
+  // Coaches info
+  const [coachSmsConsent, setCoachSmsConsent] = useState(false);
 
   // Invoices
   const [invoices, setInvoices] = useState<any[]>([]);
   const [editingInvoiceStatusId, setEditingInvoiceStatusId] = useState<string | null>(null);
-
   const [isSaving, setIsSaving] = useState(false); 
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -305,6 +306,9 @@ function Dashboard() {
         preferred_invoice_delivery: preferredInvoiceDelivery,
         preferred_communication: preferredCommunication,
         setup_completed: true,
+        sms_consent: coachSmsConsent,
+        sms_consent_at: coachSmsConsent ? new Date().toISOString() : null,
+        sms_consent_source: coachSmsConsent ? "coach_onboarding" : null,
       })
       .eq("id", coachId)
       .select();
@@ -1489,15 +1493,28 @@ function Dashboard() {
                   placeholder="(719) 123-4567"
                   required
                 />
-                <p className="sms-consent-note">
-                  By adding a phone number, you confirm this person agreed to receive lesson
-                  reminders, invoice notifications, and account-related texts from Billio.
-                  Message and data rates may apply. Reply STOP to opt out.{" "}
-                  <a href="/terms" target="_blank" rel="noreferrer">
-                    Read terms
-                  </a>
-                  .
-                </p>
+                <label className="sms-consent-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={coachSmsConsent}
+                    onChange={(e) => setCoachSmsConsent(e.target.checked)}
+                  />
+
+                  <span>
+                    I agree to receive transactional SMS messages from Billio about my account,
+                    invoice review reminders, billing notifications, and coaching-related app
+                    updates. Message frequency varies. Message and data rates may apply. Reply
+                    STOP to opt out. Reply HELP for help.{" "}
+                    <a href="/terms" target="_blank" rel="noreferrer">
+                      Terms
+                    </a>{" "}
+                    and{" "}
+                    <a href="/privacy" target="_blank" rel="noreferrer">
+                      Privacy Policy
+                    </a>
+                    .
+                  </span>
+                </label>
               </div>
 
               <div className="input-block">

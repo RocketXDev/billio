@@ -32,6 +32,7 @@ function Students() {
   const [notes, setNotes] = useState("");
   const [parentEmail, setParentEmail] = useState("");
   const [studentToDelete, setStudentToDelete] = useState<any>(null);
+  const [smsConsent, setSmsConsent] = useState(false);
 
   // Student - lessons+invoices popup
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
@@ -175,6 +176,9 @@ function Students() {
           parent_phone: parentPhone || null,
           active,
           notes: notes || null,
+          sms_consent: smsConsent,
+          sms_consent_at: smsConsent ? new Date().toISOString() : null,
+          sms_consent_source: smsConsent ? "coach_confirmed" : null,
         })
         .select()
         .single();
@@ -231,6 +235,7 @@ function Students() {
     setNotes(student?.notes || "");
     setInvoiceContactTarget(link.invoice_contact_target || "auto");
     setInvoiceDeliveryMethod(link.invoice_delivery_method || "auto");
+    setSmsConsent(link.students?.sms_consent || false);
 
     setShowEditStudent(true);
   }
@@ -298,6 +303,7 @@ function Students() {
     setEditingStudent(null);
     setInvoiceContactTarget("auto");
     setInvoiceDeliveryMethod("auto");
+    setSmsConsent(false);
   }
 
   function closeAddStudent() {
@@ -333,6 +339,9 @@ function Students() {
           hourly_rate: Number(hourlyRate),
           rate: calculatedRate,
           notes: lessonNotes || null,
+          sms_consent: smsConsent,
+          sms_consent_at: smsConsent ? new Date().toISOString() : null,
+          sms_consent_source: smsConsent ? "coach_confirmed" : null,
         })
         .eq("id", editingLesson.id)
         .eq("coach_id", coachId)
@@ -892,14 +901,28 @@ function Students() {
                     placeholder="(719) 555-1234"
                     autoComplete="off"
                     />
-                    <div className="sms-consent-note">
-                      By adding a phone number, you confirm this person agreed to receive lesson
-                      reminders, invoice notifications, and account-related texts from Billio.{" "}
-                      <a href="/terms" target="_blank" rel="noreferrer">
-                        Read terms
-                      </a>
-                      .
-                    </div>
+                    <label className="sms-consent-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={smsConsent}
+                        onChange={(e) => setSmsConsent(e.target.checked)}
+                      />
+
+                      <span>
+                        I confirm that the student or parent agreed to receive transactional SMS
+                        messages from Billio for lesson reminders, invoice notifications, payment
+                        reminders, and account-related updates. Message frequency varies. Message
+                        and data rates may apply. Reply STOP to opt out. Reply HELP for help.{" "}
+                        <a href="/terms" target="_blank" rel="noreferrer">
+                          Terms
+                        </a>{" "}
+                        and{" "}
+                        <a href="/privacy" target="_blank" rel="noreferrer">
+                          Privacy Policy
+                        </a>
+                        .
+                      </span>
+                    </label>
                 </div>
 
                 <div className="input-block">
@@ -939,14 +962,28 @@ function Students() {
                     placeholder="(719) 555-1234"
                     autoComplete="off"
                     />
-                    <div className="sms-consent-note">
-                      By adding a phone number, you confirm this person agreed to receive lesson
-                      reminders, invoice notifications, and account-related texts from Billio.{" "}
-                      <a href="/terms" target="_blank" rel="noreferrer">
-                        Read terms
-                      </a>
-                      .
-                    </div>
+                    <label className="sms-consent-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={smsConsent}
+                        onChange={(e) => setSmsConsent(e.target.checked)}
+                      />
+
+                      <span>
+                        I confirm that the student or parent agreed to receive transactional SMS
+                        messages from Billio for lesson reminders, invoice notifications, payment
+                        reminders, and account-related updates. Message frequency varies. Message
+                        and data rates may apply. Reply STOP to opt out. Reply HELP for help.{" "}
+                        <a href="/terms" target="_blank" rel="noreferrer">
+                          Terms
+                        </a>{" "}
+                        and{" "}
+                        <a href="/privacy" target="_blank" rel="noreferrer">
+                          Privacy Policy
+                        </a>
+                        .
+                      </span>
+                    </label>
                 </div>
 
                 <div className="input-block">

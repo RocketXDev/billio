@@ -1661,7 +1661,6 @@ textarea:focus {
   border-radius: 22px;
   padding: 14px;
   margin-bottom: 18px;
-
   display: grid;
   grid-template-columns: 38px 38px 1fr 38px 38px;
   gap: 8px;
@@ -1682,15 +1681,12 @@ textarea:focus {
   min-width: 38px;
   margin: 0;
   padding: 0;
-
   border-radius: 50%;
   background: var(--main-bg);
   color: var(--main-text);
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   font-size: 18px;
   line-height: 1;
 }
@@ -1963,7 +1959,7 @@ textarea:focus {
   font-size: 26px;
 }
 
-.add-lesson-form, .studetns-add-form {
+.add-lesson-form, .students-add-form {
   gap: 16px;
 }
 
@@ -2207,6 +2203,50 @@ textarea:focus {
 .student-active-button.inactive .student-active-pill {
   background: white;
   color: var(--secondary-text);
+}
+
+.sms-consent-checkbox, .input-block > .sms-consent-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 8px 0 18px;
+  padding: 12px;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  color: var(--secondary-text);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.input-block > .sms-consent-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.input-block > .sms-consent-checkbox {
+  display: flex !important;
+  flex-direction: row !important;
+}
+
+.sms-consent-checkbox input, .input-block > .sms-consent-checkbox input  {
+  width: 15px;
+  height: 15px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.sms-consent-checkbox span, .input-block > .sms-consent-checkbox span {
+  display: block;
+  font-size: 12px;
+  color: var(--secondary-text);
+}
+
+.sms-consent-checkbox a, .input-block > .sms-consent-checkbox a {
+  color: var(--primary-purple);
+  font-weight: 500;
+  text-decoration: none;
 }
 
 .students-detail-overlay {

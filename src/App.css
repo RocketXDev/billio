@@ -3753,7 +3753,9 @@ textarea:focus {
 }
 
 .profile-avatar {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 66px;
   height: 66px;
   min-width: 66px;

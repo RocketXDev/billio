@@ -1719,7 +1719,8 @@ textarea:focus {
   position: relative;
 }
 
-.calendar-pro-overlay {
+
+.calendar-pro-overlay, .invoice-pro-overlay {
   position: absolute;
   inset: 0;
   border-radius: 16px;
@@ -1732,7 +1733,20 @@ textarea:focus {
   z-index: 10;
 }
 
-.calendar-pro-overlay-card {
+.invoice-pro-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 30px 30px 0 0;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.calendar-pro-overlay-card, .invoice-pro-overlay-card {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1741,19 +1755,19 @@ textarea:focus {
   gap: 6px;
 }
 
-.calendar-pro-overlay-icon {
+.calendar-pro-overlay-icon, .invoice-pro-overlay-icon {
   font-size: 23px;
   color: var(--primary-purple);
   margin-bottom: 4px;
 }
 
-.calendar-pro-overlay-card strong {
+.calendar-pro-overlay-card strong, .invoice-pro-overlay-card strong {
   font-size: 18px;
   font-weight: 650;
   color: var(--main-text);
 }
 
-.calendar-pro-overlay-card p {
+.calendar-pro-overlay-card p, .invoice-pro-overlay-card p {
   font-size: 14px;
   color: var(--secondary-text);
   margin: 0;
@@ -1761,8 +1775,8 @@ textarea:focus {
   line-height: 1.45;
 }
 
-.calendar-pro-overlay-btn {
-  margin-top: 8px;
+.calendar-pro-overlay-btn, .invoice-pro-overlay-btn {
+  margin-top: 4px;
   width: auto;
   height: 38px;
   padding: 0 16px;
@@ -2772,7 +2786,7 @@ textarea:focus {
 }
 
 .invoices-group {
-  margin-top: 25px;
+  margin-top: 20px;
   margin-bottom: 26px;
 }
 
@@ -3550,6 +3564,7 @@ textarea:focus {
 }
 
 .invoice-settings-sheet {
+  position: relative;
   width: 100%;
   max-width: 480px;
   max-height: 88vh;
@@ -3583,6 +3598,7 @@ textarea:focus {
   background: var(--input-bg);
   color: var(--main-text);
   font-size: 24px;
+  z-index: 150;
 }
 
 .invoice-settings-section {
@@ -4261,7 +4277,7 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-top: 4px;
+  margin: 20px 0px 5px 0px;
 }
  
 .pro-teaser-banner-icon {

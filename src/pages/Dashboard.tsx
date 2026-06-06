@@ -69,7 +69,7 @@ function Dashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isPro, plan } = usePlan();
-  const [showUpgradeToast, setShowUpgradeToast] = useState(true);
+  const [showUpgradeToast, setShowUpgradeToast] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);

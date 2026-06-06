@@ -578,6 +578,16 @@ function Profile() {
               </div>
             </section>
 
+            {isPro && (
+              <button
+                type="button"
+                className="profile-cancel-sub-btn"
+                onClick={() => navigate("/upgrade")}
+              >
+                Manage Subscription
+              </button>
+            )}
+
             <button
               type="submit"
               className="profile-save-btn"

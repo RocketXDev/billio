@@ -1,31 +1,31 @@
-.upgrade-page {
+/* ================================================================
+   UPGRADE PAGE  —  replace previous upgrade.css entirely
+   Uses Billio CSS variables throughout
+   ================================================================ */
+
+.up-page {
   width: 100%;
   min-height: 100vh;
   background: var(--main-bg);
   display: flex;
   flex-direction: column;
-  padding-bottom: 80px;
-}
-
-.upgrade-wrapper {
-  width: 100%;
-  max-width: 520px;
-  margin: 0 auto;
-  padding: 0 18px 24px;
-  flex: 1;
+  padding-bottom: 90px;
 }
 
 /* ── Header ── */
-.upgrade-header {
+.up-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 0 8px;
+  padding: 20px 18px 0;
 }
 
-.upgrade-back-btn {
-  width: 36px;
-  height: 36px;
+.up-back-btn {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  margin: 0;
+  padding: 0;
   border-radius: 50%;
   background: var(--card-bg);
   border: 1px solid var(--border);
@@ -33,201 +33,198 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
 }
 
-.upgrade-logo {
-  width: 80px;
+.up-logo {
+  width: 88px;
+  height: auto;
+}
+
+/* ── Body ── */
+.up-body {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 24px 18px 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 /* ── Hero ── */
-.upgrade-hero {
+.up-hero {
   text-align: center;
-  padding: 24px 0 20px;
+  padding: 8px 0 0;
 }
 
-.upgrade-crown-wrap {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #f59e0b, #f97316);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 16px;
-  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.35);
-}
-
-.upgrade-crown {
-  font-size: 26px;
-  color: #fff;
-}
-
-.upgrade-title {
+.up-title {
   font-size: 26px;
   font-weight: 700;
-  letter-spacing: -0.8px;
+  letter-spacing: -0.7px;
   color: var(--main-text);
-  margin-bottom: 8px;
+  margin: 0 0 10px;
+  line-height: 1.2;
 }
 
-.upgrade-subtitle {
+.up-subtitle {
   font-size: 15px;
   color: var(--secondary-text);
   line-height: 1.6;
-  max-width: 320px;
-  margin: 0 auto;
+  margin: 0;
 }
 
-.upgrade-already-pro {
+/* ── Already pro ── */
+.up-already-pro {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  margin-top: 14px;
-  padding: 8px 16px;
+  gap: 8px;
+  margin: 0 auto;
+  padding: 10px 18px;
   border-radius: 999px;
   background: #dcfce7;
   color: #16a34a;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
 }
 
-/* ── Plan comparison cards ── */
-.upgrade-cards {
+/* ── Plan cards ── */
+.up-cards {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 24px;
+  gap: 14px;
+  align-items: start;
 }
 
-.upgrade-plan-card {
-  border-radius: 22px;
-  padding: 18px 16px;
+.up-card {
+  border-radius: 24px;
+  padding: 20px 16px 24px;
   position: relative;
 }
 
-.upgrade-free-card {
+.up-free-card {
   background: var(--card-bg);
   border: 1px solid var(--border);
 }
 
-.upgrade-pro-card {
-  background: linear-gradient(145deg, #1e1b4b, #312e81);
-  border: 2px solid #4f46e5;
-  box-shadow: 0 16px 40px rgba(79, 70, 229, 0.28);
+.up-pro-card {
+  background: var(--primary-purple);
+  border: 2px solid var(--secondary-purple);
+  box-shadow: 0 16px 36px rgba(59, 51, 217, 0.28);
 }
 
-.upgrade-popular-badge {
+.up-pro-badge {
   position: absolute;
-  top: -10px;
+  top: -12px;
   left: 50%;
   transform: translateX(-50%);
-  background: linear-gradient(135deg, #f59e0b, #f97316);
+  background: #f59e0b;
   color: #fff;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: 999px;
   white-space: nowrap;
   display: flex;
   align-items: center;
 }
 
-.upgrade-plan-header {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  margin-bottom: 14px;
-}
-
-.upgrade-plan-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--secondary-text);
+.up-card-label {
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 4px;
+  letter-spacing: 0.8px;
+  color: var(--secondary-text);
+  margin-bottom: 8px;
 }
 
-.upgrade-pro-label {
-  color: #a5b4fc;
+.up-pro-label {
+  color: rgba(255, 255, 255, 0.65);
 }
 
-.upgrade-plan-price {
-  font-size: 28px;
+.up-card-price {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 18px;
+}
+
+.up-card-price strong {
+  font-size: 30px;
   font-weight: 800;
-  letter-spacing: -1px;
+  letter-spacing: -1.2px;
   color: var(--main-text);
 }
 
-.upgrade-pro-price {
-  color: #fff;
+.up-card-price span {
+  font-size: 13px;
+  color: var(--secondary-text);
 }
 
-.upgrade-plan-period {
-  font-size: 12px;
-  color: var(--secondary-text);
-  margin-top: -2px;
+.up-pro-price-num {
+  color: #fff !important;
+}
+
+.up-pro-price-period {
+  color: rgba(255, 255, 255, 0.6) !important;
 }
 
 /* ── Feature lists ── */
-.upgrade-feature-list {
+.up-feature-list {
   list-style: none;
   padding: 0;
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
-.upgrade-feature-list li {
+.up-feature-list li {
   display: flex;
   align-items: flex-start;
-  gap: 7px;
-  font-size: 12px;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--secondary-text);
   line-height: 1.4;
 }
 
-.upgrade-free-list li {
-  color: var(--secondary-text);
+.up-pro-list li {
+  color: rgba(255, 255, 255, 0.9);
 }
 
-.upgrade-pro-list li {
-  color: #e0e7ff;
-}
-
-.upgrade-feature-icon {
+.up-feat-icon {
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
+  font-size: 8px;
   margin-top: 1px;
-  font-size: 9px;
 }
 
-.free-icon {
+.up-feat-no {
   background: #fee2e2;
   color: #ef4444;
 }
 
-.pro-icon {
-  background: rgba(165, 180, 252, 0.2);
-  color: #a5b4fc;
+.up-feat-yes {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
 }
 
-/* ── CTA section ── */
-.upgrade-cta-section {
+/* ── CTA ── */
+.up-cta {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 14px;
 }
 
-.upgrade-error {
+.up-error {
   width: 100%;
   padding: 12px 16px;
   border-radius: 14px;
@@ -238,11 +235,11 @@
   text-align: center;
 }
 
-.upgrade-main-btn {
+.up-main-btn {
   width: 100%;
   min-height: 54px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #3b33d9, #4338ff);
+  background: linear-gradient(135deg, var(--primary-purple), var(--secondary-purple));
   color: #fff;
   font-size: 16px;
   font-weight: 600;
@@ -251,75 +248,68 @@
   justify-content: center;
   border: none;
   cursor: pointer;
-  box-shadow: 0 12px 28px rgba(59, 51, 217, 0.32);
+  box-shadow: 0 12px 28px rgba(59, 51, 217, 0.28);
   transition: opacity 0.15s, transform 0.15s;
   letter-spacing: -0.2px;
 }
 
-.upgrade-main-btn:active {
+.up-main-btn:active {
   transform: scale(0.98);
   opacity: 0.9;
 }
 
-.upgrade-main-btn:disabled {
+.up-main-btn:disabled {
   opacity: 0.65;
   cursor: not-allowed;
 }
 
-.upgrade-btn-loading {
+.up-btn-loading {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.upgrade-spinner {
+.up-spinner {
   width: 16px;
   height: 16px;
   border: 2px solid rgba(255, 255, 255, 0.4);
   border-top-color: #fff;
   border-radius: 50%;
-  animation: spin 0.7s linear infinite;
+  animation: upSpin 0.7s linear infinite;
   display: inline-block;
+  flex-shrink: 0;
 }
 
-@keyframes spin {
+@keyframes upSpin {
   to { transform: rotate(360deg); }
 }
 
-.upgrade-trust-row {
+.up-trust {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 8px;
   font-size: 12px;
   color: var(--secondary-text);
   font-weight: 500;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
-.upgrade-trust-row span {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.upgrade-disclaimer {
+.up-disclaimer {
   font-size: 11px;
   color: var(--secondary-text);
   text-align: center;
   line-height: 1.6;
-  max-width: 320px;
+  margin: 0;
 }
 
-.upgrade-disclaimer a {
+.up-disclaimer a {
   color: var(--primary-purple);
   text-decoration: none;
 }
 
-/* ── Already-pro manage section ── */
-.upgrade-manage-section {
-  padding-top: 8px;
-}
-
-.upgrade-manage-card {
+/* ── Manage (already pro) ── */
+.up-manage {
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 24px;
@@ -327,27 +317,27 @@
   text-align: center;
 }
 
-.upgrade-manage-icon {
-  font-size: 36px;
+.up-manage-icon {
+  font-size: 34px;
   color: #f59e0b;
   margin-bottom: 14px;
 }
 
-.upgrade-manage-card h3 {
+.up-manage h3 {
   font-size: 18px;
   font-weight: 600;
   color: var(--main-text);
-  margin-bottom: 8px;
+  margin: 0 0 8px;
 }
 
-.upgrade-manage-card p {
+.up-manage p {
   font-size: 14px;
   color: var(--secondary-text);
   line-height: 1.6;
-  margin-bottom: 20px;
+  margin: 0 0 20px;
 }
 
-.upgrade-portal-btn {
+.up-portal-btn {
   padding: 12px 24px;
   border-radius: 999px;
   background: var(--primary-purple);
@@ -356,24 +346,57 @@
   font-weight: 600;
   border: none;
   cursor: pointer;
+  width: auto;
+  height: auto;
+  margin: 0;
 }
 
-/* ── UpgradeBanner — compact pill ── */
+/* ── Upgrade success toast ── */
+.upgrade-success-toast {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--primary-purple), var(--secondary-purple));
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 12px 32px rgba(59, 51, 217, 0.35);
+  animation: upToastIn 0.3s ease, upToastOut 0.4s ease 3.5s forwards;
+  white-space: nowrap;
+}
+
+@keyframes upToastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+@keyframes upToastOut {
+  to { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+}
+
+/* ── Upgrade banner components ── */
 .upgrade-banner-compact {
   display: inline-flex;
   align-items: center;
   padding: 7px 14px;
   border-radius: 999px;
-  background: linear-gradient(135deg, #fef3c7, #fde68a);
-  border: 1px solid #fcd34d;
-  color: #92400e;
+  background: #eef2ff;
+  border: 1px solid var(--shadow);
+  color: var(--primary-purple);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+  gap: 5px;
 }
 
-/* ── UpgradeBanner — full card ── */
 .upgrade-banner-full {
   width: 100%;
   display: flex;
@@ -382,8 +405,8 @@
   gap: 12px;
   padding: 14px 16px;
   border-radius: 18px;
-  background: linear-gradient(135deg, #1e1b4b, #312e81);
-  border: 1px solid #4f46e5;
+  background: var(--primary-purple);
+  border: 1px solid var(--secondary-purple);
   margin-bottom: 16px;
 }
 
@@ -397,7 +420,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #f59e0b, #f97316);
+  background: #f59e0b;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -416,7 +439,7 @@
 
 .upgrade-banner-full p {
   font-size: 12px;
-  color: #a5b4fc;
+  color: var(--shadow);
   margin: 0;
 }
 
@@ -424,7 +447,7 @@
   flex-shrink: 0;
   padding: 9px 16px;
   border-radius: 999px;
-  background: linear-gradient(135deg, #f59e0b, #f97316);
+  background: #f59e0b;
   color: #fff;
   font-size: 12px;
   font-weight: 700;
@@ -433,42 +456,57 @@
   display: flex;
   align-items: center;
   white-space: nowrap;
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);
+  gap: 5px;
+  width: auto;
+  height: auto;
+  margin: 0;
 }
 
-/* ── Success toast on /dashboard?upgraded=1 ── */
-.upgrade-success-toast {
-  position: fixed;
-  top: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 20px;
+.cancel-confirm-card {
+  width: 100%;
+  padding: 16px;
+  border-radius: 18px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.cancel-confirm-card p {
+  font-size: 14px;
+  color: var(--main-text);
+  margin: 0 0 14px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.cancel-success-banner {
+  width: 100%;
+  padding: 14px 16px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #1e1b4b, #312e81);
-  color: #fff;
+  background: #dcfce7;
+  border: 1px solid #bbf7d0;
+  color: #16a34a;
   font-size: 14px;
   font-weight: 600;
-  box-shadow: 0 12px 32px rgba(59, 51, 217, 0.35);
-  animation: toast-slide-in 0.3s ease, toast-fade-out 0.4s ease 3.5s forwards;
-  white-space: nowrap;
+  text-align: center;
 }
 
-@keyframes toast-slide-in {
-  from { opacity: 0; transform: translateX(-50%) translateY(-12px); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+.up-cancel-btn {
+  width: auto;
+  height: auto;
+  margin: 8px auto 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--secondary-text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+  display: block;
 }
 
-@keyframes toast-fade-out {
-  to { opacity: 0; transform: translateX(-50%) translateY(-8px); }
-}
-
-/* ── Responsive ── */
 @media (max-width: 380px) {
-  .upgrade-cards {
+  .up-cards {
     grid-template-columns: 1fr;
   }
 }

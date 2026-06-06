@@ -2673,6 +2673,10 @@ textarea:focus {
   color: var(--main-text);
 }
 
+.billio-cancel-btn.pro, .billio-danger-btn.pro {
+  font-size: 16px;
+}
+
 .billio-danger-btn {
   background: #e74040;
   color: white;
@@ -4056,13 +4060,13 @@ textarea:focus {
   width: 100%;
   height: 56px;
   margin-bottom: 30px;
-  margin-top: 12px;
+  margin-top: 0px;
   border: none;
   border-radius: 18px;
   background: var(--primary-purple);
   color: white;
   font-size: 17px;
-  font-weight: 750;
+  font-weight: 650;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4426,4 +4430,61 @@ button:disabled {
   color: #a78bfa;
   cursor: not-allowed;
   pointer-events: none;
+}
+
+.profile-cancel-sub-btn {
+  width: 100%;
+  height: 50px;
+  margin: 0;
+  border-radius: 16px;
+  background: #eef2ff;
+  border: 1px solid var(--shadow);
+  color: var(--primary-purple);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cancel-confirm-card {
+  padding: 16px;
+  border-radius: 18px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.cancel-confirm-card p {
+  font-size: 14px;
+  color: var(--main-text);
+  margin: 0 0 14px;
+  line-height: 1.5;
+}
+
+.cancel-success-banner {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #dcfce7;
+  border: 1px solid #bbf7d0;
+  color: #16a34a;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.up-cancel-btn {
+  width: auto;
+  height: auto;
+  margin: 8px auto 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--secondary-text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+  display: block;
 }

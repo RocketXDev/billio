@@ -1348,8 +1348,10 @@ function Dashboard() {
                   }}
                   style={{ color: "var(--primary-purple)", fontWeight: 700 }}
                 >
-                  <FaCrown style={{ fontSize: 11, marginRight: 6, color: "#f59e0b" }} />
-                  Upgrade to Pro
+                  <span className="plan-badge pro" style={{ fontSize: 13, padding: "8px 14px" }}>
+                    <FaCrown style={{ fontSize: 11, marginRight: 6, color: "#f59e0b" }} />
+                    Upgrade to Pro
+                  </span>
                 </a>
               )}
             </nav>

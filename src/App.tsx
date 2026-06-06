@@ -20,6 +20,7 @@ import AppEntry from "./pages/AppEntry";
 import SmsOptIn from "./pages/SmsOptIn";
 import Upgrade from "./pages/Upgrade";
 import DesktopLayout from "./components/DesktopLayout";
+import Support from "./pages/Support";
 
 function App() {
 
@@ -36,6 +37,7 @@ function App() {
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<Terms />} />
       <Route path="/sms-opt-in" element={<SmsOptIn />} />
+      <Route path="/support" element={<Support />} />
 
       <Route
         path="/app"

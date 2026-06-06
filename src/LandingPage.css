@@ -16,7 +16,7 @@
 .landing-nav-bar {
   width: 100%;
   background: var(--main-bg);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid rgb(206, 205, 205);
   position: sticky;
   top: 0;
   z-index: 50;
@@ -70,7 +70,7 @@
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 40px 20px 15px;
+  padding: 30px 20px 15px;
   display: flex;
   flex-direction: column;
   gap: 32px;

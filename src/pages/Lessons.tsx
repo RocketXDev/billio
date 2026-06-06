@@ -13,6 +13,7 @@ import {
   FaEdit,
   FaTrash,
   FaLock,
+  FaCrown,
 } from "react-icons/fa";
 import { supabase } from "../lib/supabaseClient";
 import { useNavigate } from "react-router-dom";
@@ -49,9 +50,6 @@ function Lessons() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [lessonsLoading, setLessonsLoading] = useState(false);
 
-  const { isPro } = usePlan();
-  const [showCalendarLockToast, setShowCalendarLockToast] = useState(false);
-
 
   // Calendar 
   function getLocalDateString(date: Date) {
@@ -65,6 +63,7 @@ function Lessons() {
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(getLocalDateString(new Date()));
 
   const navigate = useNavigate();
+  const { isPro } = usePlan();
 
   useEffect(() => {
     async function loadLessons() {
@@ -725,44 +724,17 @@ function Lessons() {
   }
 
   function changeCalendarMonth(direction: "prev" | "next") {
-    if (!isPro) {
-      // Free users: only allow navigating within the current month
-      const now = new Date();
-      const currentYear = now.getFullYear();
-      const currentMonth = now.getMonth();
-      const current = new Date(`${selectedCalendarDate}T00:00:00`);
-
-      if (direction === "next") {
-        // Block going forward past current month
-        if (current.getFullYear() === currentYear && current.getMonth() >= currentMonth) {
-          setShowCalendarLockToast(true);
-          setTimeout(() => setShowCalendarLockToast(false), 3500);
-          return;
-        }
-      } else {
-        // Block going back before current month
-        if (current.getFullYear() === currentYear && current.getMonth() <= currentMonth) {
-          setShowCalendarLockToast(true);
-          setTimeout(() => setShowCalendarLockToast(false), 3500);
-          return;
-        }
-      }
-    }
-
     const current = new Date(`${selectedCalendarDate}T00:00:00`);
     current.setDate(1);
     current.setMonth(current.getMonth() + (direction === "next" ? 1 : -1));
+
     setSelectedCalendarDate(getLocalDateString(current));
   }
 
   function changeCalendarYear(direction: "prev" | "next") {
-    if (!isPro) {
-      setShowCalendarLockToast(true);
-      setTimeout(() => setShowCalendarLockToast(false), 3500);
-      return;
-    }
     const current = new Date(`${selectedCalendarDate}T00:00:00`);
     current.setFullYear(current.getFullYear() + (direction === "next" ? 1 : -1));
+
     setSelectedCalendarDate(getLocalDateString(current));
   }
 
@@ -780,6 +752,11 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     month: "long",
     year: "numeric",
   });
+
+  const now = new Date();
+  const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const selectedMonthStr = selectedCalendarDate.slice(0, 7);
+  const isLockedMonth = !isPro && selectedMonthStr !== currentMonthStr;
   
 
   return (
@@ -851,44 +828,48 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                     </button>
                   </div>
 
-                  {showCalendarLockToast && (
-                    <div className="calendar-month-lock-toast">
-                      <FaLock />
-                      <span>
-                        <strong>Pro feature:</strong> Unlimited calendar navigation is available on the Pro plan.
-                      </span>
-                    </div>
-                  )}
-
                   <div className="calendar-days">
                     {calendarWeekLabels.map((day) => (
                       <span key={day}>{day}</span>
                     ))}
                   </div>
 
-                  <div className="calendar-grid">
-                    {calendarMonthDays.map((day) => (
-                      <button
-                        key={day.full}
-                        type="button"
-                        className={`calendar-day-card ${
-                          selectedCalendarDate === day.full ? "active" : ""
-                        } ${!day.isCurrentMonth ? "muted" : ""}`}
-                        onClick={() => setSelectedCalendarDate(day.full)}
-                      >
-                        <strong>{day.dayNumber}</strong>
-
-                        {day.lessons.length > 0 && (
-                          <>
+                  <div className="calendar-grid-wrapper">
+                    <div className="calendar-grid">
+                      {calendarMonthDays.map((day) => (
+                        <button
+                          key={day.full}
+                          type="button"
+                          className={`calendar-day-card ${
+                            selectedCalendarDate === day.full ? "active" : ""
+                          } ${!day.isCurrentMonth ? "muted" : ""}`}
+                          onClick={() => setSelectedCalendarDate(day.full)}
+                        >
+                          <strong>{day.dayNumber}</strong>
+                          {day.lessons.length > 0 && (
                             <div className="calendar-lesson-dot purple-dot" />
-                            {/* <p>
-                              {day.lessons.length}{" "}
-                              {day.lessons.length === 1 ? "lesson" : "lessons"}
-                            </p> */}
-                          </>
-                        )}
-                      </button>
-                    ))}
+                          )}
+                        </button>
+                      ))}
+                    </div>
+
+                    {isLockedMonth && (
+                      <div className="calendar-pro-overlay">
+                        <div className="calendar-pro-overlay-card">
+                          <FaLock className="calendar-pro-overlay-icon" />
+                          <strong>Pro feature</strong>
+                          <p>Unlimited calendar navigation is available on Pro.</p>
+                          <button
+                            type="button"
+                            className="calendar-pro-overlay-btn"
+                            onClick={() => navigate("/upgrade")}
+                          >
+                            <FaCrown style={{ fontSize: 11, marginRight: 6 }} />
+                            Upgrade to Pro
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <section className="calendar-detail-card">
@@ -913,14 +894,18 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                       </span>
                     </div>
 
-                    <button
-                      type="button"
-                      className="calendar-add-lesson-btn"
-                      onClick={()=> {setLessonDate(selectedCalendarDate);
-                      openAddLesson();}}
-                    >
-                      <FaPlus />
-                    </button>
+                    {(isPro || selectedMonthStr === currentMonthStr) && (
+                      <button
+                        type="button"
+                        className="calendar-add-lesson-btn"
+                        onClick={() => {
+                          setLessonDate(selectedCalendarDate);
+                          openAddLesson();
+                        }}
+                      >
+                        <FaPlus />
+                      </button>
+                    )}
                   </div>
                   {selectedCalendarLessons.length === 0 ? (
                       <p className="empty-lessons">No lessons for this day.</p>

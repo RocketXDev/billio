@@ -1715,6 +1715,67 @@ textarea:focus {
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 8px;
 }
+.calendar-grid-wrapper {
+  position: relative;
+}
+
+.calendar-pro-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.calendar-pro-overlay-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 20px;
+  gap: 6px;
+}
+
+.calendar-pro-overlay-icon {
+  font-size: 23px;
+  color: var(--primary-purple);
+  margin-bottom: 4px;
+}
+
+.calendar-pro-overlay-card strong {
+  font-size: 18px;
+  font-weight: 650;
+  color: var(--main-text);
+}
+
+.calendar-pro-overlay-card p {
+  font-size: 14px;
+  color: var(--secondary-text);
+  margin: 0;
+  max-width: 230px;
+  line-height: 1.45;
+}
+
+.calendar-pro-overlay-btn {
+  margin-top: 8px;
+  width: auto;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #3b33d9, #4338ff);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
 
 .calendar-day-card {
   aspect-ratio: 1 / 1;
@@ -3674,6 +3735,7 @@ textarea:focus {
 }
 
 .profile-avatar {
+  display: block;
   width: 66px;
   height: 66px;
   min-width: 66px;

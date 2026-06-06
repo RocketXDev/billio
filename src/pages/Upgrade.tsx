@@ -20,7 +20,7 @@ import {
 } from "react-icons/fa";
 import "../upgrade.css"
 
-const STRIPE_PRICE_ID = "price_1TcrFUAuitLEKeV91KBoNCJ6";
+const STRIPE_PRICE_ID = "price_1TfMTxAuitLEKeV99TEkxqSp";
 const PRO_PRICE = "$9.99";
 
 const PRO_FEATURES = [

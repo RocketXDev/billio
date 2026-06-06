@@ -858,7 +858,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                         <div className="calendar-pro-overlay-card">
                           <FaLock className="calendar-pro-overlay-icon" />
                           <strong>Pro feature</strong>
-                          <p>Unlimited calendar navigation is available on Pro.</p>
+                          <p>Unlimited calendar navigation is available for Pro accounts.</p>
                           <button
                             type="button"
                             className="calendar-pro-overlay-btn"

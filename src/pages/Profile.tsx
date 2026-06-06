@@ -558,7 +558,7 @@ function Profile() {
                 {["email", "text", "both"].map((choice) => {
                   const isLocked = !isPro && (choice === "text" || choice === "both");
                   return (
-                    <div key={choice} className="profile-choice-wrapper">
+                    <div key={choice} className="lock-wrapper">
                       <button
                         type="button"
                         className={`profile-choice ${preferredCommunication === choice ? "active" : ""}${isLocked ? " pro-locked-choice" : ""}`}

@@ -53,7 +53,7 @@ form {
   width: 100%;
 }
 
-form > .input-block > input {
+form > .input-block > input, form > .input-block > .lock-wrapper > input {
   width: 100%;
   height: 50px;
   border-radius: 10px;
@@ -1884,12 +1884,10 @@ textarea:focus {
 .calendar-detail-row {
   width: 100%;
   box-sizing: border-box;
-
   display: grid;
   grid-template-columns: 42px 1fr auto;
   gap: 14px;
   align-items: center;
-
   padding: 16px 0;
   border-bottom: 1px solid var(--border);
 }
@@ -4009,14 +4007,15 @@ textarea:focus {
   align-items: center;
   justify-content: center;
 }
-.profile-choice-wrapper {
+.lock-wrapper {
   position: relative;
+  width: 100%;
 }
 
 .pro-only-bubble {
   position: absolute;
-  right: 0px;
-  top: 30%;
+  right: 4px;
+  top: 35%;
   transform: translateY(-50%);
   display: inline-flex;
   align-items: center;
@@ -4028,6 +4027,7 @@ textarea:focus {
   font-size: 11px;
   font-weight: 550;
   pointer-events: none;
+  white-space: nowrap;
 }
 
 .profile-choice.active {

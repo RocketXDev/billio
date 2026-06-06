@@ -385,13 +385,13 @@ function Profile() {
             </div>
 
             <div className="profile-hero-info">
-              <h2>{visibleName || fullName || "Coach"}</h2>
-              <div className="profile-plan-badge-row">
-                <p>{bio || "Bio"}</p>
+              <div className="profile-name-row">
+                <h2>{visibleName || fullName || "Coach"}</h2>
                 <span className={`plan-badge ${plan}`}>
                   {isPro ? <><FaCrown style={{ fontSize: 9, marginRight: 3 }} />Pro</> : "Free"}
                 </span>
               </div>
+              <p>{bio || "Bio"}</p>
             </div>
           </section>
 
@@ -554,26 +554,25 @@ function Profile() {
 
             <section className="profile-section-card">
               <h3>Communication Preferences</h3>
-              {!isPro && (
-                <p style={{ fontSize: 13, color: "var(--secondary-text)", marginBottom: 10 }}>
-                  Text messaging is available on the Pro plan.
-                </p>
-              )}
               <div className="profile-choice-group">
                 {["email", "text", "both"].map((choice) => {
                   const isLocked = !isPro && (choice === "text" || choice === "both");
                   return (
-                    <button
-                      key={choice}
-                      type="button"
-                      className={`profile-choice ${preferredCommunication === choice ? "active" : ""}${isLocked ? " pro-locked-choice" : ""}`}
-                      onClick={() => !isLocked && setPreferredCommunication(choice)}
-                      disabled={isLocked}
-                      title={isLocked ? "Available on Pro plan" : undefined}
-                    >
-                      {isLocked && <FaLock style={{ fontSize: 9, marginRight: 4 }} />}
-                      {choice === "email" ? "Email" : choice === "text" ? "Text" : "Both"}
-                    </button>
+                    <div key={choice} className="profile-choice-wrapper">
+                      <button
+                        type="button"
+                        className={`profile-choice ${preferredCommunication === choice ? "active" : ""}${isLocked ? " pro-locked-choice" : ""}`}
+                        onClick={() => !isLocked && setPreferredCommunication(choice)}
+                        disabled={isLocked}
+                      >
+                        {choice === "email" ? "Email" : choice === "text" ? "Text" : "Both"}
+                      </button>
+                      {isLocked && (
+                        <span className="pro-only-bubble">
+                          <FaLock style={{ fontSize: 8 }} /> Pro only
+                        </span>
+                      )}
+                    </div>
                   );
                 })}
               </div>

@@ -9,7 +9,7 @@ import {
   FaPlus,
 } from "react-icons/fa";
 import "../index.css";
-import "../landingPage.css";
+import "../LandingPage.css";
 
 export default function LandingPage() {
   return (

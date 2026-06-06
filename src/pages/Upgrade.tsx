@@ -27,7 +27,6 @@ const PRO_FEATURES = [
   { icon: <FaInfinity />, text: "Unlimited active students" },
   { icon: <FaCalendarAlt />, text: "Unlimited calendar navigation" },
   { icon: <FaMobileAlt />, text: "SMS & text invoice delivery" },
-  { icon: <FaUserFriends />, text: "Full parent contact profiles" },
   { icon: <FaBolt />, text: "Automated invoice generation" },
   { icon: <FaCheck />, text: "Priority support" },
 ];

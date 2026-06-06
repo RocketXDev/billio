@@ -116,9 +116,9 @@ function Students() {
         .from("students").insert({
           student_name: cleanStudentName, email: email || null,
           phone_number: phoneNumber || null,
-          parent_name: isPro ? parentName || null : null,
-          parent_email: isPro ? parentEmail || null : null,
-          parent_phone: isPro ? parentPhone || null : null,
+          parent_name: parentName || null,
+          parent_email:  parentEmail || null,
+          parent_phone: parentPhone || null,
           active, notes: notes || null,
           sms_consent: smsConsent,
           sms_consent_at: smsConsent ? new Date().toISOString() : null,
@@ -247,9 +247,9 @@ function Students() {
 
       const { data: updatedStudent, error: studentError } = await supabase.from("students").update({
         student_name: cleanStudentName, email: email || null, phone_number: phoneNumber || null,
-        parent_name: isPro ? parentName || null : null,
-        parent_email: isPro ? parentEmail || null : null,
-        parent_phone: isPro ? parentPhone || null : null,
+        parent_name: parentName || null,
+        parent_email:parentEmail || null,
+        parent_phone: parentPhone || null,
         active, notes: notes || null,
       }).eq("id", editingStudent.id).select().single();
       if (studentError) { console.log("Student update error:", studentError); return; }
@@ -530,36 +530,24 @@ function Students() {
               </div>
               <div className="input-block">
                 <label htmlFor="parentName">Parent Name</label>
-                <div className="lock-wrapper">
-                  <input id="parentName" type="text" value={parentName}
-                    onChange={(e) => isPro ? setParentName(e.target.value) : undefined}
-                    placeholder={isPro ? "Enter parent name" : ""}
-                    autoComplete="off" disabled={!isPro}
-                    style={!isPro ? { opacity: 0.45, cursor: "not-allowed" } : {}} />
-                  {!isPro && <span className="pro-only-bubble"><FaLock style={{ fontSize: 8 }} /> Pro only</span>}
-                </div>
+                <input id="parentName" type="text" value={parentName}
+                  onChange={(e) => setParentName(e.target.value)}
+                  placeholder={"Enter parent name"}
+                  autoComplete="off"/>
               </div>
               <div className="input-block">
                 <label htmlFor="parentEmail">Parent Email</label>
-                <div className="lock-wrapper">
                   <input id="parentEmail" type="text" value={parentEmail}
-                    onChange={(e) => isPro ? setParentEmail(e.target.value) : undefined}
-                    placeholder={isPro ? "Enter parent email" : ""}
-                    autoComplete="off" disabled={!isPro}
-                    style={!isPro ? { opacity: 0.45, cursor: "not-allowed" } : {}} />
-                  {!isPro && <span className="pro-only-bubble"><FaLock style={{ fontSize: 8 }} /> Pro only</span>}
-                </div>
+                    onChange={(e) => setParentEmail(e.target.value)}
+                    placeholder="Enter parent email"
+                    autoComplete="off"/>
               </div>
               <div className="input-block">
                 <label htmlFor="parentPhone">Parent Phone</label>
-                <div className="lock-wrapper">
                   <input id="parentPhone" type="tel" value={parentPhone}
-                    onChange={(e) => isPro ? setParentPhone(formatUSPhoneInput(e.target.value)) : undefined}
-                    placeholder={isPro ? "(719) 555-1234" : ""}
-                    autoComplete="off" disabled={!isPro}
-                    style={!isPro ? { opacity: 0.45, cursor: "not-allowed" } : {}} />
-                  {!isPro && <span className="pro-only-bubble"><FaLock style={{ fontSize: 8 }} /> Pro only</span>}
-                </div>
+                    onChange={(e) => setParentPhone(formatUSPhoneInput(e.target.value))}
+                    placeholder="(719) 555-1234"
+                    autoComplete="off" />
               </div>
               <div className="input-block">
                 <label htmlFor="studentNotes">Notes</label>
@@ -636,34 +624,22 @@ function Students() {
               </div>
               <div className="input-block">
                 <label htmlFor="editParentName">Parent Name</label>
-                <div className="lock-wrapper">
                   <input id="editParentName" type="text" value={parentName}
-                    onChange={(e) => isPro ? setParentName(e.target.value) : undefined}
-                    autoComplete="off" disabled={!isPro}
-                    style={!isPro ? { opacity: 0.45, cursor: "not-allowed" } : {}} />
-                  {!isPro && <span className="pro-only-bubble"><FaLock style={{ fontSize: 8 }} /> Pro only</span>}
-                </div>
+                    onChange={(e) => setParentName(e.target.value)}
+                    autoComplete="off"/>
               </div>
               <div className="input-block">
                 <label htmlFor="editParentEmail">Parent Email</label>
-                <div className="lock-wrapper">
                   <input id="editParentEmail" type="text" value={parentEmail}
-                    onChange={(e) => isPro ? setParentEmail(e.target.value) : undefined}
-                    autoComplete="off" disabled={!isPro}
-                    style={!isPro ? { opacity: 0.45, cursor: "not-allowed" } : {}} />
-                  {!isPro && <span className="pro-only-bubble"><FaLock style={{ fontSize: 8 }} /> Pro only</span>}
-                </div>
+                    onChange={(e) => setParentEmail(e.target.value)}
+                    autoComplete="off"/>
               </div>
               <div className="input-block">
                 <label htmlFor="editParentPhone">Parent Phone</label>
-                <div className="lock-wrapper">
                   <input id="editParentPhone" type="tel" value={parentPhone}
-                    placeholder={isPro ? "(719) 555-1234" : ""}
-                    onChange={(e) => isPro ? setParentPhone(formatUSPhoneInput(e.target.value)) : undefined}
-                    autoComplete="off" disabled={!isPro}
-                    style={!isPro ? { opacity: 0.45, cursor: "not-allowed" } : {}} />
-                  {!isPro && <span className="pro-only-bubble"><FaLock style={{ fontSize: 8 }} /> Pro only</span>}
-                </div>
+                    placeholder="(719) 555-1234"
+                    onChange={(e) => setParentPhone(formatUSPhoneInput(e.target.value))}
+                    autoComplete="off"/>
               </div>
               <div className="input-block">
                 <label htmlFor="editStudentNotes">Notes</label>

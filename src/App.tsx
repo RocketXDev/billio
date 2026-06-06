@@ -19,6 +19,7 @@ import LandingPage from "./pages/LandingPage";
 import AppEntry from "./pages/AppEntry";
 import SmsOptIn from "./pages/SmsOptIn";
 import Upgrade from "./pages/Upgrade";
+import DesktopLayout from "./components/DesktopLayout";
 
 function App() {
 
@@ -40,7 +41,9 @@ function App() {
         path="/app"
         element={
           <ProtectedRoute>
-            <AppEntry />
+            <DesktopLayout>
+              <AppEntry />
+            </DesktopLayout>
           </ProtectedRoute>
         }
       />
@@ -48,7 +51,9 @@ function App() {
         path="/dashboard"
         element={
           <ProtectedRoute>
-            <Dashboard />
+            <DesktopLayout>
+              <Dashboard />
+            </DesktopLayout>
           </ProtectedRoute>
         }
       />
@@ -56,7 +61,9 @@ function App() {
         path="/lessons"
         element={
           <ProtectedRoute>
-            <Lessons />
+            <DesktopLayout>
+              <Lessons />
+            </DesktopLayout>
           </ProtectedRoute>
         }
       />
@@ -64,7 +71,9 @@ function App() {
         path="/students"
         element={
           <ProtectedRoute>
-            <Students />
+            <DesktopLayout>
+              <Students />
+            </DesktopLayout>
           </ProtectedRoute>
         }
       />
@@ -72,7 +81,9 @@ function App() {
         path="/invoices"
         element={
           <ProtectedRoute>
-            <Invoices />
+            <DesktopLayout>
+              <Invoices />
+            </DesktopLayout>
           </ProtectedRoute>
         }
       />
@@ -81,7 +92,9 @@ function App() {
         path="/profile"
         element={
           <ProtectedRoute>
-            <Profile />
+            <DesktopLayout>
+              <Profile />
+            </DesktopLayout>
           </ProtectedRoute>
         }
       />
@@ -90,7 +103,9 @@ function App() {
         path="/settings"
         element={
           <ProtectedRoute>
-            <ComingSoon />
+            <DesktopLayout>
+              <ComingSoon />
+            </DesktopLayout>
           </ProtectedRoute>
         }
       />
@@ -99,7 +114,9 @@ function App() {
         path="/more"
         element={
           <ProtectedRoute>
-            <ComingSoon />
+            <DesktopLayout>
+              <ComingSoon />
+            </DesktopLayout>
           </ProtectedRoute>
         }
       />
@@ -108,7 +125,9 @@ function App() {
         path="/upgrade"
         element={
           <ProtectedRoute>
-            <Upgrade />
+            <DesktopLayout>
+              <Upgrade />
+            </DesktopLayout>
           </ProtectedRoute>
         }
       />

@@ -69,7 +69,7 @@ function Dashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isPro, plan } = usePlan();
-  const [showUpgradeToast, setShowUpgradeToast] = useState(false);
+  const [showUpgradeToast, setShowUpgradeToast] = useState(true);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -975,7 +975,7 @@ function Dashboard() {
       {showUpgradeToast && (
         <div className="upgrade-success-toast">
           <FaCrown style={{ color: "#f59e0b", fontSize: 16 }} />
-          Welcome to Pro! All features are now unlocked 🎉
+          Welcome to Pro!
         </div>
       )}
       <div className="mb-dashboard-wrapper">

@@ -177,7 +177,7 @@ function Upgrade() {
               <ul className="up-feature-list">
                 {FREE_FEATURES.map((f) => (
                   <li key={f}>
-                    <span className="up-feat-icon up-feat-no"><FaTimes /></span>
+                    <span className="up-feat-icon up-feat-no">+</span>
                     {f}
                   </li>
                 ))}

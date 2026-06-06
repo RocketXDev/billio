@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { usePlan } from "../hooks/usePlan";
 import {
   FaBars,
   FaBell,
@@ -10,9 +11,11 @@ import {
   FaUsers,
   FaFileInvoiceDollar,
   FaEllipsisH,
-  FaTrash
+  FaTrash,
+  FaLock,
+  FaCrown,
 } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 function Dashboard() {
   const [fullName, setFullName] = useState("");
@@ -64,6 +67,19 @@ function Dashboard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isPro, plan } = usePlan();
+  const [showUpgradeToast, setShowUpgradeToast] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("upgraded") === "1") {
+      setShowUpgradeToast(true);
+      setTimeout(() => setShowUpgradeToast(false), 4000);
+      // Clean the URL
+      window.history.replaceState({}, "", "/dashboard");
+    }
+  }, [location.search]);
 
   useEffect(() => {
     async function loadDashboard() {
@@ -956,6 +972,12 @@ function Dashboard() {
   
   return (
     <div className="mb-dashboard">
+      {showUpgradeToast && (
+        <div className="upgrade-success-toast">
+          <FaCrown style={{ color: "#f59e0b", fontSize: 16 }} />
+          Welcome to Pro! All features are now unlocked 🎉
+        </div>
+      )}
       <div className="mb-dashboard-wrapper">
         <header className="mb-dashboard-header">
           <div className="mb-dashboard-left">
@@ -1263,7 +1285,12 @@ function Dashboard() {
 
               <div>
                 <strong>{fullName || "Billio User"}</strong>
-                <span>Coach account</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+                  <span>Coach account</span>
+                  <span className={`plan-badge ${plan}`}>
+                    {isPro ? <><FaCrown style={{ fontSize: 9 }} /> Pro</> : "Free"}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -1312,6 +1339,19 @@ function Dashboard() {
               >
                 Settings
               </a>
+
+              {!isPro && (
+                <a
+                  onClick={() => {
+                    navigate("/upgrade");
+                    setMenuOpen(false);
+                  }}
+                  style={{ color: "var(--primary-purple)", fontWeight: 700 }}
+                >
+                  <FaCrown style={{ fontSize: 11, marginRight: 6, color: "#f59e0b" }} />
+                  Upgrade to Pro
+                </a>
+              )}
             </nav>
 
             <button className="side-menu-logout" onClick={handleLogout}>

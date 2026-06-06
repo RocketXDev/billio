@@ -8,12 +8,18 @@ import {
   FaEllipsisH,
   FaPlus,
   FaEdit,
-  FaFilter
+  FaFilter,
+  FaLock,
+  FaCrown,
 } from "react-icons/fa";
 import { supabase } from "../lib/supabaseClient";
+import { usePlan } from "../hooks/usePlan";
 
 function Students() {
   const navigate = useNavigate();
+  const { isPro } = usePlan();
+
+  const FREE_STUDENT_LIMIT = 5;
 
   const [students, setStudents] = useState<any[]>([]);
   const [coachId, setCoachId] = useState("");
@@ -146,6 +152,12 @@ function Students() {
     try {
 
       if (!coachId) return;
+
+      // Free plan: cap at 5 active students
+      if (!isPro && activeStudents.length >= FREE_STUDENT_LIMIT) {
+        alert(`Free plan is limited to ${FREE_STUDENT_LIMIT} active students. Upgrade to Pro for unlimited students.`);
+        return;
+      }
 
       const cleanStudentName = studentName.trim();
 
@@ -710,7 +722,14 @@ function Students() {
               <button
                 type="button"
                 className="students-add-btn"
-                onClick={() => setShowAddStudent(true)}
+                onClick={() => {
+                  if (!isPro && activeStudents.length >= FREE_STUDENT_LIMIT) {
+                    alert(`Free plan is limited to ${FREE_STUDENT_LIMIT} active students. Upgrade to Pro for unlimited students.`);
+                    return;
+                  }
+                  setShowAddStudent(true);
+                }}
+                style={!isPro && activeStudents.length >= FREE_STUDENT_LIMIT ? { opacity: 0.4 } : {}}
               >
                 <FaPlus />
               </button>
@@ -718,6 +737,31 @@ function Students() {
           </div>
 
           <div className="students-list-view">
+            {/* Free plan student limit indicator */}
+            {!isPro && (
+              <div className="student-limit-bar-wrapper">
+                <div className="student-limit-bar-header">
+                  <span>Active students</span>
+                  <strong>{activeStudents.length} / {FREE_STUDENT_LIMIT}</strong>
+                </div>
+                <div className="student-limit-bar-track">
+                  <div
+                    className={`student-limit-bar-fill${activeStudents.length >= FREE_STUDENT_LIMIT ? " at-limit" : ""}`}
+                    style={{ width: `${Math.min((activeStudents.length / FREE_STUDENT_LIMIT) * 100, 100)}%` }}
+                  />
+                </div>
+                {activeStudents.length >= FREE_STUDENT_LIMIT ? (
+                  <p className="student-limit-note warn">
+                    <FaLock style={{ marginRight: 4, fontSize: 10 }} />
+                    Limit reached. Upgrade to Pro for unlimited students.
+                  </p>
+                ) : (
+                  <p className="student-limit-note">
+                    Free plan: up to {FREE_STUDENT_LIMIT} active students.
+                  </p>
+                )}
+              </div>
+            )}
             <section className="students-group">
               <div className="students-group-title">
                 <h2>Your Students</h2>
@@ -926,64 +970,81 @@ function Students() {
                 </div>
 
                 <div className="input-block">
-                    <label htmlFor="parentName">Parent Name</label>
+                    <label htmlFor="parentName">
+                      Parent Name
+                      {!isPro && <span className="pro-teaser-pill" style={{ marginLeft: 8 }}><FaLock /> Pro</span>}
+                    </label>
 
                     <input
                     id="parentName"
                     type="text"
                     value={parentName}
-                    onChange={(e) => setParentName(e.target.value)}
-                    placeholder="Enter parent name"
+                    onChange={(e) => isPro ? setParentName(e.target.value) : undefined}
+                    placeholder={isPro ? "Enter parent name" : "Available on Pro"}
                     autoComplete="off"
+                    disabled={!isPro}
+                    style={!isPro ? { opacity: 0.45, cursor: "not-allowed" } : {}}
                     />
                 </div>
 
                 <div className="input-block">
-                    <label htmlFor="parentEmail">Parent Email</label>
+                    <label htmlFor="parentEmail">
+                      Parent Email
+                      {!isPro && <span className="pro-teaser-pill" style={{ marginLeft: 8 }}><FaLock /> Pro</span>}
+                    </label>
 
                     <input
                     id="parentEmail"
                     type="text"
                     value={parentEmail}
-                    onChange={(e) => setParentEmail(e.target.value)}
-                    placeholder="Enter parent email"
+                    onChange={(e) => isPro ? setParentEmail(e.target.value) : undefined}
+                    placeholder={isPro ? "Enter parent email" : "Available on Pro"}
                     autoComplete="off"
+                    disabled={!isPro}
+                    style={!isPro ? { opacity: 0.45, cursor: "not-allowed" } : {}}
                     />
                 </div>
 
                 <div className="input-block">
-                    <label htmlFor="parentPhone">Parent Phone</label>
+                    <label htmlFor="parentPhone">
+                      Parent Phone
+                      {!isPro && <span className="pro-teaser-pill" style={{ marginLeft: 8 }}><FaLock /> Pro</span>}
+                    </label>
 
                     <input
                     id="parentPhone"
                     type="tel"
                     value={parentPhone}
-                    onChange={(e) => setParentPhone(formatUSPhoneInput(e.target.value))}
-                    placeholder="(719) 555-1234"
+                    onChange={(e) => isPro ? setParentPhone(formatUSPhoneInput(e.target.value)) : undefined}
+                    placeholder={isPro ? "(719) 555-1234" : "Available on Pro"}
                     autoComplete="off"
+                    disabled={!isPro}
+                    style={!isPro ? { opacity: 0.45, cursor: "not-allowed" } : {}}
                     />
-                    <label className="sms-consent-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={smsConsent}
-                        onChange={(e) => setSmsConsent(e.target.checked)}
-                      />
+                    {isPro && (
+                      <label className="sms-consent-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={smsConsent}
+                          onChange={(e) => setSmsConsent(e.target.checked)}
+                        />
 
-                      <span>
-                        I confirm that the student or parent agreed to receive transactional SMS
-                        messages from Billio for lesson reminders, invoice notifications, payment
-                        reminders, and account-related updates. Message frequency varies. Message
-                        and data rates may apply. Reply STOP to opt out. Reply HELP for help.{" "}
-                        <a href="/terms" target="_blank" rel="noreferrer">
-                          Terms
-                        </a>{" "}
-                        and{" "}
-                        <a href="/privacy" target="_blank" rel="noreferrer">
-                          Privacy Policy
-                        </a>
-                        .
-                      </span>
-                    </label>
+                        <span>
+                          I confirm that the student or parent agreed to receive transactional SMS
+                          messages from Billio for lesson reminders, invoice notifications, payment
+                          reminders, and account-related updates. Message frequency varies. Message
+                          and data rates may apply. Reply STOP to opt out. Reply HELP for help.{" "}
+                          <a href="/terms" target="_blank" rel="noreferrer">
+                            Terms
+                          </a>{" "}
+                          and{" "}
+                          <a href="/privacy" target="_blank" rel="noreferrer">
+                            Privacy Policy
+                          </a>
+                          .
+                        </span>
+                      </label>
+                    )}
                 </div>
 
                 <div className="input-block">
@@ -1029,29 +1090,35 @@ function Students() {
                   <div className="input-block">
                     <label>Invoice Delivery</label>
                     <span className="student-field-note">
-                      Auto uses your default invoice delivery setting.
+                      Auto uses your default invoice delivery setting.{!isPro && " Text delivery requires Pro."}
                     </span>
 
                     <div className="student-choice-group">
-                      {["auto", "email", "text", "both"].map((choice) => (
-                        <button
-                          key={choice}
-                          type="button"
-                          className={`student-choice ${
-                            invoiceDeliveryMethod === choice ? "active" : ""
-                          }`}
-                          onClick={() => setInvoiceDeliveryMethod(choice)}
-                        >
-                          {choice === "auto"
-                            ? "Auto"
-                            : choice === "email"
-                            ? "Email"
-                            : choice === "text"
-                            ? "Text"
-                            : "Both"}
-                        </button>
-                      ))}
+                      {["auto", "email", "text", "both"].map((choice) => {
+                        const isLocked = !isPro && (choice === "text" || choice === "both");
+                        return (
+                          <button
+                            key={choice}
+                            type="button"
+                            className={`student-choice ${invoiceDeliveryMethod === choice ? "active" : ""}${isLocked ? " pro-locked-choice" : ""}`}
+                            onClick={() => !isLocked && setInvoiceDeliveryMethod(choice)}
+                            disabled={isLocked}
+                            title={isLocked ? "Available on Pro plan" : undefined}
+                          >
+                            {isLocked
+                              ? <><FaLock style={{ fontSize: 9, marginRight: 3 }} />{choice === "text" ? "Text" : "Both"}</>
+                              : choice === "auto" ? "Auto" : choice === "email" ? "Email" : choice === "text" ? "Text" : "Both"
+                            }
+                          </button>
+                        );
+                      })}
                     </div>
+                    {!isPro && (
+                      <div className="pro-teaser-banner" style={{ marginTop: 8 }}>
+                        <div className="pro-teaser-banner-icon"><FaLock /></div>
+                        <p><strong>Text messaging</strong> for invoices is a Pro feature. Upgrade to send invoices via SMS.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1145,45 +1212,62 @@ function Students() {
                 </div>
 
                 <div className="input-block">
-                <label htmlFor="editParentName">Parent Name</label>
+                <label htmlFor="editParentName">
+                  Parent Name
+                  {!isPro && <span className="pro-teaser-pill" style={{ marginLeft: 8 }}><FaLock /> Pro</span>}
+                </label>
                 <input
                     id="editParentName"
                     type="text"
                     value={parentName}
-                    onChange={(e) => setParentName(e.target.value)}
+                    onChange={(e) => isPro ? setParentName(e.target.value) : undefined}
                     autoComplete="off"
+                    disabled={!isPro}
+                    style={!isPro ? { opacity: 0.45, cursor: "not-allowed" } : {}}
                 />
                 </div>
 
                 <div className="input-block">
-                  <label htmlFor="editParentEmail">Parent Email</label>
+                  <label htmlFor="editParentEmail">
+                    Parent Email
+                    {!isPro && <span className="pro-teaser-pill" style={{ marginLeft: 8 }}><FaLock /> Pro</span>}
+                  </label>
                   <input
                   id="editParentEmail"
                   type="text"
                   value={parentEmail}
-                  onChange={(e) => setParentEmail(e.target.value)}
+                  onChange={(e) => isPro ? setParentEmail(e.target.value) : undefined}
                   autoComplete="off"
+                  disabled={!isPro}
+                  style={!isPro ? { opacity: 0.45, cursor: "not-allowed" } : {}}
                   />
                 </div>
 
                 <div className="input-block">
-                  <label htmlFor="editParentPhone">Parent Phone</label>
+                  <label htmlFor="editParentPhone">
+                    Parent Phone
+                    {!isPro && <span className="pro-teaser-pill" style={{ marginLeft: 8 }}><FaLock /> Pro</span>}
+                  </label>
                   <input
                       id="editParentPhone"
                       type="tel"
                       value={parentPhone}
-                      placeholder="(719) 555-1234"
-                      onChange={(e) => setParentPhone(formatUSPhoneInput(e.target.value))}
+                      placeholder={isPro ? "(719) 555-1234" : "Available on Pro"}
+                      onChange={(e) => isPro ? setParentPhone(formatUSPhoneInput(e.target.value)) : undefined}
                       autoComplete="off"
+                      disabled={!isPro}
+                      style={!isPro ? { opacity: 0.45, cursor: "not-allowed" } : {}}
                   />
-                  <div className="sms-consent-note">
-                    By adding a phone number, you confirm this person agreed to receive lesson
-                    reminders, invoice notifications, and account-related texts from Billio.{" "}
-                    <a href="/terms" target="_blank" rel="noreferrer">
-                      Read terms
-                    </a>
-                    .
-                  </div>
+                  {isPro && (
+                    <div className="sms-consent-note">
+                      By adding a phone number, you confirm this person agreed to receive lesson
+                      reminders, invoice notifications, and account-related texts from Billio.{" "}
+                      <a href="/terms" target="_blank" rel="noreferrer">
+                        Read terms
+                      </a>
+                      .
+                    </div>
+                  )}
                 </div>
 
                 <div className="input-block">
@@ -1227,29 +1311,35 @@ function Students() {
                   <div className="input-block">
                     <label>Invoice Delivery</label>
                     <span className="student-field-note">
-                      Auto uses your default invoice delivery setting.
+                      Auto uses your default invoice delivery setting.{!isPro && " Text delivery requires Pro."}
                     </span>
 
                     <div className="student-choice-group">
-                      {["auto", "email", "text", "both"].map((choice) => (
-                        <button
-                          key={choice}
-                          type="button"
-                          className={`student-choice ${
-                            invoiceDeliveryMethod === choice ? "active" : ""
-                          }`}
-                          onClick={() => setInvoiceDeliveryMethod(choice)}
-                        >
-                          {choice === "auto"
-                            ? "Auto"
-                            : choice === "email"
-                            ? "Email"
-                            : choice === "text"
-                            ? "Text"
-                            : "Both"}
-                        </button>
-                      ))}
+                      {["auto", "email", "text", "both"].map((choice) => {
+                        const isLocked = !isPro && (choice === "text" || choice === "both");
+                        return (
+                          <button
+                            key={choice}
+                            type="button"
+                            className={`student-choice ${invoiceDeliveryMethod === choice ? "active" : ""}${isLocked ? " pro-locked-choice" : ""}`}
+                            onClick={() => !isLocked && setInvoiceDeliveryMethod(choice)}
+                            disabled={isLocked}
+                            title={isLocked ? "Available on Pro plan" : undefined}
+                          >
+                            {isLocked
+                              ? <><FaLock style={{ fontSize: 9, marginRight: 3 }} />{choice === "text" ? "Text" : "Both"}</>
+                              : choice === "auto" ? "Auto" : choice === "email" ? "Email" : choice === "text" ? "Text" : "Both"
+                            }
+                          </button>
+                        );
+                      })}
                     </div>
+                    {!isPro && (
+                      <div className="pro-teaser-banner" style={{ marginTop: 8 }}>
+                        <div className="pro-teaser-banner-icon"><FaLock /></div>
+                        <p><strong>Text messaging</strong> for invoices is a Pro feature.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 

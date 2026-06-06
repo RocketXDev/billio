@@ -1,5 +1,3 @@
-// src/pages/Profile.tsx
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -9,12 +7,16 @@ import {
   FaFileInvoiceDollar,
   FaEllipsisH,
   FaSave,
+  FaCrown,
+  FaLock,
 } from "react-icons/fa";
 import { supabase } from "../lib/supabaseClient";
 import Cropper from "react-easy-crop";
+import { usePlan } from "../hooks/usePlan";
 
 function Profile() {
   const navigate = useNavigate();
+  const { isPro, plan } = usePlan();
 
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -384,7 +386,12 @@ function Profile() {
 
             <div className="profile-hero-info">
               <h2>{visibleName || fullName || "Coach"}</h2>
-              <p>{bio || "Bio"}</p>
+              <div className="profile-plan-badge-row">
+                <p>{bio || "Bio"}</p>
+                <span className={`plan-badge ${plan}`}>
+                  {isPro ? <><FaCrown style={{ fontSize: 9, marginRight: 3 }} />Pro</> : "Free"}
+                </span>
+              </div>
             </div>
           </section>
 
@@ -547,24 +554,28 @@ function Profile() {
 
             <section className="profile-section-card">
               <h3>Communication Preferences</h3>
-
+              {!isPro && (
+                <p style={{ fontSize: 13, color: "var(--secondary-text)", marginBottom: 10 }}>
+                  Text messaging is available on the Pro plan.
+                </p>
+              )}
               <div className="profile-choice-group">
-                {["email", "text", "both"].map((choice) => (
-                  <button
-                    key={choice}
-                    type="button"
-                    className={`profile-choice ${
-                      preferredCommunication === choice ? "active" : ""
-                    }`}
-                    onClick={() => setPreferredCommunication(choice)}
-                  >
-                    {choice === "email"
-                      ? "Email"
-                      : choice === "text"
-                      ? "Text"
-                      : "Both"}
-                  </button>
-                ))}
+                {["email", "text", "both"].map((choice) => {
+                  const isLocked = !isPro && (choice === "text" || choice === "both");
+                  return (
+                    <button
+                      key={choice}
+                      type="button"
+                      className={`profile-choice ${preferredCommunication === choice ? "active" : ""}${isLocked ? " pro-locked-choice" : ""}`}
+                      onClick={() => !isLocked && setPreferredCommunication(choice)}
+                      disabled={isLocked}
+                      title={isLocked ? "Available on Pro plan" : undefined}
+                    >
+                      {isLocked && <FaLock style={{ fontSize: 9, marginRight: 4 }} />}
+                      {choice === "email" ? "Email" : choice === "text" ? "Text" : "Both"}
+                    </button>
+                  );
+                })}
               </div>
             </section>
 

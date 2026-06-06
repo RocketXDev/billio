@@ -1,0 +1,474 @@
+.upgrade-page {
+  width: 100%;
+  min-height: 100vh;
+  background: var(--main-bg);
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 80px;
+}
+
+.upgrade-wrapper {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 0 18px 24px;
+  flex: 1;
+}
+
+/* ── Header ── */
+.upgrade-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 0 8px;
+}
+
+.upgrade-back-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  color: var(--main-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.upgrade-logo {
+  width: 80px;
+}
+
+/* ── Hero ── */
+.upgrade-hero {
+  text-align: center;
+  padding: 24px 0 20px;
+}
+
+.upgrade-crown-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.35);
+}
+
+.upgrade-crown {
+  font-size: 26px;
+  color: #fff;
+}
+
+.upgrade-title {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.8px;
+  color: var(--main-text);
+  margin-bottom: 8px;
+}
+
+.upgrade-subtitle {
+  font-size: 15px;
+  color: var(--secondary-text);
+  line-height: 1.6;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.upgrade-already-pro {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 14px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #16a34a;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ── Plan comparison cards ── */
+.upgrade-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.upgrade-plan-card {
+  border-radius: 22px;
+  padding: 18px 16px;
+  position: relative;
+}
+
+.upgrade-free-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+}
+
+.upgrade-pro-card {
+  background: linear-gradient(145deg, #1e1b4b, #312e81);
+  border: 2px solid #4f46e5;
+  box-shadow: 0 16px 40px rgba(79, 70, 229, 0.28);
+}
+
+.upgrade-popular-badge {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+}
+
+.upgrade-plan-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.upgrade-plan-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--secondary-text);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.upgrade-pro-label {
+  color: #a5b4fc;
+}
+
+.upgrade-plan-price {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: var(--main-text);
+}
+
+.upgrade-pro-price {
+  color: #fff;
+}
+
+.upgrade-plan-period {
+  font-size: 12px;
+  color: var(--secondary-text);
+  margin-top: -2px;
+}
+
+/* ── Feature lists ── */
+.upgrade-feature-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.upgrade-feature-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.upgrade-free-list li {
+  color: var(--secondary-text);
+}
+
+.upgrade-pro-list li {
+  color: #e0e7ff;
+}
+
+.upgrade-feature-icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  margin-top: 1px;
+  font-size: 9px;
+}
+
+.free-icon {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+.pro-icon {
+  background: rgba(165, 180, 252, 0.2);
+  color: #a5b4fc;
+}
+
+/* ── CTA section ── */
+.upgrade-cta-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.upgrade-error {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #ef4444;
+  font-size: 13px;
+  text-align: center;
+}
+
+.upgrade-main-btn {
+  width: 100%;
+  min-height: 54px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #3b33d9, #4338ff);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 12px 28px rgba(59, 51, 217, 0.32);
+  transition: opacity 0.15s, transform 0.15s;
+  letter-spacing: -0.2px;
+}
+
+.upgrade-main-btn:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+.upgrade-main-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.upgrade-btn-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.upgrade-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.upgrade-trust-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--secondary-text);
+  font-weight: 500;
+}
+
+.upgrade-trust-row span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.upgrade-disclaimer {
+  font-size: 11px;
+  color: var(--secondary-text);
+  text-align: center;
+  line-height: 1.6;
+  max-width: 320px;
+}
+
+.upgrade-disclaimer a {
+  color: var(--primary-purple);
+  text-decoration: none;
+}
+
+/* ── Already-pro manage section ── */
+.upgrade-manage-section {
+  padding-top: 8px;
+}
+
+.upgrade-manage-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 28px 22px;
+  text-align: center;
+}
+
+.upgrade-manage-icon {
+  font-size: 36px;
+  color: #f59e0b;
+  margin-bottom: 14px;
+}
+
+.upgrade-manage-card h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--main-text);
+  margin-bottom: 8px;
+}
+
+.upgrade-manage-card p {
+  font-size: 14px;
+  color: var(--secondary-text);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.upgrade-portal-btn {
+  padding: 12px 24px;
+  border-radius: 999px;
+  background: var(--primary-purple);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+}
+
+/* ── UpgradeBanner — compact pill ── */
+.upgrade-banner-compact {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  border: 1px solid #fcd34d;
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* ── UpgradeBanner — full card ── */
+.upgrade-banner-full {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #1e1b4b, #312e81);
+  border: 1px solid #4f46e5;
+  margin-bottom: 16px;
+}
+
+.upgrade-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.upgrade-banner-crown {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.upgrade-banner-full strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 2px;
+}
+
+.upgrade-banner-full p {
+  font-size: 12px;
+  color: #a5b4fc;
+  margin: 0;
+}
+
+.upgrade-banner-btn {
+  flex-shrink: 0;
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);
+}
+
+/* ── Success toast on /dashboard?upgraded=1 ── */
+.upgrade-success-toast {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #1e1b4b, #312e81);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 12px 32px rgba(59, 51, 217, 0.35);
+  animation: toast-slide-in 0.3s ease, toast-fade-out 0.4s ease 3.5s forwards;
+  white-space: nowrap;
+}
+
+@keyframes toast-slide-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+@keyframes toast-fade-out {
+  to { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+}
+
+/* ── Responsive ── */
+@media (max-width: 380px) {
+  .upgrade-cards {
+    grid-template-columns: 1fr;
+  }
+}

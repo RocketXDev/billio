@@ -15,12 +15,16 @@ import {
   FaWallet,
   FaChevronDown, 
   FaChevronRight,
-  FaCog
+  FaCog,
+  FaLock,
+  FaCrown,
 } from "react-icons/fa";
 import { supabase } from "../lib/supabaseClient";
+import { usePlan } from "../hooks/usePlan";
 
 function Invoices() {
   const navigate = useNavigate();
+  const { isPro } = usePlan();
 
   const [invoices, setInvoices] = useState<any[]>([]);
   const [coachId, setCoachId] = useState("");
@@ -906,6 +910,15 @@ function Invoices() {
               </div>
             </div>
 
+            {!isPro && (
+              <div className="pro-teaser-banner" style={{ margin: "0 0 16px" }}>
+                <div className="pro-teaser-banner-icon"><FaLock /></div>
+                <p>
+                  <strong>Free plan:</strong> Manual invoice creation only, email delivery only.{" "}
+                  <strong>Upgrade to Pro</strong> for automatic invoicing and text/SMS delivery.
+                </p>
+              </div>
+            )}
 
             <div className="invoices-list-view">
               <section className="invoices-group">
@@ -971,6 +984,7 @@ function Invoices() {
                               e.stopPropagation();
                               sendInvoice(invoice.id);
                             }}
+                            title={!isPro ? "Email delivery only on Free plan" : "Send invoice"}
                           >
                             {sendingInvoiceId === invoice.id ? "..." : <FaPaperPlane />}
                           </button>

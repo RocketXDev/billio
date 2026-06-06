@@ -18,6 +18,7 @@ import Terms from "./pages/Terms";
 import LandingPage from "./pages/LandingPage";
 import AppEntry from "./pages/AppEntry";
 import SmsOptIn from "./pages/SmsOptIn";
+import Upgrade from "./pages/Upgrade";
 
 function App() {
 
@@ -99,6 +100,15 @@ function App() {
         element={
           <ProtectedRoute>
             <ComingSoon />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/upgrade"
+        element={
+          <ProtectedRoute>
+            <Upgrade />
           </ProtectedRoute>
         }
       />

@@ -12,9 +12,11 @@ import {
   FaClock,
   FaEdit,
   FaTrash,
+  FaLock,
 } from "react-icons/fa";
 import { supabase } from "../lib/supabaseClient";
 import { useNavigate } from "react-router-dom";
+import { usePlan } from "../hooks/usePlan";
 
 function Lessons() {
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
@@ -46,6 +48,9 @@ function Lessons() {
   const [isSaving, setIsSaving] = useState(false); 
   const [isDeleting, setIsDeleting] = useState(false);
   const [lessonsLoading, setLessonsLoading] = useState(false);
+
+  const { isPro } = usePlan();
+  const [showCalendarLockToast, setShowCalendarLockToast] = useState(false);
 
 
   // Calendar 
@@ -720,17 +725,44 @@ function Lessons() {
   }
 
   function changeCalendarMonth(direction: "prev" | "next") {
+    if (!isPro) {
+      // Free users: only allow navigating within the current month
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth();
+      const current = new Date(`${selectedCalendarDate}T00:00:00`);
+
+      if (direction === "next") {
+        // Block going forward past current month
+        if (current.getFullYear() === currentYear && current.getMonth() >= currentMonth) {
+          setShowCalendarLockToast(true);
+          setTimeout(() => setShowCalendarLockToast(false), 3500);
+          return;
+        }
+      } else {
+        // Block going back before current month
+        if (current.getFullYear() === currentYear && current.getMonth() <= currentMonth) {
+          setShowCalendarLockToast(true);
+          setTimeout(() => setShowCalendarLockToast(false), 3500);
+          return;
+        }
+      }
+    }
+
     const current = new Date(`${selectedCalendarDate}T00:00:00`);
     current.setDate(1);
     current.setMonth(current.getMonth() + (direction === "next" ? 1 : -1));
-
     setSelectedCalendarDate(getLocalDateString(current));
   }
 
   function changeCalendarYear(direction: "prev" | "next") {
+    if (!isPro) {
+      setShowCalendarLockToast(true);
+      setTimeout(() => setShowCalendarLockToast(false), 3500);
+      return;
+    }
     const current = new Date(`${selectedCalendarDate}T00:00:00`);
     current.setFullYear(current.getFullYear() + (direction === "next" ? 1 : -1));
-
     setSelectedCalendarDate(getLocalDateString(current));
   }
 
@@ -818,6 +850,15 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                       »
                     </button>
                   </div>
+
+                  {showCalendarLockToast && (
+                    <div className="calendar-month-lock-toast">
+                      <FaLock />
+                      <span>
+                        <strong>Pro feature:</strong> Unlimited calendar navigation is available on the Pro plan.
+                      </span>
+                    </div>
+                  )}
 
                   <div className="calendar-days">
                     {calendarWeekLabels.map((day) => (

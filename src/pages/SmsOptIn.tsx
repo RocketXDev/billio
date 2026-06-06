@@ -1,4 +1,4 @@
-import "../Legal.css";
+import "../legal.css";
 
 export default function SmsOptIn() {
   return (

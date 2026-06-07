@@ -1228,7 +1228,8 @@ function Dashboard() {
 
                     <div className="invoice-info">
                       <strong>{invoice.students?.student_name || "Student"}</strong>
-                      <span>{invoice.invoice_number || "Invoice"}</span>
+                      <span className="invoice-info-number">{invoice.invoice_number || "Invoice"}</span>
+                      <span className="invoice-info-price">{formatMoney(invoice.total)}</span>
                     </div>
 
                     <div className="invoice-price">

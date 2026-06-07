@@ -846,3 +846,7 @@
   color: white;
   border-color: var(--primary-purple);
 }
+
+.invoice-info-price {
+  display: none;
+}

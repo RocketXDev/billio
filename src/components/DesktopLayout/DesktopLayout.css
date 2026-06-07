@@ -297,6 +297,7 @@
     justify-content: center;
     border-radius: 50%;
     line-height: 1;
+    margin: 0px;
   }
 
   .desktop-notif-header button:hover {
@@ -410,38 +411,142 @@
     max-width: none;
     margin: 0;
     padding: 0;
+    min-height: 100vh;
   }
 
   .mb-dashboard-body {
-    padding: 36px 40px 40px;
+    padding: 0;
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    grid-template-columns: 1fr 380px;
+    grid-auto-rows: auto;
     align-items: start;
+    gap: 0;
     margin-top: 0;
+    min-height: calc(100vh - 64px);
+  }
+
+  .mb-dashboard-body > * {
+    grid-column: 1;
+  }
+
+  .mb-dashboard-body > .dashboard-welcome,
+  .mb-dashboard-body > .add-lesson-card,
+  .mb-dashboard-body > .stat-card,
+  .mb-dashboard-body > .dashboard-section:first-of-type {
+    margin-left: 40px;
+    margin-right: 40px;
   }
 
   .mb-dashboard-body > .dashboard-welcome {
-    font-size: 22px;
+    font-size: 26px;
     font-weight: 700;
     color: var(--main-text);
-    margin-bottom: 0;
-    align-self: center;
-    letter-spacing: -0.5px;
+    letter-spacing: -0.6px;
+    margin-top: 36px;
+    margin-bottom: 20px;
   }
 
+  /* Add Lesson button */
   .mb-dashboard-body > .add-lesson-card {
-    height: 72px;
+    height: 80px;
+    width: 93%;
+    margin-top: 0;
+    margin-bottom: 0;
+    border-radius: 18px;
+    box-shadow: 0 8px 24px rgba(79, 70, 229, 0.22);
+    cursor: pointer;
+  }
+
+  .mb-dashboard-body > .stat-card {
+    margin-top: 20px;
     margin-bottom: 0;
     border-radius: 18px;
   }
 
-  .mb-dashboard-body > .stat-card {
-    margin-bottom: 0;
+  .mb-dashboard-body > .stat-card button {
+    cursor: pointer;
+  }
+
+  .dashboard-row-edit-btn {
+    cursor: pointer;
   }
 
   .mb-dashboard-body > .dashboard-section {
+    padding: 0px 40px ;
+  }
+
+  .row-arrow, .section-title-row button {
+    cursor: pointer;
+  }
+
+  .mb-dashboard-body > .dashboard-section:first-of-type {
+    margin-top: 28px;
+    margin-bottom: 40px;
+  }
+
+  .mb-dashboard-body > .dashboard-section:last-of-type {
+    grid-column: 2;
+    grid-row: 1 / span 100;
+    padding: 36px 32px 40px 32px;
+    border-left: 1px solid rgb(220, 218, 218);
     margin-top: 0;
+    align-self: stretch;
+    min-height: 120vh;
+  }
+
+  /* Invoice cards in right column */
+  .mb-dashboard-body > .dashboard-section:last-of-type .invoice-card {
+    margin-top: 12px;
+    border-radius: 18px;
+  }
+
+  /* Show price under name, hide invoice number and separate price col */
+  .mb-dashboard-body > .dashboard-section:last-of-type .invoice-info-number {
+    display: none;
+  }
+
+  .mb-dashboard-body > .dashboard-section:last-of-type .invoice-info-price {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--main-text);
+    margin-top: 2px;
+  }
+
+  .mb-dashboard-body > .dashboard-section:last-of-type .invoice-price {
+    display: none;
+  }
+
+  /* Prevent wrapping in info block */
+  .mb-dashboard-body > .dashboard-section:last-of-type .invoice-info strong,
+  .mb-dashboard-body > .dashboard-section:last-of-type .invoice-info-price {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Right-column section header */
+  .mb-dashboard-body > .dashboard-section:last-of-type h3 {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--secondary-text);
+    margin-bottom: 4px;
+  }
+
+  .mb-dashboard-body > .dashboard-section:last-of-type .section-title-row {
+    margin-bottom: 0;
+  }
+
+  .mb-dashboard-body > .dashboard-section:last-of-type .section-title-row button {
+    font-size: 13px;
+  }
+
+  /* Paid invoice status green badge */
+  .invoice-status.paid {
+    background: #dcfce7;
+    color: #16a34a;
   }
 
   /* ── Lessons ── */

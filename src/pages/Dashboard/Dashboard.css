@@ -287,7 +287,7 @@
   border-radius: 22px;
   padding: 18px;
   display: grid;
-  grid-template-columns: 54px 1fr auto auto 12px;
+  grid-template-columns: 54px minmax(0, 1fr) auto auto 12px;
   align-items: center;
   gap: 12px;
 }
@@ -304,10 +304,18 @@
   font-weight: 600;
 }
 
+.invoice-info {
+  min-width: 0;
+  overflow: hidden;
+}
+
 .invoice-info strong {
   display: block;
   color: var(--main-text);
   font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .invoice-info span {
@@ -315,6 +323,9 @@
   color: var(--secondary-text);
   font-size: 14px;
   margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .invoice-price {

@@ -21,6 +21,7 @@ import SmsOptIn from "./pages/SmsOptIn/SmsOptIn";
 import Upgrade from "./pages/Upgrade/Upgrade";
 import DesktopLayout from "./components/DesktopLayout/DesktopLayout";
 import Support from "./pages/Support/Support";
+import More from "./pages/More/More";
 
 function App() {
 
@@ -117,7 +118,7 @@ function App() {
         element={
           <ProtectedRoute>
             <DesktopLayout>
-              <ComingSoon />
+              <More />
             </DesktopLayout>
           </ProtectedRoute>
         }

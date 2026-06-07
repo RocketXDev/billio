@@ -1,0 +1,216 @@
+.timer-page {
+  min-height: 100vh;
+  padding: 22px;
+  background: #f4f6fb;
+}
+
+.timer-header {
+  margin-bottom: 22px;
+}
+
+.timer-header h1 {
+  margin: 0;
+  font-size: 2rem;
+  letter-spacing: -0.04em;
+}
+
+.timer-header p {
+  color: #6b7280;
+  margin: 8px 0 0;
+}
+
+.timer-card {
+  background: white;
+  border-radius: 24px;
+  padding: 22px;
+  box-shadow: 0 16px 35px rgba(15, 23, 42, 0.08);
+  display: grid;
+  gap: 14px;
+}
+
+.timer-card label {
+  font-weight: 700;
+}
+
+.timer-card input {
+  width: 100%;
+  height: 48px;
+  border-radius: 14px;
+  border: 1px solid #d1d5db;
+  padding: 0 14px;
+  font-size: 1rem;
+}
+
+.timer-student-wrapper {
+  position: relative;
+}
+
+.timer-suggestions {
+  position: absolute;
+  top: 54px;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  overflow: hidden;
+  z-index: 20;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+}
+
+.timer-suggestions button {
+  width: 100%;
+  background: white;
+  border: none;
+  padding: 14px;
+  text-align: left;
+  font-weight: 700;
+}
+
+.timer-display {
+  margin: 18px 0;
+  padding: 30px 16px;
+  text-align: center;
+  font-size: 3.5rem;
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  border-radius: 24px;
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.timer-start-btn,
+.timer-stop-btn {
+  height: 54px;
+  border: none;
+  border-radius: 16px;
+  color: white;
+  font-size: 1.15rem;
+  font-weight: 550;
+}
+
+.timer-start-btn {
+  background: #4338ca;
+}
+
+.timer-stop-btn {
+  background: #dc2626;
+}
+
+.timer-message {
+  background: #fff7ed;
+  color: #9a3412;
+  padding: 12px;
+  border-radius: 14px;
+  font-weight: 600;
+}
+
+.timer-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.timer-actions button {
+  height: 46px;
+  border-radius: 14px;
+  border: none;
+  font-weight: 600;
+}
+
+.timer-actions button:first-child {
+  background: #16a34a;
+  color: white;
+}
+
+.timer-actions button:last-child {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.timer-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: grid;
+  place-items: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.timer-modal {
+  width: 100%;
+  max-width: 360px;
+  background: white;
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.25);
+  animation: timerModalIn 0.2s ease;
+}
+
+.timer-modal h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.timer-modal p {
+  margin: 10px 0 22px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.timer-modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.timer-modal-actions button {
+  height: 46px;
+  border: none;
+  font-size: 18px;
+  border-radius: 14px;
+  font-weight: 500;
+}
+
+.timer-modal-cancel {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.timer-modal-save {
+  background: #4338ca;
+  color: white;
+}
+
+@keyframes timerModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (min-width: 900px) {
+  .timer-page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 42px;
+  }
+
+  .timer-header h1 {
+    font-size: 2.7rem;
+  }
+
+  .timer-card {
+    padding: 34px;
+  }
+
+  .timer-display {
+    font-size: 4rem;
+  }
+}

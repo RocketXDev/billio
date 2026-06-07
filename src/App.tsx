@@ -22,6 +22,7 @@ import Upgrade from "./pages/Upgrade/Upgrade";
 import DesktopLayout from "./components/DesktopLayout/DesktopLayout";
 import Support from "./pages/Support/Support";
 import More from "./pages/More/More";
+import CoachingTimer from "./pages/CoachingTimer/CoachingTimer";
 
 function App() {
 
@@ -119,6 +120,17 @@ function App() {
           <ProtectedRoute>
             <DesktopLayout>
               <More />
+            </DesktopLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/timer"
+        element={
+          <ProtectedRoute>
+            <DesktopLayout>
+              <CoachingTimer />
             </DesktopLayout>
           </ProtectedRoute>
         }

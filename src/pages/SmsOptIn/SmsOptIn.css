@@ -1,0 +1,80 @@
+/* SMS OPT-IN PAGE */
+
+.sms-example-form {
+  margin-top: 24px;
+  padding: 24px;
+  border-radius: 20px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+}
+
+.sms-example-form label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 700;
+  color: var(--main-text);
+}
+
+.sms-example-form input[type="tel"] {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 20px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+}
+
+.sms-consent-box {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.sms-consent-box input {
+  margin-top: 4px;
+}
+
+.sms-consent-box span {
+  color: var(--secondary-text);
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.sms-links {
+  font-size: 13px;
+  color: var(--secondary-text);
+}
+
+.sms-info-card {
+  margin-top: 24px;
+  padding: 20px;
+  border-radius: 20px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+}
+
+.sms-info-card h2 {
+  margin-top: 0;
+}
+
+.sms-consent-note {
+  margin: 8px 0 0;
+  color: var(--secondary-text);
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: left;
+  padding-left: 5px;
+  width: 100%;
+}
+
+.sms-consent-note a {
+  color: var(--primary-purple);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.sms-consent-note a:hover {
+  text-decoration: underline;
+}

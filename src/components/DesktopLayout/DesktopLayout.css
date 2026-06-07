@@ -1,0 +1,574 @@
+/* Hide desktop chrome on mobile — shown only inside the media query below */
+.desktop-sidebar,
+.desktop-topbar {
+  display: none;
+}
+
+@media (min-width: 769px) {
+
+  /* ── Auth pages ── */
+  .mb {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+
+  .mb-logo {
+    margin-top: 0;
+    margin-bottom: 10px;
+  }
+
+  .mb-form {
+    max-width: 480px;
+    width: 100%;
+    min-height: auto;
+    margin-top: 0;
+    border-radius: 24px;
+    padding: 40px 36px 44px;
+  }
+
+  .mb-form-title {
+    margin-top: -10px;
+  }
+
+  /* ── Shell ── */
+  .desktop-shell {
+    display: flex;
+    min-height: 100vh;
+    background: var(--main-bg);
+  }
+
+  /* ── Sidebar ── */
+  .desktop-sidebar {
+    width: 240px;
+    min-width: 240px;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    background: var(--card-bg);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 24px 16px;
+    z-index: 10;
+    overflow-y: auto;
+  }
+
+  .desktop-sidebar-logo {
+    width: 100px;
+    height: auto;
+    display: block;
+    margin-bottom: 28px;
+  }
+
+  .desktop-sidebar-nav {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .desktop-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 14px;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--secondary-text);
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+
+  .desktop-nav-link:hover {
+    background: var(--main-bg);
+    color: var(--main-text);
+  }
+
+  .desktop-nav-link.active {
+    background: #eef2ff;
+    color: var(--primary-purple);
+    font-weight: 600;
+  }
+
+  .desktop-nav-link svg {
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .desktop-sidebar-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 12px 0;
+  }
+
+  .desktop-sidebar-user {
+    padding: 14px;
+    border-radius: 16px;
+    background: var(--main-bg);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    min-width: 0;
+  }
+
+  .desktop-sidebar-user-info {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .desktop-sidebar-user-info strong {
+    display: block;
+    font-size: 13px;
+    color: var(--main-text);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .desktop-sidebar-user-info span {
+    display: block;
+    font-size: 11px;
+    color: var(--secondary-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+  }
+
+  .desktop-sidebar-logout {
+    width: 100%;
+    height: 42px;
+    margin: 0;
+    border-radius: 14px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--secondary-text);
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+
+  .desktop-sidebar-logout:hover {
+    background: #fee2e2;
+    color: #dc2626;
+    border-color: #fecaca;
+  }
+
+  /* ── Main area ── */
+  .desktop-main {
+    flex: 1;
+    min-width: 0;
+    height: 100vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Topbar ── */
+  .desktop-topbar {
+    height: 64px;
+    padding: 0 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    flex-shrink: 0;
+  }
+
+  .desktop-topbar-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--main-text);
+    letter-spacing: -0.5px;
+  }
+
+  .desktop-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .desktop-bell-wrapper {
+    position: relative;
+  }
+
+  .desktop-bell-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--main-bg);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: var(--main-text);
+    cursor: pointer;
+    position: relative;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .desktop-bell-btn:hover {
+    background: #eef2ff;
+    color: var(--primary-purple);
+    border-color: #c7d2fe;
+  }
+
+  .desktop-bell-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    background: var(--primary-purple);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+  }
+
+  .desktop-notif-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+  }
+
+  .desktop-notif-dropdown {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: 360px;
+    max-height: 480px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    box-shadow: 0 12px 40px rgba(15, 23, 42, 0.12);
+    z-index: 201;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .desktop-notif-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px 14px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .desktop-notif-header span {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--main-text);
+  }
+
+  .desktop-notif-header button {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: var(--secondary-text);
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    line-height: 1;
+  }
+
+  .desktop-notif-header button:hover {
+    background: var(--main-bg);
+    color: var(--main-text);
+  }
+
+  .desktop-notif-empty {
+    padding: 36px 20px;
+    text-align: center;
+    color: var(--secondary-text);
+    font-size: 14px;
+  }
+
+  .desktop-notif-list {
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .desktop-notif-item {
+    padding: 14px 20px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.12s;
+  }
+
+  .desktop-notif-item:last-child {
+    border-bottom: none;
+  }
+
+  .desktop-notif-item:hover {
+    background: var(--main-bg);
+  }
+
+  .desktop-notif-item.unread {
+    border-left: 3px solid var(--primary-purple);
+    padding-left: 17px;
+  }
+
+  .desktop-notif-body strong {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--main-text);
+    display: block;
+  }
+
+  .desktop-notif-body p {
+    font-size: 12px;
+    color: var(--secondary-text);
+    margin: 3px 0 0;
+    line-height: 1.4;
+  }
+
+  .desktop-notif-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+  }
+
+  .desktop-notif-meta span {
+    font-size: 11px;
+    color: var(--secondary-text);
+  }
+
+  .desktop-notif-delete {
+    background: none;
+    border: none;
+    color: var(--secondary-text);
+    cursor: pointer;
+    font-size: 11px;
+    padding: 4px 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+  }
+
+  .desktop-notif-delete:hover {
+    background: #fee2e2;
+    color: #dc2626;
+  }
+
+  /* ── Content area ── */
+  .desktop-content {
+    flex: 1;
+  }
+
+  /* ── Hide mobile-only elements ── */
+  .bottom-nav,
+  nav.bottom-nav {
+    display: none;
+  }
+
+  .dashboard-menu-btn {
+    display: none;
+  }
+
+  header.mb-dashboard-header {
+    display: none;
+  }
+
+  /* ── Dashboard ── */
+  .mb-dashboard,
+  .lessons-page,
+  .students-page,
+  .invoices-page {
+    padding-bottom: 40px;
+  }
+
+  .mb-dashboard-wrapper {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .mb-dashboard-body {
+    padding: 36px 40px 40px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+    margin-top: 0;
+  }
+
+  .mb-dashboard-body > .dashboard-welcome {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--main-text);
+    margin-bottom: 0;
+    align-self: center;
+    letter-spacing: -0.5px;
+  }
+
+  .mb-dashboard-body > .add-lesson-card {
+    height: 72px;
+    margin-bottom: 0;
+    border-radius: 18px;
+  }
+
+  .mb-dashboard-body > .stat-card {
+    margin-bottom: 0;
+  }
+
+  .mb-dashboard-body > .dashboard-section {
+    margin-top: 0;
+  }
+
+  /* ── Lessons ── */
+  .lessons-wrapper {
+    max-width: none;
+  }
+
+  .lessons-body {
+    padding: 32px 40px 0;
+  }
+
+  .lessons-header {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+
+  /* ── Students ── */
+  .students-wrapper {
+    max-width: none;
+  }
+
+  .students-body {
+    padding: 32px 40px 0;
+  }
+
+  /* ── Invoices ── */
+  .invoices-wrapper {
+    max-width: none;
+  }
+
+  .invoices-body {
+    padding: 32px 40px 0;
+  }
+
+  .invoice-stat-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  /* ── Profile ── */
+  .profile-wrapper {
+    max-width: none;
+    padding-bottom: 60px;
+  }
+
+  .profile-body {
+    padding: 32px 40px 0;
+  }
+
+  /* ── Upgrade ── */
+  .up-page {
+    padding-bottom: 60px;
+  }
+
+  .up-body {
+    max-width: 700px;
+    padding: 40px 40px 0;
+  }
+
+  .up-cards {
+    gap: 20px;
+  }
+
+  .up-card {
+    padding: 28px 22px 32px;
+  }
+
+  /* ── Modals / sheets: centered on desktop ── */
+  .add-lesson-overlay,
+  .students-add-overlay,
+  .students-detail-overlay,
+  .invoices-add-overlay,
+  .invoice-settings-overlay,
+  .rate-sheet-overlay,
+  .avatar-crop-overlay,
+  .invoice-success-overlay,
+  .invoice-sending-overlay {
+    align-items: center;
+  }
+
+  .add-lesson-sheet,
+  .students-add-sheet {
+    border-radius: 28px;
+    max-height: 88vh;
+    max-width: 520px;
+  }
+
+  .students-detail-sheet {
+    border-radius: 28px;
+    max-height: 90vh;
+    max-width: 560px;
+  }
+
+  .invoices-add-sheet {
+    border-radius: 28px;
+    max-height: 88vh;
+    max-width: 520px;
+  }
+
+  .invoice-settings-sheet {
+    border-radius: 28px;
+    max-height: 86vh;
+    max-width: 500px;
+  }
+
+  .rate-sheet {
+    border-radius: 28px;
+    max-width: 420px;
+  }
+
+  .avatar-crop-sheet {
+    border-radius: 28px;
+    max-width: 480px;
+  }
+
+  .coming-soon-card {
+    max-width: 520px;
+    padding: 60px 44px;
+  }
+
+  /* ── Legal ── */
+  .legal-page {
+    padding: 48px 24px;
+  }
+
+  .legal-card {
+    padding: 40px;
+  }
+
+}

@@ -1,11 +1,13 @@
 import '../Login/Login.css';
 import { useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { useNavigate } from "react-router-dom";
 
 function UpdatePassword() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   async function handleUpdatePassword(e: any) {
     e.preventDefault();
@@ -23,7 +25,7 @@ function UpdatePassword() {
       return;
     }
 
-    setMessage("Password updated. You can now log in.");
+    navigate("/password-updated");
     setLoading(false);
   }
 

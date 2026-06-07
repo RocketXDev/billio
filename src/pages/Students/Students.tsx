@@ -1,4 +1,3 @@
-import './Students.css';
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -13,6 +12,7 @@ import {
   FaLock,
   FaCrown,
 } from "react-icons/fa";
+import './Students.css';
 import { supabase } from "../../lib/supabaseClient";
 import { usePlan } from "../../hooks/usePlan";
 import { useSettings } from "../../hooks/useSettings";
@@ -20,6 +20,7 @@ import { useSettings } from "../../hooks/useSettings";
 function Students() {
   const navigate = useNavigate();
   const { isPro } = usePlan();
+  const { settings } = useSettings();
   const FREE_STUDENT_LIMIT = 5;
 
   const [students, setStudents] = useState<any[]>([]);
@@ -28,8 +29,8 @@ function Students() {
   const [showAddStudent, setShowAddStudent] = useState(false);
   const [showEditStudent, setShowEditStudent] = useState(false);
   const [editingStudent, setEditingStudent] = useState<any>(null);
-  const [showStudentLimitModal, setShowStudentLimitModal] = useState(false);
 
+//   Add Student Block
   const [studentName, setStudentName] = useState("");
   const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -41,10 +42,12 @@ function Students() {
   const [studentToDelete, setStudentToDelete] = useState<any>(null);
   const [smsConsent, setSmsConsent] = useState(false);
 
+  // Student - lessons+invoices popup
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [studentLessons, setStudentLessons] = useState<any[]>([]);
   const [studentInvoices, setStudentInvoices] = useState<any[]>([]);
 
+  // Edit lessons
   const [selectedLessonActionId, setSelectedLessonActionId] = useState<string | null>(null);
   const [showEditLesson, setShowEditLesson] = useState(false);
   const [editingLesson, setEditingLesson] = useState<any>(null);
@@ -62,10 +65,19 @@ function Students() {
   const [invoiceContactTarget, setInvoiceContactTarget] = useState("auto");
   const [invoiceDeliveryMethod, setInvoiceDeliveryMethod] = useState("auto");
 
+  // Loading
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
-  const { settings } = useSettings();
+  const [showStudentLimitModal, setShowStudentLimitModal] = useState(false);
+
+  // Filter states
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterRange, setFilterRange] = useState<string>("all");
+  const [filterSort, setFilterSort] = useState<string>("newest");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
+  const [showFilterSheet, setShowFilterSheet] = useState(false);
 
   useEffect(() => {
     loadStudents();
@@ -73,83 +85,162 @@ function Students() {
 
   async function loadStudents() {
     setLoading(true);
+
     const { data: sessionData } = await supabase.auth.getSession();
     const user = sessionData.session?.user;
-    if (!user) { navigate("/login"); return; }
+
+    if (!user) {
+      navigate("/login");
+      return;
+    }
 
     const { data: profileData, error: profileError } = await supabase
-      .from("profiles").select("id").eq("user_id", user.id).single();
-    if (profileError || !profileData) { setLoading(false); return; }
+      .from("profiles")
+      .select("id")
+      .eq("user_id", user.id)
+      .single();
+
+    if (profileError || !profileData) {
+      console.log("Profile fetch error:", profileError);
+      setLoading(false);
+      return;
+    }
 
     const { data: coachData, error: coachError } = await supabase
-      .from("coaches").select("id").eq("profile_id", profileData.id).single();
-    if (coachError || !coachData) { setLoading(false); return; }
+      .from("coaches")
+      .select("id")
+      .eq("profile_id", profileData.id)
+      .single();
+
+    if (coachError || !coachData) {
+      console.log("Coach fetch error:", coachError);
+      setLoading(false);
+      return;
+    }
 
     setCoachId(coachData.id);
-    await loadRateOptions(coachData.id);
+
+    await loadRateOptions(coachData.id)
 
     const { data, error } = await supabase
       .from("coach_students")
-      .select(`student_id, invoice_contact_target, invoice_delivery_method,
-        students (id, student_name, email, phone_number, parent_name, parent_email, parent_phone, active, notes, created_at)`)
+      .select(`
+        student_id,
+        invoice_contact_target,
+        invoice_delivery_method,
+        students (
+          id,
+          student_name,
+          email,
+          phone_number,
+          parent_name,
+          parent_email,
+          parent_phone,
+          active,
+          notes,
+          created_at
+        )
+      `)
       .eq("coach_id", coachData.id);
 
-    if (error) { console.log("Students load error:", error); setLoading(false); return; }
+    if (error) {
+      console.log("Students load error:", error);
+      setLoading(false);
+      return;
+    }
+
     setStudents(data || []);
     setLoading(false);
   }
 
   async function handleCreateStudent(e: any) {
     e.preventDefault();
-    if (isSaving) return;
+
+    if (isSaving) return; 
     setIsSaving(true);
+
     try {
+
       if (!coachId) return;
-      if (!isPro && activeStudents.length >= FREE_STUDENT_LIMIT) {
-        setShowStudentLimitModal(true);
+
+      const cleanStudentName = studentName.trim();
+
+      if (!cleanStudentName) {
+        alert("Please enter a student name.");
         return;
       }
-      const cleanStudentName = studentName.trim();
-      if (!cleanStudentName) { alert("Please enter a student name."); return; }
-      const existingStudent = students.find((link: any) =>
-        link.students?.student_name?.trim().toLowerCase() === cleanStudentName.toLowerCase());
-      if (existingStudent) { alert("This student already exists."); return; }
+
+      const existingStudent = students.find(
+        (link: any) =>
+          link.students?.student_name?.trim().toLowerCase() ===
+          cleanStudentName.toLowerCase()
+      );
+
+      if (existingStudent) {
+        alert("This student already exists.");
+        return;
+      }
 
       const { data: newStudent, error: studentError } = await supabase
-        .from("students").insert({
-          student_name: cleanStudentName, email: email || null,
+        .from("students")
+        .insert({
+          student_name: cleanStudentName,
+          email: email || null,
           phone_number: phoneNumber || null,
           parent_name: parentName || null,
-          parent_email:  parentEmail || null,
+          parent_email: parentEmail || null,
           parent_phone: parentPhone || null,
-          active, notes: notes || null,
+          active,
+          notes: notes || null,
           sms_consent: smsConsent,
           sms_consent_at: smsConsent ? new Date().toISOString() : null,
           sms_consent_source: smsConsent ? "coach_confirmed" : null,
-        }).select().single();
-      if (studentError) { console.log("Student create error:", studentError); return; }
+        })
+        .select()
+        .single();
 
-      const { error: linkError } = await supabase.from("coach_students").insert({
-        coach_id: coachId, student_id: newStudent.id,
-        invoice_contact_target: invoiceContactTarget,
-        invoice_delivery_method: invoiceDeliveryMethod,
-      });
-      if (linkError) { console.log("Coach-student link error:", linkError); return; }
+      if (studentError) {
+        console.log("Student create error:", studentError);
+        return;
+      }
 
-      setStudents((prev) => [...prev, {
-        student_id: newStudent.id,
-        invoice_contact_target: invoiceContactTarget,
-        invoice_delivery_method: invoiceDeliveryMethod,
-        students: newStudent,
-      }]);
-    } finally { setIsSaving(false); }
+      const { error: linkError } = await supabase
+        .from("coach_students")
+        .insert({
+          coach_id: coachId,
+          student_id: newStudent.id,
+          invoice_contact_target: invoiceContactTarget,
+          invoice_delivery_method: invoiceDeliveryMethod,
+        });
+
+      if (linkError) {
+        console.log("Coach-student link error:", linkError);
+        return;
+      }
+
+      setStudents((prev) => [
+        ...prev,
+        {
+          student_id: newStudent.id,
+          invoice_contact_target: invoiceContactTarget,
+          invoice_delivery_method: invoiceDeliveryMethod,
+          students: newStudent,
+        },
+      ]);
+
+    } finally {
+      setIsSaving(false)
+    }
+
     resetStudentForm();
     setShowAddStudent(false);
   }
 
   function openEditStudent(link: any) {
     const student = link.students;
+
     setEditingStudent(student);
+
     setStudentName(student?.student_name || "");
     setEmail(student?.email || "");
     setPhoneNumber(student?.phone_number || "");
@@ -161,220 +252,488 @@ function Students() {
     setInvoiceContactTarget(link.invoice_contact_target || "auto");
     setInvoiceDeliveryMethod(link.invoice_delivery_method || "auto");
     setSmsConsent(link.students?.sms_consent || false);
+
     setShowEditStudent(true);
   }
 
   function closeEditStudent() {
     setShowAddStudent(false);
-    setShowEditStudent(false);
     resetStudentForm();
   }
 
   function openEditLesson(lesson: any) {
     setEditingLesson(lesson);
+
     setLessonDate(lesson.lesson_date || "");
     setStartTime(lesson.start_time?.slice(0, 5) || "");
     setDurationMinutes(String(lesson.duration_minutes || "30"));
     setLessonType(lesson.lesson_type || "");
     setHourlyRate(String(lesson.hourly_rate || ""));
     setLessonNotes(lesson.notes || "");
-    if (coachId) loadRateOptions(coachId);
+
+    if (coachId) {
+      loadRateOptions(coachId);
+    }
+
     setShowEditLesson(true);
     setSelectedLessonActionId(null);
   }
 
   async function loadRateOptions(coachId: string) {
-    const { data, error } = await supabase.from("coaches")
-      .select("default_hourly_rate, custom_rates").eq("id", coachId).single();
-    if (error || !data) return;
-    const options: any[] = [];
-    if (data.default_hourly_rate) options.push({ name: "Default", amount: Number(data.default_hourly_rate) });
-    if (Array.isArray(data.custom_rates)) options.push(...data.custom_rates);
+    const { data, error } = await supabase
+      .from("coaches")
+      .select("default_hourly_rate, custom_rates")
+      .eq("id", coachId)
+      .single();
+
+    if (error || !data) {
+      console.log("Rate load error:", error);
+      return;
+    }
+
+    const options = [];
+
+    if (data.default_hourly_rate) {
+      options.push({
+        name: "Default",
+        amount: Number(data.default_hourly_rate),
+      });
+    }
+
+    if (Array.isArray(data.custom_rates)) {
+      options.push(...data.custom_rates);
+    }
+
     setRateOptions(options);
   }
 
   function resetStudentForm() {
-    setStudentName(""); setEmail(""); setPhoneNumber("");
-    setParentName(""); setParentPhone(""); setParentEmail("");
-    setActive(true); setNotes(""); setEditingStudent(null);
-    setInvoiceContactTarget("auto"); setInvoiceDeliveryMethod("auto"); setSmsConsent(false);
+    setStudentName("");
+    setEmail("");
+    setPhoneNumber("");
+    setParentName("");
+    setParentPhone("");
+    setParentEmail("");
+    setActive(true);
+    setNotes("");
+    setEditingStudent(null);
+    setInvoiceContactTarget("auto");
+    setInvoiceDeliveryMethod("auto");
+    setSmsConsent(false);
   }
 
-  function closeAddStudent() { setShowAddStudent(false); resetStudentForm(); }
-  function closeEditLesson() { setShowEditLesson(false); resetStudentForm(); }
+  function closeAddStudent() {
+    setShowAddStudent(false);
+    resetStudentForm();
+  }
+
+  function closeEditLesson() {
+    setShowEditLesson(false);
+    resetStudentForm();
+  }
 
   async function handleUpdateLesson(e: any) {
     e.preventDefault();
-    if (isSaving) return;
+
+    if (isSaving) return; 
     setIsSaving(true);
+
     try {
+
       if (!editingLesson || !coachId) return;
-      const calculatedRate = Number(hourlyRate) * (Number(durationMinutes) / 60);
-      const { data, error } = await supabase.from("lessons").update({
-        lesson_date: lessonDate, start_time: startTime,
-        duration_minutes: Number(durationMinutes), lesson_type: lessonType || null,
-        hourly_rate: Number(hourlyRate), rate: calculatedRate, notes: lessonNotes || null,
-        sms_consent: smsConsent,
-        sms_consent_at: smsConsent ? new Date().toISOString() : null,
-        sms_consent_source: smsConsent ? "coach_confirmed" : null,
-      }).eq("id", editingLesson.id).eq("coach_id", coachId).select().single();
-      if (error) { console.log("Update student lesson error:", error); return; }
-      setStudentLessons((prev) => prev.map((lesson) => lesson.id === editingLesson.id ? data : lesson));
-    } finally { setIsSaving(false); }
+
+      const calculatedRate =
+        Number(hourlyRate) * (Number(durationMinutes) / 60);
+
+      const { data, error } = await supabase
+        .from("lessons")
+        .update({
+          lesson_date: lessonDate,
+          start_time: startTime,
+          duration_minutes: Number(durationMinutes),
+          lesson_type: lessonType || null,
+          hourly_rate: Number(hourlyRate),
+          rate: calculatedRate,
+          notes: lessonNotes || null,
+          sms_consent: smsConsent,
+          sms_consent_at: smsConsent ? new Date().toISOString() : null,
+          sms_consent_source: smsConsent ? "coach_confirmed" : null,
+        })
+        .eq("id", editingLesson.id)
+        .eq("coach_id", coachId)
+        .select()
+        .single();
+
+      if (error) {
+        console.log("Update student lesson error:", error);
+        return;
+      }
+
+      setStudentLessons((prev) =>
+        prev.map((lesson) =>
+          lesson.id === editingLesson.id ? data : lesson
+        )
+      );
+
+    } finally {
+      setIsSaving (false);
+    }
+
     closeEditLesson();
   }
 
   async function handleDeleteStudentLesson(lessonId: string) {
-    if (isDeleting) return;
+
+    if (isDeleting) return; 
     setIsDeleting(true);
+
     try {
-      const { error } = await supabase.from("lessons").delete().eq("id", lessonId).eq("coach_id", coachId);
-      if (error) { console.log("Delete student lesson error:", error); return; }
-      setStudentLessons((prev) => prev.filter((lesson) => lesson.id !== lessonId));
-    } finally { setIsDeleting(false); }
+
+      const { error } = await supabase
+      .from("lessons")
+      .delete()
+      .eq("id", lessonId)
+      .eq("coach_id", coachId);
+
+      if (error) {
+        console.log("Delete student lesson error:", error);
+        return;
+      }
+
+      setStudentLessons((prev) =>
+        prev.filter((lesson) => lesson.id !== lessonId)
+      );
+
+    } finally {
+      setIsDeleting(false);
+    }
+
     setSelectedLessonActionId(null);
   }
 
   async function handleUpdateStudent(e: any) {
     e.preventDefault();
-    if (isSaving) return;
+
+    if (isSaving) return; 
     setIsSaving(true);
+
     try {
+
       if (!coachId || !editingStudent) return;
+
       const cleanStudentName = studentName.trim();
-      if (!cleanStudentName) { alert("Please enter a student name."); return; }
-      const existingStudent = students.find((link: any) =>
-        link.student_id !== editingStudent.id &&
-        link.students?.student_name?.trim().toLowerCase() === cleanStudentName.toLowerCase());
-      if (existingStudent) { alert("This student already exists."); return; }
 
-      const { data: updatedStudent, error: studentError } = await supabase.from("students").update({
-        student_name: cleanStudentName, email: email || null, phone_number: phoneNumber || null,
-        parent_name: parentName || null,
-        parent_email:parentEmail || null,
-        parent_phone: parentPhone || null,
-        active, notes: notes || null,
-      }).eq("id", editingStudent.id).select().single();
-      if (studentError) { console.log("Student update error:", studentError); return; }
+      if (!cleanStudentName) {
+        alert("Please enter a student name.");
+        return;
+      }
 
-      const { error: linkError } = await supabase.from("coach_students").update({
-        invoice_contact_target: invoiceContactTarget,
-        invoice_delivery_method: invoiceDeliveryMethod,
-      }).eq("coach_id", coachId).eq("student_id", editingStudent.id);
-      if (linkError) { console.log("Coach-student preference update error:", linkError); return; }
+      const existingStudent = students.find(
+        (link: any) =>
+          link.student_id !== editingStudent.id &&
+          link.students?.student_name?.trim().toLowerCase() ===
+            cleanStudentName.toLowerCase()
+      );
 
-      setStudents((prev) => prev.map((link: any) =>
-        link.student_id === editingStudent.id
-          ? { ...link, invoice_contact_target: invoiceContactTarget, invoice_delivery_method: invoiceDeliveryMethod, students: updatedStudent }
-          : link));
-    } finally { setIsSaving(false); }
+      if (existingStudent) {
+        alert("This student already exists.");
+        return;
+      }
+
+      const { data: updatedStudent, error: studentError } = await supabase
+        .from("students")
+        .update({
+          student_name: cleanStudentName,
+          email: email || null,
+          phone_number: phoneNumber || null,
+          parent_name: parentName || null,
+          parent_email: parentEmail || null,
+          parent_phone: parentPhone || null,
+          active,
+          notes: notes || null,
+        })
+        .eq("id", editingStudent.id)
+        .select()
+        .single();
+
+      if (studentError) {
+        console.log("Student update error:", studentError);
+        return;
+      }
+
+      const { error: linkError } = await supabase
+        .from("coach_students")
+        .update({
+          invoice_contact_target: invoiceContactTarget,
+          invoice_delivery_method: invoiceDeliveryMethod,
+        })
+        .eq("coach_id", coachId)
+        .eq("student_id", editingStudent.id);
+
+      if (linkError) {
+        console.log("Coach-student preference update error:", linkError);
+        return;
+      }
+
+      setStudents((prev) =>
+        prev.map((link: any) =>
+          link.student_id === editingStudent.id
+            ? {
+                ...link,
+                invoice_contact_target: invoiceContactTarget,
+                invoice_delivery_method: invoiceDeliveryMethod,
+                students: updatedStudent,
+              }
+            : link
+        )
+      );
+
+    } finally {
+      setIsSaving(false);
+    }
+
     closeEditStudent();
   }
 
   async function openStudentDetails(link: any) {
     const student = link.students;
+
     setSelectedStudent(student);
+
     if (!coachId || !student?.id) return;
-    const { data: lessonsData, error: lessonsError } = await supabase.from("lessons").select("*")
-      .eq("coach_id", coachId).eq("student_id", student.id)
-      .order("lesson_date", { ascending: false }).order("start_time", { ascending: false });
-    if (lessonsError) console.log("Student lessons error:", lessonsError);
-    else setStudentLessons(lessonsData || []);
-    const { data: invoicesData, error: invoicesError } = await supabase.from("invoices").select("*")
-      .eq("coach_id", coachId).eq("student_id", student.id).order("created_at", { ascending: false });
-    if (invoicesError) console.log("Student invoices error:", invoicesError);
-    else setStudentInvoices(invoicesData || []);
+
+    const { data: lessonsData, error: lessonsError } = await supabase
+      .from("lessons")
+      .select("*")
+      .eq("coach_id", coachId)
+      .eq("student_id", student.id)
+      .order("lesson_date", { ascending: false })
+      .order("start_time", { ascending: false });
+
+    if (lessonsError) {
+      console.log("Student lessons error:", lessonsError);
+    } else {
+      setStudentLessons(lessonsData || []);
+    }
+
+    const { data: invoicesData, error: invoicesError } = await supabase
+      .from("invoices")
+      .select("*")
+      .eq("coach_id", coachId)
+      .eq("student_id", student.id)
+      .order("created_at", { ascending: false });
+
+    if (invoicesError) {
+      console.log("Student invoices error:", invoicesError);
+    } else {
+      setStudentInvoices(invoicesData || []);
+    }
   }
 
   function formatUSPhoneInput(value: string) {
     const digits = value.replace(/\D/g, "").slice(0, 10);
+
     if (digits.length <= 3) return digits;
-    if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    if (digits.length <= 6) {
+      return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    }
+
     return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
   }
 
-  const activeStudents = students.filter((link: any) => link.students?.active !== false);
-  const archivedStudents = students.filter((link: any) => link.students?.active === false);
+  const activeStudents = students.filter(
+    (link: any) => link.students?.active !== false
+  );
+
+  const archivedStudents = students.filter(
+    (link: any) => link.students?.active === false
+  );
 
   async function handleArchiveStudent(studentId: string) {
-    if (isMoving) return;
+
+    if (isMoving) return; 
     setIsMoving(true);
+
     try {
-      const { data, error } = await supabase.from("students").update({ active: false }).eq("id", studentId).select().single();
-      if (error) { console.log("Archive student error:", error); return; }
-      setStudents((prev) => prev.map((link: any) => link.student_id === studentId ? { ...link, students: data } : link));
-    } finally { setIsMoving(false); }
+
+      const { data, error } = await supabase
+      .from("students")
+      .update({ active: false })
+      .eq("id", studentId)
+      .select()
+      .single();
+
+      if (error) {
+        console.log("Archive student error:", error);
+        return;
+      }
+
+      setStudents((prev) =>
+        prev.map((link: any) =>
+          link.student_id === studentId
+            ? { ...link, students: data }
+            : link
+        )
+      );
+
+    } finally {
+      setIsMoving(false);
+    }
+
     closeEditStudent();
   }
 
   async function handleRestoreStudent(studentId: string) {
-    if (isMoving) return;
+
+    if (isMoving) return; 
     setIsMoving(true);
+
     try {
-      const { data, error } = await supabase.from("students").update({ active: true }).eq("id", studentId).select().single();
-      if (error) { console.log("Restore student error:", error); return; }
-      setStudents((prev) => prev.map((link: any) => link.student_id === studentId ? { ...link, students: data } : link));
-    } finally { setIsMoving(false); }
+
+      const { data, error } = await supabase
+      .from("students")
+      .update({ active: true })
+      .eq("id", studentId)
+      .select()
+      .single();
+
+      if (error) {
+        console.log("Restore student error:", error);
+        return;
+      }
+
+      setStudents((prev) =>
+        prev.map((link: any) =>
+          link.student_id === studentId
+            ? { ...link, students: data }
+            : link
+        )
+      );
+
+    } finally {
+      setIsMoving(false);
+    }
+
     closeEditStudent();
   }
 
   async function handlePermanentDeleteStudent(studentId: string) {
-    if (!coachId || isDeleting) return;
+
+    if (!coachId) return;
+
+    if (isDeleting) return; 
     setIsDeleting(true);
+
     try {
-      const { data: studentInvoices, error: invoiceFetchError } = await supabase.from("invoices").select("id").eq("coach_id", coachId).eq("student_id", studentId);
-      if (invoiceFetchError) { console.log("Fetch student invoices error:", invoiceFetchError); return; }
-      const invoiceIds = studentInvoices?.map((invoice) => invoice.id) || [];
-      if (invoiceIds.length > 0) {
-        await supabase.from("invoice_lessons").delete().in("invoice_id", invoiceIds);
-        await supabase.from("invoices").delete().in("id", invoiceIds);
+
+      const { data: studentInvoices, error: invoiceFetchError } = await supabase
+      .from("invoices")
+      .select("id")
+      .eq("coach_id", coachId)
+      .eq("student_id", studentId);
+
+      if (invoiceFetchError) {
+        console.log("Fetch student invoices error:", invoiceFetchError);
+        return;
       }
-      await supabase.from("lessons").delete().eq("coach_id", coachId).eq("student_id", studentId);
-      await supabase.from("coach_students").delete().eq("coach_id", coachId).eq("student_id", studentId);
-      await supabase.from("students").delete().eq("id", studentId);
-      setStudents((prev) => prev.filter((link: any) => link.student_id !== studentId));
-    } finally { setIsDeleting(false); }
+
+      const invoiceIds = studentInvoices?.map((invoice) => invoice.id) || [];
+
+      if (invoiceIds.length > 0) {
+        const { error: invoiceLessonsError } = await supabase
+          .from("invoice_lessons")
+          .delete()
+          .in("invoice_id", invoiceIds);
+
+        if (invoiceLessonsError) {
+          console.log("Delete invoice lessons error:", invoiceLessonsError);
+          return;
+        }
+
+        const { error: invoicesError } = await supabase
+          .from("invoices")
+          .delete()
+          .in("id", invoiceIds);
+
+        if (invoicesError) {
+          console.log("Delete invoices error:", invoicesError);
+          return;
+        }
+      }
+
+      const { error: lessonsError } = await supabase
+        .from("lessons")
+        .delete()
+        .eq("coach_id", coachId)
+        .eq("student_id", studentId);
+
+      if (lessonsError) {
+        console.log("Delete lessons error:", lessonsError);
+        return;
+      }
+
+      const { error: linkError } = await supabase
+        .from("coach_students")
+        .delete()
+        .eq("coach_id", coachId)
+        .eq("student_id", studentId);
+
+      if (linkError) {
+        console.log("Delete coach student link error:", linkError);
+        return;
+      }
+
+      const { error: studentError } = await supabase
+        .from("students")
+        .delete()
+        .eq("id", studentId);
+
+      if (studentError) {
+        console.log("Delete student error:", studentError);
+        return;
+      }
+
+      setStudents((prev) =>
+        prev.filter((link: any) => link.student_id !== studentId)
+      );
+
+    } finally {
+      setIsDeleting(false);
+    }
+
     closeEditStudent();
   }
 
-  function DeliveryChoiceGroup() {
-    return (
-      <div className="student-choice-group">
-        {["auto", "email", "text", "both"].map((choice) => {
-          const isLocked = !isPro && (choice === "text" || choice === "both");
-          return (
-            <div key={choice} className="lock-wrapper">
-              <button
-                type="button"
-                className={`student-choice ${invoiceDeliveryMethod === choice ? "active" : ""}${isLocked ? " pro-locked-choice" : ""}`}
-                onClick={() => !isLocked && setInvoiceDeliveryMethod(choice)}
-                disabled={isLocked}
-              >
-                {choice === "auto" ? "Auto" : choice === "email" ? "Email" : choice === "text" ? "Text" : "Both"}
-              </button>
-              {isLocked && (
-                <span className="pro-only-bubble">
-                  <FaLock style={{ fontSize: 8 }} /> Pro only
-                </span>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
-
-  function formatTime(time: string) {
-    if (!time) return "";
-    const [hourString, minuteString] = time.split(":");
-    const date = new Date();
-    date.setHours(Number(hourString), Number(minuteString), 0);
-    return date.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: settings.timeFormat === "12h",
+  // Filtered and sorted lessons
+  const filteredStudentLessons = studentLessons
+    .filter((lesson) => {
+      if (filterStatus !== "all" && lesson.billing_status !== filterStatus) return false;
+      const lessonDate = new Date(lesson.lesson_date + "T00:00:00");
+      const now = new Date();
+      if (filterRange === "30days") {
+        const cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        if (lessonDate < cutoff) return false;
+      } else if (filterRange === "90days") {
+        const cutoff = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        if (lessonDate < cutoff) return false;
+      } else if (filterRange === "year") {
+        if (lessonDate.getFullYear() !== now.getFullYear()) return false;
+      } else if (filterRange === "custom") {
+        if (filterDateFrom && lesson.lesson_date < filterDateFrom) return false;
+        if (filterDateTo && lesson.lesson_date > filterDateTo) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      const dateA = new Date(`${a.lesson_date}T${a.start_time || "00:00"}`).getTime();
+      const dateB = new Date(`${b.lesson_date}T${b.start_time || "00:00"}`).getTime();
+      return filterSort === "newest" ? dateB - dateA : dateA - dateB;
     });
-  }
+
+  const activeFilterCount = [
+    filterStatus !== "all",
+    filterRange !== "all",
+  ].filter(Boolean).length;
 
   if (loading) {
     return (
@@ -394,17 +753,11 @@ function Students() {
           <div className="students-header">
             <div className="students-header-add">
               <h1>Students</h1>
+
               <button
                 type="button"
                 className="students-add-btn"
-                onClick={() => {
-                  if (!isPro && activeStudents.length >= FREE_STUDENT_LIMIT) {
-                    setShowStudentLimitModal(true);
-                    return;
-                  }
-                  setShowAddStudent(true);
-                }}
-                style={!isPro && activeStudents.length >= FREE_STUDENT_LIMIT ? { opacity: 0.4 } : {}}
+                onClick={() => setShowAddStudent(true)}
               >
                 <FaPlus />
               </button>
@@ -412,52 +765,47 @@ function Students() {
           </div>
 
           <div className="students-list-view">
-            {!isPro && (
-              <div className="student-limit-bar-wrapper">
-                <div className="student-limit-bar-header">
-                  <span>Active students</span>
-                  <strong>{activeStudents.length} / {FREE_STUDENT_LIMIT}</strong>
-                </div>
-                <div className="student-limit-bar-track">
-                  <div
-                    className={`student-limit-bar-fill${activeStudents.length >= FREE_STUDENT_LIMIT ? " at-limit" : ""}`}
-                    style={{ width: `${Math.min((activeStudents.length / FREE_STUDENT_LIMIT) * 100, 100)}%` }}
-                  />
-                </div>
-                {activeStudents.length >= FREE_STUDENT_LIMIT ? (
-                  <p className="student-limit-note warn">
-                    <FaLock style={{ marginRight: 4, fontSize: 10 }} />
-                    Limit reached. Upgrade to Pro for unlimited students.
-                  </p>
-                ) : (
-                  <p className="student-limit-note">Free plan: up to {FREE_STUDENT_LIMIT} active students.</p>
-                )}
-              </div>
-            )}
-
             <section className="students-group">
               <div className="students-group-title">
                 <h2>Your Students</h2>
-                <span>{activeStudents.length} {activeStudents.length === 1 ? "student" : "students"}</span>
+                <span>
+                  {activeStudents.length}{" "}
+                  {activeStudents.length === 1 ? "student" : "students"}
+                </span>
               </div>
+
               {activeStudents.length === 0 ? (
-                <p className="students-empty">No students yet. Tap + to add one.</p>
+                <p className="students-empty">
+                  No students yet. Tap + to add one.
+                </p>
               ) : (
                 <div className="students-group-card">
                   {activeStudents.map((link: any) => {
                     const student = link.students;
+
                     return (
                       <div key={link.student_id} className="students-row" onClick={() => openStudentDetails(link)}>
                         <div className="students-avatar">
-                          {student?.student_name ? student.student_name.charAt(0).toUpperCase() : "S"}
+                          {student?.student_name
+                            ? student.student_name.charAt(0).toUpperCase()
+                            : "S"}
                         </div>
+
                         <div className="students-info">
                           <strong>{student?.student_name || "Student"}</strong>
-                          <span>Added {student?.created_at ? new Date(student.created_at).toLocaleDateString() : "recently"}</span>
+                          <span>
+                            Added{" "}
+                            {student?.created_at
+                              ? new Date(student.created_at).toLocaleDateString()
+                              : "recently"}
+                          </span>
                         </div>
-                        <button type="button" className="students-edit-btn"
-                          onClick={(e) => { e.stopPropagation(); openEditStudent(link); }}>
-                          <FaEdit />
+                        <button
+                        type="button"
+                        className="students-edit-btn"
+                        onClick={(e) => {e.stopPropagation(), openEditStudent(link)}}
+                        >
+                        <FaEdit />
                         </button>
                       </div>
                     );
@@ -465,29 +813,47 @@ function Students() {
                 </div>
               )}
             </section>
-
             <section className="students-group archived-students-group">
               <div className="students-group-title">
                 <h2>Archived Students</h2>
-                <span>{archivedStudents.length} {archivedStudents.length === 1 ? "student" : "students"}</span>
+                <span>
+                  {archivedStudents.length}{" "}
+                  {archivedStudents.length === 1 ? "student" : "students"}
+                </span>
               </div>
+
               {archivedStudents.length === 0 ? (
                 <p className="students-empty">No archived students.</p>
               ) : (
                 <div className="students-group-card">
                   {archivedStudents.map((link: any) => {
                     const student = link.students;
+
                     return (
-                      <div key={link.student_id} className="students-row archived-student-row" onClick={() => openEditStudent(link)}>
+                      <div
+                        key={link.student_id}
+                        className="students-row archived-student-row"
+                        onClick={() => openEditStudent(link)}
+                      >
                         <div className="students-avatar archived">
-                          {student?.student_name ? student.student_name.charAt(0).toUpperCase() : "S"}
+                          {student?.student_name
+                            ? student.student_name.charAt(0).toUpperCase()
+                            : "S"}
                         </div>
+
                         <div className="students-info">
                           <strong>{student?.student_name || "Student"}</strong>
                           <span>Archived</span>
                         </div>
-                        <button type="button" className="students-edit-btn"
-                          onClick={(e) => { e.stopPropagation(); openEditStudent(link); }}>
+
+                        <button
+                          type="button"
+                          className="students-edit-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditStudent(link);
+                          }}
+                        >
                           <FaEdit />
                         </button>
                       </div>
@@ -500,266 +866,634 @@ function Students() {
         </div>
 
         <nav className="bottom-nav">
-          <div className="nav-item" onClick={() => navigate("/dashboard")}><FaHome /><span>Dashboard</span></div>
-          <div className="nav-item" onClick={() => navigate("/lessons")}><FaCalendarAlt /><span>Lessons</span></div>
-          <div className="nav-item active" onClick={() => navigate("/students")}><FaUsers /><span>Students</span></div>
-          <div className="nav-item" onClick={() => navigate("/invoices")}><FaFileInvoiceDollar /><span>Invoices</span></div>
-          <div className="nav-item" onClick={() => navigate("/more")}><FaEllipsisH /><span>More</span></div>
+          <div className="nav-item" onClick={() => navigate("/dashboard")}>
+            <FaHome />
+            <span>Dashboard</span>
+          </div>
+
+          <div className="nav-item" onClick={() => navigate("/lessons")}>
+            <FaCalendarAlt />
+            <span>Lessons</span>
+          </div>
+
+          <div className="nav-item active" onClick={() => navigate("/students")}>
+            <FaUsers />
+            <span>Students</span>
+          </div>
+
+          <div className="nav-item" onClick={() => navigate("/invoices")}>
+            <FaFileInvoiceDollar />
+            <span>Invoices</span>
+          </div>
+
+          <div className="nav-item" onClick={() => navigate("/settings")}>
+            <FaEllipsisH />
+            <span>More</span>
+          </div>
         </nav>
       </div>
 
-      {/* ── Add Student ── */}
       {showAddStudent && (
-        <div className="students-add-overlay" onClick={closeAddStudent}>
-          <div className="students-add-sheet" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="students-add-overlay"
+          onClick={closeAddStudent}
+        >
+          <div
+            className="students-add-sheet"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="students-add-header">
               <h2>Add Student</h2>
-              <button type="button" onClick={closeAddStudent}>×</button>
+              <button type="button" onClick={closeAddStudent}>
+                ×
+              </button>
             </div>
+
             <form onSubmit={handleCreateStudent} autoComplete="off" className="students-add-form">
-              <div className="input-block">
-                <label htmlFor="studentName">Student Name (Required)</label>
-                <input id="studentName" type="text" value={studentName}
-                  onChange={(e) => setStudentName(e.target.value)}
-                  placeholder="Enter student name" required spellCheck={false} />
-              </div>
-              <div className="input-block">
-                <label htmlFor="studentEmail">Email</label>
-                <input id="studentEmail" type="email" value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="example@email.com" autoComplete="off" />
-              </div>
-              <div className="input-block">
-                <label htmlFor="studentPhone">Phone Number</label>
-                <input id="studentPhone" type="tel" value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(formatUSPhoneInput(e.target.value))}
-                  placeholder="(719) 555-1234" autoComplete="off" />
-                {isPro && (
-                  <label className="sms-consent-checkbox">
-                    <input type="checkbox" checked={smsConsent} onChange={(e) => setSmsConsent(e.target.checked)} />
-                    <span>I confirm that the student or parent agreed to receive transactional SMS messages from Billio for lesson reminders, invoice notifications, payment reminders, and account-related updates. Message frequency varies. Message and data rates may apply. Reply STOP to opt out. Reply HELP for help.{" "}
-                      <a href="/terms" target="_blank" rel="noreferrer">Terms</a>{" "}and{" "}
-                      <a href="/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>.</span>
-                  </label>
-                )}
-              </div>
-              <div className="input-block">
-                <label htmlFor="parentName">Parent Name</label>
-                <input id="parentName" type="text" value={parentName}
-                  onChange={(e) => setParentName(e.target.value)}
-                  placeholder={"Enter parent name"}
-                  autoComplete="off"/>
-              </div>
-              <div className="input-block">
-                <label htmlFor="parentEmail">Parent Email</label>
-                  <input id="parentEmail" type="text" value={parentEmail}
+                <div className="input-block">
+                    <label htmlFor="studentName">Student Name (Required)</label>
+
+                    <input
+                    id="studentName"
+                    type="text"
+                    value={studentName}
+                    onChange={(e) => setStudentName(e.target.value)}
+                    placeholder="Enter student name"
+                    required
+                    spellCheck={false}
+                    />
+                </div>
+
+                <div className="input-block">
+                    <label htmlFor="studentEmail">Email</label>
+
+                    <input
+                    id="studentEmail"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="example@email.com"
+                    autoComplete="off"
+                    />
+                </div>
+
+                <div className="input-block">
+                    <label htmlFor="studentPhone">Phone Number</label>
+
+                    <input
+                    id="studentPhone"
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(formatUSPhoneInput(e.target.value))}
+                    placeholder="(719) 555-1234"
+                    autoComplete="off"
+                    />
+                    <label className="sms-consent-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={smsConsent}
+                        onChange={(e) => setSmsConsent(e.target.checked)}
+                      />
+
+                      <span>
+                        I confirm that the student or parent agreed to receive transactional SMS
+                        messages from Billio for lesson reminders, invoice notifications, payment
+                        reminders, and account-related updates. Message frequency varies. Message
+                        and data rates may apply. Reply STOP to opt out. Reply HELP for help.{" "}
+                        <a href="/terms" target="_blank" rel="noreferrer">
+                          Terms
+                        </a>{" "}
+                        and{" "}
+                        <a href="/privacy" target="_blank" rel="noreferrer">
+                          Privacy Policy
+                        </a>
+                        .
+                      </span>
+                    </label>
+                </div>
+
+                <div className="input-block">
+                    <label htmlFor="parentName">Parent Name</label>
+
+                    <input
+                    id="parentName"
+                    type="text"
+                    value={parentName}
+                    onChange={(e) => setParentName(e.target.value)}
+                    placeholder="Enter parent name"
+                    autoComplete="off"
+                    />
+                </div>
+
+                <div className="input-block">
+                    <label htmlFor="parentEmail">Parent Email</label>
+
+                    <input
+                    id="parentEmail"
+                    type="text"
+                    value={parentEmail}
                     onChange={(e) => setParentEmail(e.target.value)}
                     placeholder="Enter parent email"
-                    autoComplete="off"/>
-              </div>
-              <div className="input-block">
-                <label htmlFor="parentPhone">Parent Phone</label>
-                  <input id="parentPhone" type="tel" value={parentPhone}
-                    onChange={(e) => setParentPhone(formatUSPhoneInput(e.target.value))}
-                    placeholder="(719) 555-1234"
-                    autoComplete="off" />
-              </div>
-              <div className="input-block">
-                <label htmlFor="studentNotes">Notes</label>
-                <textarea id="studentNotes" value={notes}
-                  onChange={(e) => setNotes(e.target.value)} placeholder="Add notes..." />
-              </div>
-              <div className="student-preference-section">
-                <h3>Invoice Preferences</h3>
-                <div className="input-block">
-                  <label>Invoice Contact</label>
-                  <span className="student-field-note">Choose who should receive invoices for this student.</span>
-                  <div className="student-choice-group">
-                    {["auto", "student", "parent"].map((choice) => (
-                      <button key={choice} type="button"
-                        className={`student-choice ${invoiceContactTarget === choice ? "active" : ""}`}
-                        onClick={() => setInvoiceContactTarget(choice)}>
-                        {choice === "auto" ? "Auto" : choice === "student" ? "Student" : "Parent"}
-                      </button>
-                    ))}
-                  </div>
+                    autoComplete="off"
+                    />
                 </div>
-                <div className="input-block">
-                  <label>Invoice Delivery</label>
-                  <span className="student-field-note">Auto uses your default invoice delivery setting.</span>
-                  <DeliveryChoiceGroup />
-                </div>
-              </div>
-              <button type="button" className={`student-active-button ${active ? "active" : "inactive"}`}>
-                <div>
-                  <strong>Student Activity</strong>
-                  <span>{active ? "This student is currently active" : "This student is currently inactive"}</span>
-                </div>
-                <div className="student-active-pill">{active ? "Active" : "Inactive"}</div>
-              </button>
-              <button type="submit" className="students-save-btn" disabled={isSaving}>
-                {isSaving ? "Saving..." : "Save Student"}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
 
-      {/* ── Edit Student ── */}
-      {showEditStudent && editingStudent && (
-        <div className="students-add-overlay" onClick={closeEditStudent}>
-          <div className="students-add-sheet" onClick={(e) => e.stopPropagation()}>
-            <div className="students-add-header">
-              <h2>Edit Student</h2>
-              <button type="button" onClick={closeEditStudent}>×</button>
-            </div>
-            <form onSubmit={handleUpdateStudent} className="students-add-form">
-              <div className="input-block">
-                <label htmlFor="editStudentName">Student Name</label>
-                <input id="editStudentName" type="text" value={studentName}
-                  onChange={(e) => setStudentName(e.target.value)} required
-                  autoComplete="new-password" autoCorrect="off" autoCapitalize="words" spellCheck={false} />
-              </div>
-              <div className="input-block">
-                <label htmlFor="editStudentEmail">Email</label>
-                <input id="editStudentEmail" type="email" value={email}
-                  onChange={(e) => setEmail(e.target.value)} autoComplete="off" />
-              </div>
-              <div className="input-block">
-                <label htmlFor="editStudentPhone">Phone Number</label>
-                <input id="editStudentPhone" type="tel" placeholder="(719) 555-1234" value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(formatUSPhoneInput(e.target.value))} autoComplete="off" />
-                {isPro && (
-                  <div className="sms-consent-note">
-                    By adding a phone number, you confirm this person agreed to receive lesson reminders,
-                    invoice notifications, and account-related texts from Billio.{" "}
-                    <a href="/terms" target="_blank" rel="noreferrer">Read terms</a>.
-                  </div>
-                )}
-              </div>
-              <div className="input-block">
-                <label htmlFor="editParentName">Parent Name</label>
-                  <input id="editParentName" type="text" value={parentName}
-                    onChange={(e) => setParentName(e.target.value)}
-                    autoComplete="off"/>
-              </div>
-              <div className="input-block">
-                <label htmlFor="editParentEmail">Parent Email</label>
-                  <input id="editParentEmail" type="text" value={parentEmail}
-                    onChange={(e) => setParentEmail(e.target.value)}
-                    autoComplete="off"/>
-              </div>
-              <div className="input-block">
-                <label htmlFor="editParentPhone">Parent Phone</label>
-                  <input id="editParentPhone" type="tel" value={parentPhone}
-                    placeholder="(719) 555-1234"
+                <div className="input-block">
+                    <label htmlFor="parentPhone">Parent Phone</label>
+
+                    <input
+                    id="parentPhone"
+                    type="tel"
+                    value={parentPhone}
                     onChange={(e) => setParentPhone(formatUSPhoneInput(e.target.value))}
-                    autoComplete="off"/>
-              </div>
-              <div className="input-block">
-                <label htmlFor="editStudentNotes">Notes</label>
-                <textarea id="editStudentNotes" value={notes} onChange={(e) => setNotes(e.target.value)} />
-              </div>
-              <div className="student-preference-section">
-                <h3>Invoice Preferences</h3>
+                    placeholder="(719) 555-1234"
+                    autoComplete="off"
+                    />
+                    <label className="sms-consent-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={smsConsent}
+                        onChange={(e) => setSmsConsent(e.target.checked)}
+                      />
+
+                      <span>
+                        I confirm that the student or parent agreed to receive transactional SMS
+                        messages from Billio for lesson reminders, invoice notifications, payment
+                        reminders, and account-related updates. Message frequency varies. Message
+                        and data rates may apply. Reply STOP to opt out. Reply HELP for help.{" "}
+                        <a href="/terms" target="_blank" rel="noreferrer">
+                          Terms
+                        </a>{" "}
+                        and{" "}
+                        <a href="/privacy" target="_blank" rel="noreferrer">
+                          Privacy Policy
+                        </a>
+                        .
+                      </span>
+                    </label>
+                </div>
+
                 <div className="input-block">
-                  <label>Invoice Contact</label>
-                  <span className="student-field-note">Choose who should receive invoices for this student.</span>
-                  <div className="student-choice-group">
-                    {["auto", "student", "parent"].map((choice) => (
-                      <button key={choice} type="button"
-                        className={`student-choice ${invoiceContactTarget === choice ? "active" : ""}`}
-                        onClick={() => setInvoiceContactTarget(choice)}>
-                        {choice === "auto" ? "Auto" : choice === "student" ? "Student" : "Parent"}
-                      </button>
-                    ))}
+                    <label htmlFor="studentNotes">Notes</label>
+
+                    <textarea
+                    id="studentNotes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Add notes..."
+                    />
+                </div>
+
+                <div className="student-preference-section">
+                  <h3>Invoice Preferences</h3>
+
+                  <div className="input-block">
+                    <label>Invoice Contact</label>
+                    <span className="student-field-note">
+                      Choose who should receive invoices for this student.
+                    </span>
+
+                    <div className="student-choice-group">
+                      {["auto", "student", "parent"].map((choice) => (
+                        <button
+                          key={choice}
+                          type="button"
+                          className={`student-choice ${
+                            invoiceContactTarget === choice ? "active" : ""
+                          }`}
+                          onClick={() => setInvoiceContactTarget(choice)}
+                        >
+                          {choice === "auto"
+                            ? "Auto"
+                            : choice === "student"
+                            ? "Student"
+                            : "Parent"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="input-block">
+                    <label>Invoice Delivery</label>
+                    <span className="student-field-note">
+                      Auto uses your default invoice delivery setting.
+                    </span>
+
+                    <div className="student-choice-group">
+                      {["auto", "email", "text", "both"].map((choice) => (
+                        <button
+                          key={choice}
+                          type="button"
+                          className={`student-choice ${
+                            invoiceDeliveryMethod === choice ? "active" : ""
+                          }`}
+                          onClick={() => setInvoiceDeliveryMethod(choice)}
+                        >
+                          {choice === "auto"
+                            ? "Auto"
+                            : choice === "email"
+                            ? "Email"
+                            : choice === "text"
+                            ? "Text"
+                            : "Both"}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
-                <div className="input-block">
-                  <label>Invoice Delivery</label>
-                  <span className="student-field-note">Auto uses your default invoice delivery setting.</span>
-                  <DeliveryChoiceGroup />
-                </div>
-              </div>
-              <button type="button" className={`student-active-button ${active ? "active" : "inactive"}`}>
+
+                <button
+                type="button"
+                className={`student-active-button ${active ? "active" : "inactive"}`}
+                // onClick={() => setActive((prev) => !prev)}
+                >
                 <div>
-                  <strong>Student Activity</strong>
-                  <span>{active ? "This student is currently active" : "This student is currently inactive"}</span>
+                    <strong>Student Activity</strong>
+                    <span>
+                    {active
+                        ? "This student is currently active"
+                        : "This student is currently inactive"}
+                    </span>
                 </div>
-                <div className="student-active-pill">{active ? "Active" : "Inactive"}</div>
-              </button>
-              <button type="submit" className="students-save-btn" disabled={isSaving}>
-                {isSaving ? "Saving..." : "Save Changes"}
-              </button>
-              {!active && (
-                <button type="button" className="students-restore-btn"
-                  onClick={() => handleRestoreStudent(editingStudent.id)} disabled={isMoving}>
-                  {isMoving ? "Restoring..." : "Restore Student"}
+
+                <div className="student-active-pill">
+                    {active ? "Active" : "Inactive"}
+                </div>
                 </button>
-              )}
-              <button type="button"
-                className={active ? "students-delete-btn" : "students-permanent-delete-btn"}
-                disabled={isMoving || isDeleting}
-                onClick={() => { active ? handleArchiveStudent(editingStudent.id) : setStudentToDelete(editingStudent); }}>
-                {active ? (isMoving ? "Archiving..." : "Archive Student") : (isDeleting ? "Deleting..." : "Permanently Delete Student")}
-              </button>
-            </form>
+
+                <button type="submit" className="students-save-btn" disabled={isSaving}>
+                    {isSaving ? "Saving..." : "Save Lesson"}
+                </button>
+                </form>
           </div>
         </div>
       )}
-
-      {/* ── Student Details ── */}
-      {selectedStudent && (
-        <div className="students-detail-overlay" onClick={() => setSelectedStudent(null)}>
-          <div className="students-detail-sheet" onClick={(e) => e.stopPropagation()}>
-            <div className="students-detail-header">
-              <div><h2>{selectedStudent.student_name}</h2><span>Student details</span></div>
-              <button type="button" className="students-filter-btn"><FaFilter /></button>
-              <button type="button" className="students-close-btn" onClick={() => setSelectedStudent(null)}>×</button>
+      {showEditStudent && editingStudent && (
+        <div
+            className="students-add-overlay"
+            onClick={closeEditStudent}
+        >
+            <div
+            className="students-add-sheet"
+            onClick={(e) => e.stopPropagation()}
+            >
+            <div className="students-add-header">
+                <h2>Edit Student</h2>
+                <button type="button" onClick={closeEditStudent}>
+                ×
+                </button>
             </div>
+
+            <form onSubmit={handleUpdateStudent} className="students-add-form">
+                <div className="input-block">
+                <label htmlFor="editStudentName">Student Name</label>
+                <input
+                    id="editStudentName"
+                    type="text"
+                    value={studentName}
+                    onChange={(e) => setStudentName(e.target.value)}
+                    required
+                    autoComplete="new-password"
+                    autoCorrect="off"
+                    autoCapitalize="words"
+                    spellCheck={false}
+                />
+                </div>
+
+                <div className="input-block">
+                <label htmlFor="editStudentEmail">Email</label>
+                <input
+                    id="editStudentEmail"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="off"
+                />
+                </div>
+
+                <div className="input-block">
+                  <label htmlFor="editStudentPhone">Phone Number</label>
+                  <input
+                      id="editStudentPhone"
+                      type="tel"
+                      placeholder="(719) 555-1234"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(formatUSPhoneInput(e.target.value))}
+                      autoComplete="off"
+                  />
+                  <div className="sms-consent-note">
+                    By adding a phone number, you confirm this person agreed to receive lesson
+                    reminders, invoice notifications, and account-related texts from Billio.{" "}
+                    <a href="/terms" target="_blank" rel="noreferrer">
+                      Read terms
+                    </a>
+                    .
+                  </div>
+                </div>
+
+                <div className="input-block">
+                <label htmlFor="editParentName">Parent Name</label>
+                <input
+                    id="editParentName"
+                    type="text"
+                    value={parentName}
+                    onChange={(e) => setParentName(e.target.value)}
+                    autoComplete="off"
+                />
+                </div>
+
+                <div className="input-block">
+                  <label htmlFor="editParentEmail">Parent Email</label>
+                  <input
+                  id="editParentEmail"
+                  type="text"
+                  value={parentEmail}
+                  onChange={(e) => setParentEmail(e.target.value)}
+                  autoComplete="off"
+                  />
+                </div>
+
+                <div className="input-block">
+                  <label htmlFor="editParentPhone">Parent Phone</label>
+                  <input
+                      id="editParentPhone"
+                      type="tel"
+                      value={parentPhone}
+                      placeholder="(719) 555-1234"
+                      onChange={(e) => setParentPhone(formatUSPhoneInput(e.target.value))}
+                      autoComplete="off"
+                  />
+                  <div className="sms-consent-note">
+                    By adding a phone number, you confirm this person agreed to receive lesson
+                    reminders, invoice notifications, and account-related texts from Billio.{" "}
+                    <a href="/terms" target="_blank" rel="noreferrer">
+                      Read terms
+                    </a>
+                    .
+                  </div>
+                </div>
+
+                <div className="input-block">
+                <label htmlFor="editStudentNotes">Notes</label>
+                <textarea
+                    id="editStudentNotes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                />
+                </div>
+
+                <div className="student-preference-section">
+                  <h3>Invoice Preferences</h3>
+
+                  <div className="input-block">
+                    <label>Invoice Contact</label>
+                    <span className="student-field-note">
+                      Choose who should receive invoices for this student.
+                    </span>
+
+                    <div className="student-choice-group">
+                      {["auto", "student", "parent"].map((choice) => (
+                        <button
+                          key={choice}
+                          type="button"
+                          className={`student-choice ${
+                            invoiceContactTarget === choice ? "active" : ""
+                          }`}
+                          onClick={() => setInvoiceContactTarget(choice)}
+                        >
+                          {choice === "auto"
+                            ? "Auto"
+                            : choice === "student"
+                            ? "Student"
+                            : "Parent"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="input-block">
+                    <label>Invoice Delivery</label>
+                    <span className="student-field-note">
+                      Auto uses your default invoice delivery setting.
+                    </span>
+
+                    <div className="student-choice-group">
+                      {["auto", "email", "text", "both"].map((choice) => (
+                        <button
+                          key={choice}
+                          type="button"
+                          className={`student-choice ${
+                            invoiceDeliveryMethod === choice ? "active" : ""
+                          }`}
+                          onClick={() => setInvoiceDeliveryMethod(choice)}
+                        >
+                          {choice === "auto"
+                            ? "Auto"
+                            : choice === "email"
+                            ? "Email"
+                            : choice === "text"
+                            ? "Text"
+                            : "Both"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                type="button"
+                className={`student-active-button ${active ? "active" : "inactive"}`}
+                // onClick={() => setActive((prev) => !prev)}
+                >
+                <div>
+                    <strong>Student Activity</strong>
+                    <span>
+                    {active
+                        ? "This student is currently active"
+                        : "This student is currently inactive"}
+                    </span>
+                </div>
+
+                <div className="student-active-pill">
+                    {active ? "Active" : "Inactive"}
+                </div>
+                </button>
+
+                <button type="submit" className="students-save-btn" disabled={isSaving}>
+                {isSaving ? "Saving..." : "Save Changes"}
+                </button>
+
+                {!active && (
+                  <button
+                    type="button"
+                    className="students-restore-btn"
+                    onClick={() => handleRestoreStudent(editingStudent.id)}
+                    disabled={isMoving}
+                  >
+                    {isMoving ? "Restoring..." : "Restore Student"}
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  className={active ? "students-delete-btn" : "students-permanent-delete-btn"}
+                  disabled={isMoving || isDeleting}
+                  onClick={() => {
+                    if (active) {
+                      handleArchiveStudent(editingStudent.id);
+                    } else {
+                      setStudentToDelete(editingStudent);
+                    }
+                  }}
+                >
+                  {active
+                  ? isMoving
+                    ? "Archiving..."
+                    : "Archive Student"
+                  : isDeleting
+                  ? "Deleting..."
+                  : "Permanently Delete Student"}
+                </button>
+            </form>
+            </div>
+        </div>
+      )}
+      {selectedStudent && (
+        <div
+          className="students-detail-overlay"
+          onClick={() => setSelectedStudent(null)}
+        >
+          <div
+            className="students-detail-sheet"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="students-detail-header">
+              <div>
+                <h2>{selectedStudent.student_name}</h2>
+                <span>Student details</span>
+              </div>
+
+              <button
+                type="button"
+                className="students-filter-btn"
+                style={activeFilterCount > 0 ? { background: "#eef2ff", color: "var(--primary-purple)", position: "relative" } : { position: "relative" }}
+                onClick={() => setShowFilterSheet(true)}
+              >
+                <FaFilter />
+                {activeFilterCount > 0 && (
+                  <span style={{
+                    position: "absolute", top: -4, right: -4,
+                    width: 16, height: 16, borderRadius: "50%",
+                    background: "var(--primary-purple)", color: "#fff",
+                    fontSize: 10, fontWeight: 700,
+                    display: "flex", alignItems: "center", justifyContent: "center"
+                  }}>{activeFilterCount}</span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                className="students-close-btn"
+                onClick={() => setSelectedStudent(null)}
+              >
+                ×
+              </button>
+            </div>
+
             <section className="students-detail-section">
-              <div className="students-detail-title"><h3>Lessons</h3><span>{studentLessons.length}</span></div>
-              {studentLessons.length === 0 ? (
-                <p className="students-empty">No lessons for this student yet.</p>
+              <div className="students-detail-title">
+                <h3>Lessons</h3>
+                <span>
+                  {filteredStudentLessons.length}
+                  {filteredStudentLessons.length !== studentLessons.length && ` of ${studentLessons.length}`}
+                </span>
+              </div>
+
+              {filteredStudentLessons.length === 0 ? (
+                <p className="students-empty">
+                  {studentLessons.length === 0 ? "No lessons for this student yet." : "No lessons match your filters."}
+                </p>
               ) : (
                 <div className="students-detail-card">
-                  {studentLessons.map((lesson) => (
-                    <div key={lesson.id}
-                      className={`students-detail-row ${selectedLessonActionId === lesson.id ? "action-mode" : ""}`}
-                      onClick={() => setSelectedLessonActionId(selectedLessonActionId === lesson.id ? null : lesson.id)}>
-                      {selectedLessonActionId === lesson.id ? (
-                        <div className="students-lesson-actions">
-                          <button type="button" className="students-lesson-edit-action"
-                            onClick={(e) => { e.stopPropagation(); openStudentDetails(false); openEditLesson(lesson); }}>Edit</button>
-                          <button type="button" className="students-lesson-delete-action"
-                            onClick={(e) => { e.stopPropagation(); handleDeleteStudentLesson(lesson.id); }}>Delete</button>
+                  {filteredStudentLessons.map((lesson) => (
+                    <div
+                    key={lesson.id}
+                    className={`students-detail-row ${
+                      selectedLessonActionId === lesson.id ? "action-mode" : ""
+                    }`}
+                    onClick={() =>
+                      setSelectedLessonActionId(
+                        selectedLessonActionId === lesson.id ? null : lesson.id
+                      )
+                    }
+                  >
+                    {selectedLessonActionId === lesson.id ? (
+                      <div className="students-lesson-actions">
+                        <button
+                          type="button"
+                          className="students-lesson-edit-action"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openStudentDetails(false)
+                            openEditLesson(lesson);
+                          }}
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          type="button"
+                          className="students-lesson-delete-action"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteStudentLesson(lesson.id);
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div>
+                          <strong>{lesson.lesson_date}</strong>
+                          <span>
+                            {lesson.start_time?.slice(0, 5)} •{" "}
+                            {lesson.duration_minutes} min
+                          </span>
                         </div>
-                      ) : (
-                        <>
-                          <div>
-                            <strong>{lesson.lesson_date}</strong>
-                            <span>{formatTime(lesson.start_time)} • {lesson.duration_minutes} min</span>
-                          </div>
-                          <strong>${Number(lesson.rate || 0).toFixed(2)}</strong>
-                        </>
-                      )}
-                    </div>
+
+                        <strong>${Number(lesson.rate || 0).toFixed(2)}</strong>
+                      </>
+                    )}
+                  </div>
                   ))}
                 </div>
               )}
             </section>
+
             <section className="students-detail-section">
-              <div className="students-detail-title"><h3>Invoices</h3><span>{studentInvoices.length}</span></div>
+              <div className="students-detail-title">
+                <h3>Invoices</h3>
+                <span>{studentInvoices.length}</span>
+              </div>
+
               {studentInvoices.length === 0 ? (
-                <p className="students-empty">No invoices for this student yet.</p>
+                <p className="students-empty">
+                  No invoices for this student yet.
+                </p>
               ) : (
                 <div className="students-detail-card">
                   {studentInvoices.map((invoice) => (
                     <div key={invoice.id} className="students-detail-row">
                       <div>
                         <strong>{invoice.invoice_number || "Invoice"}</strong>
-                        <span>{invoice.status ? invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1) : "No status"}</span>
+                        <span>
+                          {invoice.status
+                            ? invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)
+                            : "No status"}
+                        </span>
                       </div>
+
                       <strong>${Number(invoice.total || 0).toFixed(2)}</strong>
                     </div>
                   ))}
@@ -769,114 +1503,308 @@ function Students() {
           </div>
         </div>
       )}
-
-      {showStudentLimitModal && (
-        <div className="billio-confirm-overlay" onClick={() => setShowStudentLimitModal(false)}>
-          <div className="billio-confirm-card" onClick={(e) => e.stopPropagation()}>
-            <div className="billio-confirm-icon" style={{ background: "#eef2ff", color: "var(--primary-purple)" }}>
-              <FaUsers />
-            </div>
-            <h2>Student Limit Reached</h2>
-            <p>Free plan is limited to <strong>{FREE_STUDENT_LIMIT} active students</strong>. Upgrade to Pro for unlimited students.</p>
-            <div className="billio-confirm-actions">
-              <button type="button" className="billio-cancel-btn" onClick={() => setShowStudentLimitModal(false)}>Cancel</button>
-              <button type="button" className="billio-danger-btn" style={{ background: "var(--primary-purple)" }}
-                onClick={() => { setShowStudentLimitModal(false); navigate("/upgrade"); }}>
-                <FaCrown style={{ fontSize: 15, marginRight: 2 }} /> Upgrade
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {studentToDelete && (
-        <div className="billio-confirm-overlay" onClick={() => setStudentToDelete(null)}>
-          <div className="billio-confirm-card" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="billio-confirm-overlay"
+          onClick={() => setStudentToDelete(null)}
+        >
+          <div
+            className="billio-confirm-card"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="billio-confirm-icon">!</div>
+
             <h2>Permanently Delete?</h2>
-            <p>This will permanently delete <strong>{studentToDelete.student_name}</strong>, including all lessons, invoices, and invoice links. This cannot be undone.</p>
+
+            <p>
+              This will permanently delete{" "}
+              <strong>{studentToDelete.student_name}</strong>, including all lessons,
+              invoices, and invoice links. This cannot be undone.
+            </p>
+
             <div className="billio-confirm-actions">
-              <button type="button" className="billio-cancel-btn" onClick={() => setStudentToDelete(null)}>Cancel</button>
-              <button type="button" className="billio-danger-btn" disabled={isDeleting}
-                onClick={() => { handlePermanentDeleteStudent(studentToDelete.id); setStudentToDelete(null); }}>
+              <button
+                type="button"
+                className="billio-cancel-btn"
+                onClick={() => setStudentToDelete(null)}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="billio-danger-btn"
+                disabled={isDeleting}
+                onClick={() => {
+                  handlePermanentDeleteStudent(studentToDelete.id);
+                  setStudentToDelete(null);
+                }}
+              >
                 {isDeleting ? "Deleting..." : "Delete"}
               </button>
             </div>
           </div>
         </div>
       )}
-
       {showEditLesson && editingLesson && (
-        <div className="add-lesson-overlay" onClick={closeEditLesson}>
-          <div className="add-lesson-sheet" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="add-lesson-overlay"
+          onClick={closeEditLesson}
+        >
+          <div
+            className="add-lesson-sheet"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="add-lesson-header">
               <h2>Edit Lesson</h2>
-              <button type="button" onClick={closeEditLesson}>×</button>
+              <button type="button" onClick={closeEditLesson}>
+                ×
+              </button>
             </div>
+
             <form onSubmit={handleUpdateLesson} className="add-lesson-form">
               <div className="input-block">
                 <label>Lesson Date</label>
-                <input type="date" value={lessonDate} onChange={(e) => setLessonDate(e.target.value)} required />
+                <input
+                  type="date"
+                  value={lessonDate}
+                  onChange={(e) => setLessonDate(e.target.value)}
+                  required
+                />
               </div>
+
               <div className="input-block">
                 <label>Start Time</label>
-                <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required />
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  required
+                />
               </div>
+
               <div className="input-block">
                 <label>Duration</label>
-                <input type="text" inputMode="numeric" value={durationMinutes}
-                  onChange={(e) => setDurationMinutes(e.target.value.replace(/\D/g, ""))} required />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={durationMinutes}
+                  onChange={(e) =>
+                    setDurationMinutes(e.target.value.replace(/\D/g, ""))
+                  }
+                  required
+                />
               </div>
+
               <div className="input-block">
                 <label>Lesson Type</label>
-                <input type="text" value={lessonType} onChange={(e) => setLessonType(e.target.value)} />
+                <input
+                  type="text"
+                  value={lessonType}
+                  onChange={(e) => setLessonType(e.target.value)}
+                />
               </div>
+
               <div className="input-block">
                 <label>Hourly Rate</label>
                 {rateOptions.length > 0 && (
                   <div className="rate-options-row">
                     {visibleRates.map((rate, index) => (
-                      <button key={`${rate.name}-${index}`} type="button"
-                        className={`rate-option-chip ${Number(hourlyRate) === Number(rate.amount) ? "active" : ""}`}
-                        onClick={() => setHourlyRate(String(rate.amount))}>
+                      <button
+                        key={`${rate.name}-${index}`}
+                        type="button"
+                        className={`rate-option-chip ${
+                          Number(hourlyRate) === Number(rate.amount) ? "active" : ""
+                        }`}
+                        onClick={() => setHourlyRate(String(rate.amount))}
+                      >
                         {rate.name} ${Number(rate.amount).toFixed(0)}
                       </button>
                     ))}
+
                     {hiddenRates.length > 0 && (
-                      <button type="button" className="rate-option-chip more-rate-chip" onClick={() => setShowRateSheet(true)}>
+                      <button
+                        type="button"
+                        className="rate-option-chip more-rate-chip"
+                        onClick={() => setShowRateSheet(true)}
+                      >
                         More +{hiddenRates.length}
                       </button>
                     )}
                   </div>
                 )}
-                <input type="text" inputMode="decimal"
+                <input
+                  type="text"
+                  inputMode="decimal"
                   value={hourlyRate ? `$${hourlyRate}` : ""}
-                  onChange={(e) => setHourlyRate(e.target.value.replace(/[^0-9.]/g, ""))}
-                  placeholder="$60" required />
+                  onChange={(e) =>
+                    setHourlyRate(e.target.value.replace(/[^0-9.]/g, ""))
+                  }
+                  placeholder="$60"
+                  required
+                />
               </div>
+
               <div className="input-block">
                 <label>Notes</label>
-                <textarea value={lessonNotes} onChange={(e) => setLessonNotes(e.target.value)} />
+                <textarea
+                  value={lessonNotes}
+                  onChange={(e) => setLessonNotes(e.target.value)}
+                />
               </div>
+
               <button type="submit" className="save-lesson-btn" disabled={isSaving}>
                 {isSaving ? "Saving..." : "Save Changes"}
               </button>
-              <button type="button" className="delete-lesson-btn"
-                onClick={() => handleDeleteStudentLesson(editingLesson.id)}>
+
+              <button
+                type="button"
+                className="delete-lesson-btn"
+                onClick={() => handleDeleteStudentLesson(editingLesson.id)}
+              >
                 {isDeleting ? "Deleting..." : "Delete Lesson"}
               </button>
             </form>
           </div>
         </div>
       )}
+      {showFilterSheet && (
+        <div className="invoice-settings-overlay" onClick={() => setShowFilterSheet(false)}>
+          <div className="invoice-settings-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="invoice-settings-header">
+              <h2>Filter Lessons</h2>
+              <button type="button" onClick={() => setShowFilterSheet(false)}>×</button>
+            </div>
+
+            <section className="invoice-settings-section">
+              <h3>Billing Status</h3>
+              <div className="isf-freq-group" style={{ gridTemplateColumns: "repeat(2,1fr)" }}>
+                {["all","unbilled","billed","paid"].map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className={`isf-freq-btn${filterStatus === s ? " active" : ""}`}
+                    onClick={() => setFilterStatus(s)}
+                  >
+                    {s === "all" ? "All" : s.charAt(0).toUpperCase() + s.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section className="invoice-settings-section under-divider">
+              <h3>Date Range</h3>
+              <div className="isf-freq-group" style={{ gridTemplateColumns: "repeat(2,1fr)" }}>
+                {[
+                  { value: "all", label: "All time" },
+                  { value: "30days", label: "Last 30 days" },
+                  { value: "90days", label: "Last 90 days" },
+                  { value: "year", label: "This year" },
+                  { value: "custom", label: "Custom" },
+                ].map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={`isf-freq-btn${filterRange === value ? " active" : ""}`}
+                    onClick={() => setFilterRange(value)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {filterRange === "custom" && (
+                <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+                  <div className="input-block" style={{ flex: 1, margin: 0 }}>
+                    <label>From</label>
+                    <input
+                      type="date"
+                      value={filterDateFrom}
+                      onChange={(e) => setFilterDateFrom(e.target.value)}
+                      style={{ height: 48, borderRadius: 12, border: "1px solid var(--border)", background: "var(--input-bg)", color: "var(--main-text)", fontSize: 15, padding: "0 14px", width: "100%", boxSizing: "border-box" as any }}
+                    />
+                  </div>
+                  <div className="input-block" style={{ flex: 1, margin: 0 }}>
+                    <label>To</label>
+                    <input
+                      type="date"
+                      value={filterDateTo}
+                      onChange={(e) => setFilterDateTo(e.target.value)}
+                      style={{ height: 48, borderRadius: 12, border: "1px solid var(--border)", background: "var(--input-bg)", color: "var(--main-text)", fontSize: 15, padding: "0 14px", width: "100%", boxSizing: "border-box" as any }}
+                    />
+                  </div>
+                </div>
+              )}
+            </section>
+
+            <section className="invoice-settings-section under-divider">
+              <h3>Sort</h3>
+              <div className="isf-freq-group">
+                <button
+                  type="button"
+                  className={`isf-freq-btn${filterSort === "newest" ? " active" : ""}`}
+                  onClick={() => setFilterSort("newest")}
+                >
+                  Newest first
+                </button>
+                <button
+                  type="button"
+                  className={`isf-freq-btn${filterSort === "oldest" ? " active" : ""}`}
+                  onClick={() => setFilterSort("oldest")}
+                >
+                  Oldest first
+                </button>
+              </div>
+            </section>
+
+            <button
+              type="button"
+              className="invoice-settings-save-btn"
+              onClick={() => setShowFilterSheet(false)}
+            >
+              Apply Filters
+            </button>
+
+            {activeFilterCount > 0 && (
+              <button
+                type="button"
+                className="up-cancel-btn"
+                style={{ marginTop: 8 }}
+                onClick={() => {
+                  setFilterStatus("all");
+                  setFilterRange("all");
+                  setFilterSort("newest");
+                  setFilterDateFrom("");
+                  setFilterDateTo("");
+                }}
+              >
+                Clear all filters
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {showRateSheet && (
-        <div className="rate-sheet-overlay" onClick={() => setShowRateSheet(false)}>
-          <div className="rate-sheet" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="rate-sheet-overlay"
+          onClick={() => setShowRateSheet(false)}
+        >
+          <div
+            className="rate-sheet"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3>Select Rate</h3>
+
             {rateOptions.map((rate, index) => (
-              <button key={`${rate.name}-${index}`} type="button" className="rate-sheet-item"
-                onClick={() => { setHourlyRate(String(rate.amount)); setShowRateSheet(false); }}>
+              <button
+                key={`${rate.name}-${index}`}
+                type="button"
+                className="rate-sheet-item"
+                onClick={() => {
+                  setHourlyRate(String(rate.amount));
+                  setShowRateSheet(false);
+                }}
+              >
                 {rate.name} ${Number(rate.amount).toFixed(0)}
               </button>
             ))}

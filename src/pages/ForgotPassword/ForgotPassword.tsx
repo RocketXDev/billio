@@ -59,7 +59,27 @@ function ForgotPassword() {
                 />
               </div>
 
-              {message && <p className="error-message">{message}</p>}
+              {message && (
+                <div className="billio-confirm-overlay" onClick={() => setMessage("")}>
+                  <div className="billio-confirm-card" onClick={(e) => e.stopPropagation()}>
+                    <div className="billio-confirm-icon" style={{ background: "#dcfce7", color: "#16a34a" }}>
+                      ✓
+                    </div>
+                    <h2>Check your email</h2>
+                    <p>A password reset link has been sent to <strong>{email}</strong>.</p>
+                    <div className="billio-confirm-actions" style={{ gridTemplateColumns: "1fr" }}>
+                      <button
+                        type="button"
+                        className="billio-danger-btn"
+                        style={{ background: "var(--primary-purple)" }}
+                        onClick={() => setMessage("")}
+                      >
+                        Got it
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <button type="submit" disabled={loading}>
                 Send Reset Link

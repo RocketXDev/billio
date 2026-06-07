@@ -15,16 +15,12 @@ import {
   FaWallet,
   FaChevronDown, 
   FaChevronRight,
-  FaCog,
-  FaLock,
-  FaCrown,
+  FaCog
 } from "react-icons/fa";
 import { supabase } from "../lib/supabaseClient";
-import { usePlan } from "../hooks/usePlan";
 
 function Invoices() {
   const navigate = useNavigate();
-  const { isPro } = usePlan();
 
   const [invoices, setInvoices] = useState<any[]>([]);
   const [coachId, setCoachId] = useState("");
@@ -71,6 +67,12 @@ function Invoices() {
   const [invoiceReviewTime, setInvoiceReviewTime] = useState("15:05");
   const [invoiceTimezone, setInvoiceTimezone] = useState("America/Denver");
   const [savingInvoiceSettings, setSavingInvoiceSettings] = useState(false);
+  const [invoiceGenerationFrequency, setInvoiceGenerationFrequency] = useState("weekly");
+  const [invoiceGenerationDayOfMonth, setInvoiceGenerationDayOfMonth] = useState(1);
+  const [invoiceReviewFrequency, setInvoiceReviewFrequency] = useState("weekly");
+  const [invoiceReviewDayOfMonth, setInvoiceReviewDayOfMonth] = useState(1);
+  const [genCalendarMonth, setGenCalendarMonth] = useState(new Date());
+  const [reviewCalendarMonth, setReviewCalendarMonth] = useState(new Date());
 
   // Loading
   const [isSaving, setIsSaving] = useState(false);
@@ -797,7 +799,11 @@ function Invoices() {
         invoice_generation_time,
         invoice_review_day,
         invoice_review_time,
-        invoice_timezone
+        invoice_timezone,
+        invoice_generation_frequency,
+        invoice_generation_day_of_month,
+        invoice_review_frequency,
+        invoice_review_day_of_month
       `)
       .eq("id", currentCoachId)
       .single();
@@ -812,7 +818,17 @@ function Invoices() {
     setInvoiceReviewDay(String(data.invoice_review_day ?? 0));
     setInvoiceReviewTime(data.invoice_review_time || "15:05");
     setInvoiceTimezone(data.invoice_timezone || "America/Denver");
+    setInvoiceGenerationFrequency(data.invoice_generation_frequency ?? "weekly");
+    setInvoiceGenerationDayOfMonth(data.invoice_generation_day_of_month ?? 1);
+    setInvoiceReviewFrequency(data.invoice_review_frequency ?? "weekly");
+    setInvoiceReviewDayOfMonth(data.invoice_review_day_of_month ?? 1);
   }
+
+  const WEEKDAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const DAY_OF_MONTH_OPTIONS = Array.from({ length: 28 }, (_, i) => ({
+    value: i + 1,
+    label: `${i + 1}${i === 0 ? "st" : i === 1 ? "nd" : i === 2 ? "rd" : "th"}`,
+  }));
 
   async function handleSaveInvoiceSettings(e: any) {
     e.preventDefault();
@@ -829,6 +845,10 @@ function Invoices() {
         invoice_review_day: Number(invoiceReviewDay),
         invoice_review_time: invoiceReviewTime,
         invoice_timezone: invoiceTimezone,
+        invoice_generation_frequency: invoiceGenerationFrequency,
+        invoice_generation_day_of_month: invoiceGenerationDayOfMonth,
+        invoice_review_frequency: invoiceReviewFrequency,
+        invoice_review_day_of_month: invoiceReviewDayOfMonth,
       })
       .eq("id", coachId);
 
@@ -840,6 +860,68 @@ function Invoices() {
     }
 
     setShowInvoiceSettings(false);
+  }
+
+
+  function DomCalendar({
+    selectedDay,
+    onSelect,
+    calMonth,
+    setCalMonth,
+    freq,
+  }: {
+    selectedDay: number;
+    onSelect: (day: number) => void;
+    calMonth: Date;
+    setCalMonth: (d: Date) => void;
+    freq: string;
+  }) {
+    const year = calMonth.getFullYear();
+    const month = calMonth.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const cells: (number | null)[] = [];
+    for (let i = 0; i < firstDay; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+    const domOpts = Array.from({ length: 28 }, (_, i) => ({
+      value: i + 1,
+      label: `${i + 1}${i === 0 ? "st" : i === 1 ? "nd" : i === 2 ? "rd" : "th"}`,
+    }));
+    return (
+      <div className="invoice-calendar-floating" style={{ marginTop: 10 }}>
+        <div className="invoice-calendar-header">
+          <button type="button" onClick={() => setCalMonth(new Date(year, month - 1, 1))}>‹</button>
+          <strong>{calMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</strong>
+          <button type="button" onClick={() => setCalMonth(new Date(year, month + 1, 1))}>›</button>
+        </div>
+        <div className="invoice-calendar-weekdays">
+          {["S","M","T","W","T","F","S"].map((d, i) => <span key={i}>{d}</span>)}
+        </div>
+        <div className="invoice-calendar-grid">
+          {cells.map((day, i) => (
+            <button
+              key={i}
+              type="button"
+              className={`invoice-calendar-day${day === selectedDay ? " selected" : ""}`}
+              disabled={!day || day > 28}
+              onClick={() => { if (day && day <= 28) onSelect(day); }}
+            >
+              {day || ""}
+            </button>
+          ))}
+        </div>
+        {selectedDay > 0 && (
+          <p className="isf-dom-note">
+            {freq === "biweekly" ? (
+              <>Runs on the <strong>{domOpts[selectedDay - 1]?.label}</strong> and{" "}
+              <strong>{domOpts[Math.min(selectedDay + 13, 27)]?.label}</strong> of each month</>
+            ) : (
+              <>Runs on the <strong>{domOpts[selectedDay - 1]?.label}</strong> of each month</>
+            )}
+          </p>
+        )}
+      </div>
+    );
   }
 
   if (loading) {
@@ -910,12 +992,6 @@ function Invoices() {
               </div>
             </div>
 
-            {!isPro && (
-              <div className="pro-teaser-banner">
-                <div className="pro-teaser-banner-icon"><FaLock /></div>
-                <p><strong>Free plan:</strong> Email invoices only. Upgrade to Pro for SMS delivery and automatic invoicing.</p>
-              </div>
-            )}
 
             <div className="invoices-list-view">
               <section className="invoices-group">
@@ -981,7 +1057,6 @@ function Invoices() {
                               e.stopPropagation();
                               sendInvoice(invoice.id);
                             }}
-                            title={!isPro ? "Email delivery only on Free plan" : "Send invoice"}
                           >
                             {sendingInvoiceId === invoice.id ? "..." : <FaPaperPlane />}
                           </button>
@@ -1569,92 +1644,183 @@ function Invoices() {
               style={{ position: "relative", width: "100%", maxWidth: 480, display: "flex", flexDirection: "column" }}
               onClick={(e) => e.stopPropagation()}
             >
-              {!isPro && (
-                <div className="invoice-pro-overlay">
-                  <div className="invoice-pro-overlay-card">
-                    <FaLock className="invoice-pro-overlay-icon" />
-                    <strong>Pro feature</strong>
-                    <p>Automatic invoice scheduling is available on Pro.</p>
-                    <button
-                      type="button"
-                      className="invoice-pro-overlay-btn"
-                      onClick={() => { setShowInvoiceSettings(false); navigate("/upgrade"); }}
-                    >
-                      <FaCrown style={{ fontSize: 11, marginRight: 6 }} />
-                      Upgrade to Pro
-                    </button>
-                  </div>
-                </div>
-              )}
-
               <div className="invoice-settings-sheet">
-                <div className="invoice-settings-header">
-                  <h2>Invoice Settings</h2>
-                  <button type="button" onClick={() => setShowInvoiceSettings(false)}>×</button>
-                </div>
+              <div className="invoice-settings-header">
+                <h2>Invoice Settings</h2>
 
-                <form className="invoice-settings-form" onSubmit={handleSaveInvoiceSettings}>
-                  <section className="invoice-settings-section">
-                    <h3>Generate Invoices</h3>
-                    <p>Choose when Billio should automatically create invoices from unbilled lessons.</p>
-                    <div className="input-block">
-                      <label>Day</label>
-                      <select value={invoiceGenerationDay} onChange={(e) => setInvoiceGenerationDay(e.target.value)}>
-                        <option value="0">Sunday</option>
-                        <option value="1">Monday</option>
-                        <option value="2">Tuesday</option>
-                        <option value="3">Wednesday</option>
-                        <option value="4">Thursday</option>
-                        <option value="5">Friday</option>
-                        <option value="6">Saturday</option>
-                      </select>
-                    </div>
-                    <div className="input-block">
-                      <label>Time</label>
-                      <input type="time" value={invoiceGenerationTime} onChange={(e) => setInvoiceGenerationTime(e.target.value)} />
-                    </div>
-                  </section>
-
-                  <section className="invoice-settings-section">
-                    <h3>Send Review Reminder</h3>
-                    <p>Choose when Billio should notify you that invoices are ready to review.</p>
-                    <div className="input-block">
-                      <label>Day</label>
-                      <select value={invoiceReviewDay} onChange={(e) => setInvoiceReviewDay(e.target.value)}>
-                        <option value="0">Sunday</option>
-                        <option value="1">Monday</option>
-                        <option value="2">Tuesday</option>
-                        <option value="3">Wednesday</option>
-                        <option value="4">Thursday</option>
-                        <option value="5">Friday</option>
-                        <option value="6">Saturday</option>
-                      </select>
-                    </div>
-                    <div className="input-block">
-                      <label>Time</label>
-                      <input type="time" value={invoiceReviewTime} onChange={(e) => setInvoiceReviewTime(e.target.value)} />
-                    </div>
-                  </section>
-
-                  <section className="invoice-settings-section">
-                    <h3>Timezone</h3>
-                    <p>Used for invoice automation timing.</p>
-                    <div className="input-block">
-                      <label>Timezone</label>
-                      <select value={invoiceTimezone} onChange={(e) => setInvoiceTimezone(e.target.value)}>
-                        <option value="America/Denver">Mountain Time</option>
-                        <option value="America/Los_Angeles">Pacific Time</option>
-                        <option value="America/Chicago">Central Time</option>
-                        <option value="America/New_York">Eastern Time</option>
-                      </select>
-                    </div>
-                  </section>
-
-                  <button type="submit" className="invoice-settings-save-btn" disabled={savingInvoiceSettings}>
-                    {savingInvoiceSettings ? "Saving..." : "Save Settings"}
-                  </button>
-                </form>
+                <button
+                  type="button"
+                  onClick={() => setShowInvoiceSettings(false)}
+                >
+                  ×
+                </button>
               </div>
+
+              <form className="invoice-settings-form" onSubmit={handleSaveInvoiceSettings}>
+
+                {/* Generate Invoices */}
+                <section className="invoice-settings-section">
+                  <h3>Generate Invoices</h3>
+                  <p>Choose how often Billio automatically creates invoices from unbilled lessons.</p>
+
+                  <div className="isf-freq-group">
+                    {["weekly", "biweekly", "monthly"].map((f) => (
+                      <button
+                        key={f}
+                        type="button"
+                        className={`isf-freq-btn${invoiceGenerationFrequency === f ? " active" : ""}`}
+                        onClick={() => setInvoiceGenerationFrequency(f)}
+                      >
+                        {f.charAt(0).toUpperCase() + f.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+
+                  {invoiceGenerationFrequency === "weekly" && (
+                    <div className="input-block" style={{ marginTop: 14 }}>
+                      <label>Day of week</label>
+                      <select
+                        value={invoiceGenerationDay}
+                        onChange={(e) => setInvoiceGenerationDay(e.target.value)}
+                      >
+                        {WEEKDAYS.map((d, i) => (
+                          <option key={d} value={i}>{d}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {invoiceGenerationFrequency === "biweekly" && (
+                    <div className="input-block" style={{ marginTop: 14 }}>
+                      <label>First occurrence (repeats 14 days later)</label>
+                      <DomCalendar
+                        selectedDay={invoiceGenerationDayOfMonth}
+                        onSelect={setInvoiceGenerationDayOfMonth}
+                        calMonth={genCalendarMonth}
+                        setCalMonth={setGenCalendarMonth}
+                        freq="biweekly"
+                      />
+                    </div>
+                  )}
+
+                  {invoiceGenerationFrequency === "monthly" && (
+                    <div className="input-block" style={{ marginTop: 14 }}>
+                      <label>Day of month</label>
+                      <DomCalendar
+                        selectedDay={invoiceGenerationDayOfMonth}
+                        onSelect={setInvoiceGenerationDayOfMonth}
+                        calMonth={genCalendarMonth}
+                        setCalMonth={setGenCalendarMonth}
+                        freq="monthly"
+                      />
+                    </div>
+                  )}
+
+                  <div className="input-block" style={{ marginTop: 14 }}>
+                    <label>Time</label>
+                    <input
+                      type="time"
+                      value={invoiceGenerationTime}
+                      onChange={(e) => setInvoiceGenerationTime(e.target.value)}
+                    />
+                  </div>
+                </section>
+
+                {/* Review Reminder */}
+                <section className="invoice-settings-section">
+                  <h3>Send Review Reminder</h3>
+                  <p>Choose when Billio notifies you that invoices are ready to review.</p>
+
+                  <div className="isf-freq-group">
+                    {["weekly", "biweekly", "monthly"].map((f) => (
+                      <button
+                        key={f}
+                        type="button"
+                        className={`isf-freq-btn${invoiceReviewFrequency === f ? " active" : ""}`}
+                        onClick={() => setInvoiceReviewFrequency(f)}
+                      >
+                        {f.charAt(0).toUpperCase() + f.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+
+                  {invoiceReviewFrequency === "weekly" && (
+                    <div className="input-block" style={{ marginTop: 14 }}>
+                      <label>Day of week</label>
+                      <select
+                        value={invoiceReviewDay}
+                        onChange={(e) => setInvoiceReviewDay(e.target.value)}
+                      >
+                        {WEEKDAYS.map((d, i) => (
+                          <option key={d} value={i}>{d}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {invoiceReviewFrequency === "biweekly" && (
+                    <div className="input-block" style={{ marginTop: 14 }}>
+                      <label>First occurrence (repeats 14 days later)</label>
+                      <DomCalendar
+                        selectedDay={invoiceReviewDayOfMonth}
+                        onSelect={setInvoiceReviewDayOfMonth}
+                        calMonth={reviewCalendarMonth}
+                        setCalMonth={setReviewCalendarMonth}
+                        freq="biweekly"
+                      />
+                    </div>
+                  )}
+
+                  {invoiceReviewFrequency === "monthly" && (
+                    <div className="input-block" style={{ marginTop: 14 }}>
+                      <label>Day of month</label>
+                      <DomCalendar
+                        selectedDay={invoiceReviewDayOfMonth}
+                        onSelect={setInvoiceReviewDayOfMonth}
+                        calMonth={reviewCalendarMonth}
+                        setCalMonth={setReviewCalendarMonth}
+                        freq="monthly"
+                      />
+                    </div>
+                  )}
+
+                  <div className="input-block" style={{ marginTop: 14 }}>
+                    <label>Time</label>
+                    <input
+                      type="time"
+                      value={invoiceReviewTime}
+                      onChange={(e) => setInvoiceReviewTime(e.target.value)}
+                    />
+                  </div>
+                </section>
+
+                {/* Timezone */}
+                <section className="invoice-settings-section">
+                  <h3>Timezone</h3>
+                  <p>Used for all invoice automation timing.</p>
+                  <div className="input-block">
+                    <label>Timezone</label>
+                    <select
+                      value={invoiceTimezone}
+                      onChange={(e) => setInvoiceTimezone(e.target.value)}
+                    >
+                      <option value="America/Denver">Mountain Time</option>
+                      <option value="America/Los_Angeles">Pacific Time</option>
+                      <option value="America/Chicago">Central Time</option>
+                      <option value="America/New_York">Eastern Time</option>
+                    </select>
+                  </div>
+                </section>
+
+                <button
+                  type="submit"
+                  className="invoice-settings-save-btn"
+                  disabled={savingInvoiceSettings}
+                >
+                  {savingInvoiceSettings ? "Saving..." : "Save Settings"}
+                </button>
+              </form>
+            </div>
             </div>
           </div>
         )}

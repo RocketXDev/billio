@@ -19,6 +19,7 @@ import {
 import { supabase } from "../../lib/supabaseClient";
 import { useNavigate } from "react-router-dom";
 import { usePlan } from "../../hooks/usePlan";
+import { useSettings } from "../../hooks/useSettings";
 
 function Lessons() {
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
@@ -50,6 +51,12 @@ function Lessons() {
   const [isSaving, setIsSaving] = useState(false); 
   const [isDeleting, setIsDeleting] = useState(false);
   const [lessonsLoading, setLessonsLoading] = useState(false);
+
+  const { settings } = useSettings();
+
+  useEffect(() => {
+    setDurationMinutes(String(settings.defaultLessonDuration));
+  }, [settings.defaultLessonDuration]);
 
 
   // Calendar 
@@ -273,15 +280,13 @@ function Lessons() {
 
   function formatTime(time: string) {
     if (!time) return "";
-
     const [hourString, minuteString] = time.split(":");
     const date = new Date();
     date.setHours(Number(hourString), Number(minuteString), 0);
-
     return date.toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
-      hour12: true,
+      hour12: settings.timeFormat === "12h",
     });
   }
 

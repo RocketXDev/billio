@@ -15,6 +15,7 @@ import {
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
 import { usePlan } from "../../hooks/usePlan";
+import { useSettings } from "../../hooks/useSettings";
 
 function Students() {
   const navigate = useNavigate();
@@ -64,6 +65,7 @@ function Students() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
+  const { settings } = useSettings();
 
   useEffect(() => {
     loadStudents();
@@ -360,6 +362,18 @@ function Students() {
         })}
       </div>
     );
+  }
+
+  function formatTime(time: string) {
+    if (!time) return "";
+    const [hourString, minuteString] = time.split(":");
+    const date = new Date();
+    date.setHours(Number(hourString), Number(minuteString), 0);
+    return date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: settings.timeFormat === "12h",
+    });
   }
 
   if (loading) {
@@ -724,7 +738,7 @@ function Students() {
                         <>
                           <div>
                             <strong>{lesson.lesson_date}</strong>
-                            <span>{lesson.start_time?.slice(0, 5)} • {lesson.duration_minutes} min</span>
+                            <span>{formatTime(lesson.start_time)} • {lesson.duration_minutes} min</span>
                           </div>
                           <strong>${Number(lesson.rate || 0).toFixed(2)}</strong>
                         </>

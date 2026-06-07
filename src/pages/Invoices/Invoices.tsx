@@ -21,6 +21,7 @@ import {
   FaCog
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
+import { useSettings } from "../../hooks/useSettings";
 
 function Invoices() {
   const navigate = useNavigate();
@@ -81,6 +82,8 @@ function Invoices() {
   // Loading
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const { settings } = useSettings();
 
   useEffect(() => {
     loadInvoices();
@@ -263,6 +266,11 @@ function Invoices() {
 
       const invoiceNumber = generateInvoiceNumber();
 
+      const today = new Date().toLocaleDateString("en-CA");
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + settings.defaultDueDateDays);
+      const dueDateStr = dueDate.toLocaleDateString("en-CA");
+
       const { data: invoiceData, error: invoiceError } = await supabase
         .from("invoices")
         .insert({
@@ -272,7 +280,8 @@ function Invoices() {
           status: "unbilled",
           subtotal: total,
           total,
-          issue_date: new Date().toISOString().split("T")[0],
+          issue_date: today,
+          due_date: dueDateStr,
           notes: null,
         })
         .select(`
@@ -626,13 +635,8 @@ function Invoices() {
 
   function generateInvoiceNumber() {
     const year = new Date().getFullYear();
-
-    const randomCode = Math.random()
-      .toString(36)
-      .substring(2, 6)
-      .toUpperCase();
-
-    return `INV-${year}-${randomCode}`;
+    const randomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `${settings.invoicePrefix}-${year}-${randomCode}`;
   }
 
   function getInvoiceStatusFromLessons(lessons: any[]) {

@@ -1,7 +1,5 @@
-import './Dashboard.css';
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
-import { usePlan } from "../../hooks/usePlan";
 import {
   FaBars,
   FaBell,
@@ -12,11 +10,15 @@ import {
   FaUsers,
   FaFileInvoiceDollar,
   FaEllipsisH,
-  FaTrash,
-  FaLock,
-  FaCrown,
+  FaTrash
 } from "react-icons/fa";
 import { useNavigate, useLocation } from "react-router-dom";
+import { usePlan } from "../../hooks/usePlan";
+import { useSettings } from "../../hooks/useSettings";
+import { InstallBanner, InstallGuide } from "../../components/InstallGuide/InstallGuide";
+import { useInstallPrompt } from "../../hooks/useInstallPrompt";
+import { createInstallNotification } from "../../lib/InstallNotification";
+import './Dashboard.css';
 
 function Dashboard() {
   const [fullName, setFullName] = useState("");
@@ -69,15 +71,17 @@ function Dashboard() {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const { isPro, plan } = usePlan();
+  const { plan } = usePlan();
+  const { settings } = useSettings();
+  const { shouldShow, remindLater } = useInstallPrompt();
   const [showUpgradeToast, setShowUpgradeToast] = useState(false);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get("upgraded") === "1") {
       setShowUpgradeToast(true);
       setTimeout(() => setShowUpgradeToast(false), 4000);
-      // Clean the URL
       window.history.replaceState({}, "", "/dashboard");
     }
   }, [location.search]);
@@ -122,6 +126,9 @@ function Dashboard() {
       setFullName(profileData.full_name);
       setRole(profileData.role);
       setProfileId(profileData.id);
+
+      // Create install prompt notification once
+      await createInstallNotification(profileData.id);
 
       // Create onboarding notification only once
       const { error: onboardingNotificationError } = await supabase
@@ -266,6 +273,10 @@ function Dashboard() {
   async function markNotificationAsRead(notification: any) {
     if (notification.type === "onboarding") {
       setShowOnboarding(true);
+    }
+    if (notification.type === "install_prompt") {
+      setShowInstallGuide(true);
+      setNotificationsOpen(false);
     }
 
     const { error } = await supabase
@@ -973,12 +984,6 @@ function Dashboard() {
   
   return (
     <div className="mb-dashboard">
-      {showUpgradeToast && (
-        <div className="upgrade-success-toast">
-          <FaCrown style={{ color: "#f59e0b", fontSize: 16 }} />
-          Welcome to Pro!
-        </div>
-      )}
       <div className="mb-dashboard-wrapper">
         <header className="mb-dashboard-header">
           <div className="mb-dashboard-left">
@@ -1010,6 +1015,13 @@ function Dashboard() {
           <p className="dashboard-welcome">
             Welcome back{fullName ? `, ${fullName.split(" ")[0]}` : ""} 👋
           </p>
+
+          {shouldShow && (
+            <InstallBanner
+              onOpenGuide={() => setShowInstallGuide(true)}
+              onDismiss={remindLater}
+            />
+          )}
 
           <button className="add-lesson-card" onClick={openAddLesson}>
             <div className="add-circle">
@@ -1286,12 +1298,7 @@ function Dashboard() {
 
               <div>
                 <strong>{fullName || "Billio User"}</strong>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
-                  <span>Coach account</span>
-                  <span className={`plan-badge ${plan}`}>
-                    {isPro ? <><FaCrown style={{ fontSize: 9 }} /> Pro</> : "Free"}
-                  </span>
-                </div>
+                <span>Coach account</span>
               </div>
             </div>
 
@@ -1340,21 +1347,6 @@ function Dashboard() {
               >
                 Settings
               </a>
-
-              {!isPro && (
-                <a
-                  onClick={() => {
-                    navigate("/upgrade");
-                    setMenuOpen(false);
-                  }}
-                  style={{ color: "var(--primary-purple)", fontWeight: 700 }}
-                >
-                  <span className="plan-badge pro" style={{ fontSize: 13, padding: "8px 14px" }}>
-                    <FaCrown style={{ fontSize: 11, marginRight: 6, color: "#f59e0b" }} />
-                    Upgrade to Pro
-                  </span>
-                </a>
-              )}
             </nav>
 
             <button className="side-menu-logout" onClick={handleLogout}>
@@ -1873,6 +1865,10 @@ function Dashboard() {
           </div>
         </div>
       )}
+      {showInstallGuide && (
+        <InstallGuide onClose={() => setShowInstallGuide(false)} />
+      )}
+
       {showRateSheet && (
           <div
             className="rate-sheet-overlay"

@@ -24,6 +24,7 @@ import Support from "./pages/Support/Support";
 import More from "./pages/More/More";
 import CoachingTimer from "./pages/CoachingTimer/CoachingTimer";
 import About from "./pages/About/About";
+import Settings from "./pages/Settings/Settings";
 
 function App() {
 
@@ -110,7 +111,7 @@ function App() {
         element={
           <ProtectedRoute>
             <DesktopLayout>
-              <ComingSoon />
+              <Settings />
             </DesktopLayout>
           </ProtectedRoute>
         }

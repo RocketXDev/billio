@@ -17,7 +17,7 @@ import { usePlan } from "../../hooks/usePlan";
 import { useSettings } from "../../hooks/useSettings";
 import { InstallBanner, InstallGuide } from "../../components/InstallGuide/InstallGuide";
 import { useInstallPrompt } from "../../hooks/useInstallPrompt";
-import { createInstallNotification } from "../../lib/InstallNotification";
+import { createInstallNotification } from "../../lib/installNotification";
 import './Dashboard.css';
 
 function Dashboard() {

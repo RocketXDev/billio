@@ -1,11 +1,26 @@
 .timer-page {
   min-height: 100vh;
   padding: 22px;
-  background: #f4f6fb;
+  background: var(--main-bg);
 }
 
 .timer-header {
-  margin-bottom: 22px;
+  margin-bottom: 15px;
+}
+
+.timer-header .logo-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-self: center;
+  flex-direction: row;
+  width: 100%;
+  padding: 0px 5px 15px;
+  border-bottom: 1px solid rgb(220, 218, 218)
+}
+
+.timer-header .logo-wrapper > img {
+  width: 88px;
+  height: auto
 }
 
 .timer-header h1 {
@@ -16,7 +31,7 @@
 
 .timer-header p {
   color: #6b7280;
-  margin: 8px 0 0;
+  margin: 2px 0 0;
 }
 
 .timer-card {
@@ -181,6 +196,17 @@
 .timer-modal-save {
   background: #4338ca;
   color: white;
+}
+.timer-restoring {
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--secondary-text);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 @keyframes timerModalIn {

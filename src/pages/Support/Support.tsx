@@ -1,6 +1,8 @@
 import './Support.css';
 import { useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { useNavigate } from "react-router-dom";
+import { FaArrowLeft } from "react-icons/fa";
 
 function Support() {
   const [name, setName] = useState("");
@@ -11,6 +13,8 @@ function Support() {
   const [sending, setSending] = useState(false);
   const [supportSuccess, setSupportSuccess] = useState(false);
   const [supportError, setSupportError] = useState("");
+
+  const navigate = useNavigate();
 
   async function handleSendSupport(e: any) {
     e.preventDefault();
@@ -53,6 +57,12 @@ function Support() {
 
   return (
     <div className="support-page">
+      <div className="support-header">
+        <button type="button" className="up-back-btn" onClick={() => navigate(-1)}>
+          <FaArrowLeft />
+        </button>
+        <img src="/logo.png" alt="Billio" className="about-logo" />
+      </div>
       <div className="support-card">
         <h1>Contact Support</h1>
 

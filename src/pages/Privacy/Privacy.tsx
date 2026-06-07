@@ -1,7 +1,20 @@
 import './Privacy.css';
+import { useNavigate } from "react-router-dom";
+import { FaArrowLeft } from "react-icons/fa";
+
+
 function Privacy() {
+
+  const navigate = useNavigate();
+
   return (
     <div className="legal-page">
+      <div className="legal-header">
+        <button type="button" className="up-back-btn" onClick={() => navigate(-1)}>
+          <FaArrowLeft />
+        </button>
+        <img src="/logo.png" alt="Billio" className="about-logo" />
+      </div>
       <div className="legal-card">
         <h1>Privacy Policy</h1>
         <p className="legal-updated">Last updated: June 3, 2026</p>

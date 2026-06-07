@@ -1,6 +1,7 @@
 import './Invoices.css';
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { usePlan } from "../../hooks/usePlan";
 import {
   FaHome,
   FaCalendarAlt,
@@ -10,7 +11,8 @@ import {
   FaPlus,
   FaPaperPlane,
   FaEdit,
-  FaFilter,
+  FaLock,
+  FaCrown,
   FaReceipt,
   FaClock,
   FaWallet,
@@ -22,6 +24,7 @@ import { supabase } from "../../lib/supabaseClient";
 
 function Invoices() {
   const navigate = useNavigate();
+  const { isPro } = usePlan();
 
   const [invoices, setInvoices] = useState<any[]>([]);
   const [coachId, setCoachId] = useState("");
@@ -826,10 +829,6 @@ function Invoices() {
   }
 
   const WEEKDAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-  const DAY_OF_MONTH_OPTIONS = Array.from({ length: 28 }, (_, i) => ({
-    value: i + 1,
-    label: `${i + 1}${i === 0 ? "st" : i === 1 ? "nd" : i === 2 ? "rd" : "th"}`,
-  }));
 
   async function handleSaveInvoiceSettings(e: any) {
     e.preventDefault();
@@ -863,6 +862,16 @@ function Invoices() {
     setShowInvoiceSettings(false);
   }
 
+  const paidThisWeek = invoices
+    .filter((invoice) => {
+      if (invoice.status !== "paid") return false;
+      const invoiceDate = new Date(invoice.issue_date || invoice.created_at);
+      const now = new Date();
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      return invoiceDate >= weekAgo;
+    })
+    .reduce((total, invoice) => total + Number(invoice.total || 0), 0);
+
 
   function DomCalendar({
     selectedDay,
@@ -888,6 +897,7 @@ function Invoices() {
       value: i + 1,
       label: `${i + 1}${i === 0 ? "st" : i === 1 ? "nd" : i === 2 ? "rd" : "th"}`,
     }));
+
     return (
       <div className="invoice-calendar-floating" style={{ marginTop: 10 }}>
         <div className="invoice-calendar-header">
@@ -973,9 +983,14 @@ function Invoices() {
 
               <div className="invoice-stat-card green-stat">
                 <div className="invoice-stat-icon"><FaFileInvoiceDollar /></div>
-                <span>Paid total</span>
-                <strong>{formatMoney(paidThisMonth)}</strong>
-                <p>{invoices.filter((i) => i.status === "paid").length} invoices</p>
+                <span>Paid this week</span>
+                <strong>{formatMoney(paidThisWeek)}</strong>
+                <p>{invoices.filter((i) => {
+                  if (i.status !== "paid") return false;
+                  const d = new Date(i.issue_date || i.created_at);
+                  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                  return d >= weekAgo;
+                }).length} invoices</p>
               </div>
 
               <div className="invoice-stat-card orange-stat">
@@ -992,6 +1007,13 @@ function Invoices() {
                 <p>{formatMoney(pendingInvoices.reduce((t, i) => t + Number(i.total || 0), 0))}</p>
               </div>
             </div>
+
+            {!isPro && (
+              <div className="pro-teaser-banner" style={{ margin: "16px 0 0" }}>
+                <div className="pro-teaser-banner-icon"><FaLock /></div>
+                <p><strong>Free plan:</strong> Email invoices only. Upgrade to Pro for SMS delivery and automatic invoicing.</p>
+              </div>
+            )}
 
 
             <div className="invoices-list-view">
@@ -1645,6 +1667,24 @@ function Invoices() {
               style={{ position: "relative", width: "100%", maxWidth: 480, display: "flex", flexDirection: "column" }}
               onClick={(e) => e.stopPropagation()}
             >
+              {!isPro && (
+                <div className="invoice-pro-overlay">
+                  <div className="invoice-pro-overlay-card">
+                    <FaLock className="invoice-pro-overlay-icon" />
+                    <strong>Pro feature</strong>
+                    <p>Automatic invoice scheduling is available on Pro.</p>
+                    <button
+                      type="button"
+                      className="invoice-pro-overlay-btn"
+                      onClick={() => { setShowInvoiceSettings(false); navigate("/upgrade"); }}
+                    >
+                      <FaCrown style={{ fontSize: 11, marginRight: 6 }} />
+                      Upgrade to Pro
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="invoice-settings-sheet">
               <div className="invoice-settings-header">
                 <h2>Invoice Settings</h2>

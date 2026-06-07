@@ -1,12 +1,27 @@
 .more-page {
   min-height: 100vh;
-  padding: 22px;
-  background: #f4f6fb;
+  padding: 22px 22px 80px 22px;
+  background: var(--main-bg);
   color: #111827;
 }
 
 .more-header {
-  margin-bottom: 26px;
+  margin-bottom: 15px;
+}
+
+.more-header .logo-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-self: center;
+  flex-direction: row;
+  width: 100%;
+  padding: 0px 5px 15px;
+  border-bottom: 1px solid rgb(220, 218, 218)
+}
+
+.more-header .logo-wrapper > img {
+  width: 88px;
+  height: auto
 }
 
 .more-header h1 {
@@ -124,6 +139,17 @@
 
 .more-list-item span {
   font-weight: 700;
+}
+
+.more-card-locked {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.more-icon-locked {
+  background: #f1f5f9;
+  color: #94a3b8;
 }
 
 @media (min-width: 900px) {

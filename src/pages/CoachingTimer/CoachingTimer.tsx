@@ -24,6 +24,7 @@ export default function CoachingTimer() {
   const [message, setMessage] = useState("");
   const [showSavePrompt, setShowSavePrompt] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [timerRestoring, setTimerRestoring] = useState(true);
 
   const navigate = useNavigate();
 
@@ -58,24 +59,25 @@ export default function CoachingTimer() {
 
   async function loadCoach() {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) return;
+    if (userError || !user) { setTimerRestoring(false); return; }
 
     const { data: profileData } = await supabase
       .from("profiles")
       .select("id")
       .eq("user_id", user.id)
       .single();
-    if (!profileData) return;
+    if (!profileData) { setTimerRestoring(false); return; }
 
     const { data: coachData } = await supabase
       .from("coaches")
       .select("id, default_hourly_rate")
       .eq("profile_id", profileData.id)
       .single();
-    if (!coachData) return;
+    if (!coachData) { setTimerRestoring(false); return; }
 
     setCoachId(coachData.id);
     setDefaultRate(coachData.default_hourly_rate ?? null);
+    setTimerRestoring(false);
   }
 
   async function loadCoachStudents() {
@@ -241,11 +243,14 @@ export default function CoachingTimer() {
   return (
     <div className="timer-page">
         <div className="timer-header">
+          <div className="timer-header logo-wrapper">
             <button type="button" className="up-back-btn" onClick={() => navigate(-1)}>
-                <FaArrowLeft />
+              <FaArrowLeft />
             </button>
-            <h1>Lesson Timer</h1>
-            <p>Track a lesson live and save it when finished.</p>
+            <img src="/logo.png" alt="Billio" />
+          </div>
+          <h1>Lesson Timer</h1>
+          <p>Track a lesson live and save it when finished.</p>
         </div>
 
       <div className="timer-card">
@@ -292,7 +297,13 @@ export default function CoachingTimer() {
           <input value={today} disabled />
         </div>
 
-        <div className="timer-display">{formatTime(elapsedMs)}</div>
+        <div className="timer-display">
+          {timerRestoring ? (
+            <div className="billio-mini-spinner" style={{ margin: "0 auto" }} />
+          ) : (
+            formatTime(elapsedMs)
+          )}
+        </div>
 
         <div className="timer-progress-track">
           <div

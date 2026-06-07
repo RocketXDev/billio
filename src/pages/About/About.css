@@ -1,0 +1,204 @@
+.about-page {
+  min-height: 100vh;
+  background: var(--main-bg);
+  padding: 20px;
+}
+
+/* Header */
+.about-header {
+  padding: 0px 5px 0;
+}
+
+.about-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgb(220, 218, 218);
+}
+
+.about-logo {
+  width: 88px;
+  height: auto;
+}
+
+/* Hero */
+.about-hero {
+  padding: 28px 18px 0;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.about-hero-badge {
+  display: inline-block;
+  background: #eef2ff;
+  color: var(--primary-purple);
+  border: 1px solid var(--shadow);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+
+.about-hero-title {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.8px;
+  color: var(--main-text);
+  line-height: 1.2;
+  margin: 0 0 12px;
+}
+
+.about-hero-subtitle {
+  font-size: 15px;
+  color: var(--secondary-text);
+  line-height: 1.65;
+  margin: 0;
+}
+
+/* Mission card */
+.about-mission-card {
+  margin: 24px 18px 0;
+  max-width: 520px;
+  margin-left: auto;
+  margin-right: auto;
+  background: linear-gradient(135deg, var(--primary-purple), var(--secondary-purple));
+  border-radius: 24px;
+  padding: 22px 20px;
+  box-shadow: 0 12px 30px rgba(59, 51, 217, 0.22);
+}
+
+.about-mission-card h2 {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 12px;
+}
+
+.about-mission-card p {
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 14px;
+  line-height: 1.65;
+  margin: 0 0 10px;
+}
+
+.about-mission-card p:last-child {
+  margin-bottom: 0;
+}
+
+/* Sections */
+.about-section {
+  padding: 24px 18px 0;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.about-section h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--main-text);
+  margin: 0 0 14px;
+  letter-spacing: -0.3px;
+}
+
+/* Features list */
+.about-features {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 0 16px;
+}
+
+.about-feature-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--main-text);
+}
+
+.about-feature-item:last-child {
+  border-bottom: none;
+}
+
+.about-feature-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: #eef2ff;
+  color: var(--primary-purple);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+/* Info card */
+.about-info-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 0 16px;
+}
+
+.about-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.about-info-row:last-child {
+  border-bottom: none;
+}
+
+.about-info-row span {
+  color: var(--secondary-text);
+}
+
+.about-info-row strong {
+  color: var(--main-text);
+  font-weight: 600;
+}
+
+/* Contact button */
+.about-contact-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 13px 20px;
+  border-radius: 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  color: var(--primary-purple);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.about-contact-btn:hover {
+  background: #eef2ff;
+}
+
+/* Footer */
+.about-footer {
+  margin: 32px 18px 0;
+  max-width: 520px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+  font-size: 12px;
+  color: var(--secondary-text);
+  line-height: 1.7;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}

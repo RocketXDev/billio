@@ -490,7 +490,7 @@ function Students() {
           <div className="nav-item" onClick={() => navigate("/lessons")}><FaCalendarAlt /><span>Lessons</span></div>
           <div className="nav-item active" onClick={() => navigate("/students")}><FaUsers /><span>Students</span></div>
           <div className="nav-item" onClick={() => navigate("/invoices")}><FaFileInvoiceDollar /><span>Invoices</span></div>
-          <div className="nav-item" onClick={() => navigate("/settings")}><FaEllipsisH /><span>More</span></div>
+          <div className="nav-item" onClick={() => navigate("/more")}><FaEllipsisH /><span>More</span></div>
         </nav>
       </div>
 

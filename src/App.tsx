@@ -23,6 +23,7 @@ import DesktopLayout from "./components/DesktopLayout/DesktopLayout";
 import Support from "./pages/Support/Support";
 import More from "./pages/More/More";
 import CoachingTimer from "./pages/CoachingTimer/CoachingTimer";
+import About from "./pages/About/About";
 
 function App() {
 
@@ -40,6 +41,7 @@ function App() {
       <Route path="/terms" element={<Terms />} />
       <Route path="/sms-opt-in" element={<SmsOptIn />} />
       <Route path="/support" element={<Support />} />
+      <Route path="/about" element={<About />} />
 
       <Route
         path="/app"

@@ -422,7 +422,7 @@
   background: var(--primary-purple);
   color: white;
   font-size: 17px;
-  font-weight: 650;
+  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -442,7 +442,7 @@
   background: #eef2ff;
   border: 1px solid var(--shadow);
   color: var(--primary-purple);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 600;
   cursor: pointer;
   display: flex;

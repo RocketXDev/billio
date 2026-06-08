@@ -25,6 +25,7 @@ import More from "./pages/More/More";
 import CoachingTimer from "./pages/CoachingTimer/CoachingTimer";
 import About from "./pages/About/About";
 import Settings from "./pages/Settings/Settings";
+import MarkInvoicePaid from "./pages/MarkInvoicePaid/MarkInvoicePaid";
 
 function App() {
 
@@ -43,6 +44,7 @@ function App() {
       <Route path="/sms-opt-in" element={<SmsOptIn />} />
       <Route path="/support" element={<Support />} />
       <Route path="/about" element={<About />} />
+      <Route path="/mark-invoice-paid" element={<MarkInvoicePaid />} />
 
       <Route
         path="/app"

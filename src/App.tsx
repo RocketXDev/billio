@@ -27,6 +27,7 @@ import About from "./pages/About/About";
 import Settings from "./pages/Settings/Settings";
 import MarkInvoicePaid from "./pages/MarkInvoicePaid/MarkInvoicePaid";
 import RecurringLessons from "./pages/RecurringLessons/RecurringLessons";
+import EarningsDashboard from "./pages/EarningsDashboard/EarningsDashboard";
 
 function App() {
 
@@ -148,6 +149,17 @@ function App() {
           <ProtectedRoute>
             <DesktopLayout>
               <RecurringLessons />
+            </DesktopLayout>
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/earnings-dashboard" 
+        element={
+          <ProtectedRoute>
+            <DesktopLayout>
+              <EarningsDashboard />
             </DesktopLayout>
           </ProtectedRoute>
         } 

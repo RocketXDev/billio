@@ -1,0 +1,412 @@
+/* EARNINGS DASHBOARD — matches Invoices.css style */
+
+.ed-page {
+  width: 100%;
+  min-height: 100vh;
+  background: var(--main-bg);
+  overflow-x: hidden;
+  padding-bottom: 95px;
+}
+
+/* ── Header ── */
+.ed-header {
+  padding: 20px 18px 0;
+  max-width: 520px;
+  margin: 0 auto;
+  margin-bottom: 0;
+}
+
+.ed-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.ed-title {
+  color: var(--main-text);
+  font-size: 30px;
+  font-weight: 700;
+  margin: 0 0 4px;
+  letter-spacing: -1px;
+}
+
+.ed-subtitle {
+  margin: 0 0 20px;
+  color: var(--secondary-text);
+  font-size: 14px;
+}
+
+/* ── Body ── */
+.ed-body {
+  padding: 0 18px;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+/* ── Section label ── */
+.ed-section-label {
+  display: flex;
+  align-items: center;
+  font-size: 20px;
+  font-weight: 650;
+  color: var(--main-text);
+  margin: 24px 0 10px;
+}
+
+/* ── Stat grid (3 col) ── */
+.ed-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.ed-stat-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 16px 12px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.ed-stat-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  font-size: 15px;
+}
+
+.ed-stat-card span {
+  display: block;
+  color: var(--secondary-text);
+  font-size: 12px;
+}
+
+.ed-stat-card strong {
+  display: block;
+  color: var(--main-text);
+  font-weight: 600;
+  margin-top: 5px;
+  letter-spacing: -0.3px;
+  line-height: 1.1;
+  font-size: 18px;
+  /* Add: */
+  font-size: clamp(18px, 3vw, 22px);
+  word-break: break-all;
+}
+
+.ed-stat-card p {
+  color: var(--primary-purple);
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+/* ── Outstanding ── */
+.ed-outstanding-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.ed-outstanding-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 16px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ed-outstanding-icon {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.ed-outstanding-card strong {
+  display: block;
+  color: var(--main-text);
+  font-weight: 600;
+  margin-top: 5px;
+  letter-spacing: -0.3px;
+  line-height: 1.1;
+  font-size: 18px;
+  /* Add: */
+  font-size: clamp(18px, 3vw, 22px);
+  word-break: break-all;
+}
+
+.ed-outstanding-card span {
+  display: block;
+  color: var(--secondary-text);
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+/* ── Month detail banner ── */
+.ed-month-detail {
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 18px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  animation: fadeOverlay 0.15s ease;
+}
+
+.ed-month-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.ed-month-detail-header span {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--primary-purple);
+}
+
+.ed-month-detail-header button {
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: none;
+  background: white;
+  color: var(--secondary-text);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.ed-month-detail-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.ed-month-detail-stats > div {
+  text-align: center;
+}
+
+.ed-month-detail-stats span {
+  display: block;
+  font-size: 11px;
+  color: var(--primary-purple);
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.ed-month-detail-stats strong {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--main-text);
+  letter-spacing: -0.3px;
+}
+
+/* ── Bar chart ── */
+.ed-chart-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 16px 12px 14px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.ed-bar-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  height: 120px;
+}
+
+.ed-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  gap: 6px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.ed-bar-track {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  background: var(--main-bg);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.ed-bar-fill {
+  width: 100%;
+  background: #c7d2fe;
+  border-radius: 6px 6px 0 0;
+  transition: height 0.4s ease, background 0.2s;
+  min-height: 0;
+}
+
+.ed-bar-fill.current { background: var(--primary-purple); }
+.ed-bar-fill.selected { background: #4f46e5; outline: 2px solid var(--primary-purple); }
+
+.ed-bar-label {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--secondary-text);
+  text-align: center;
+}
+
+.ed-bar-label.current { color: var(--primary-purple); font-weight: 700; }
+.ed-bar-label.selected { color: var(--primary-purple); font-weight: 700; }
+
+/* ── Generic group card (students, types) ── */
+.ed-group-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 0 16px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+/* ── Student rows ── */
+.ed-student-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.ed-student-row:last-child { border-bottom: none; }
+
+.ed-rank {
+  font-size: 18px;
+  min-width: 26px;
+  text-align: center;
+  margin-top: 2px;
+}
+
+.ed-student-info { flex: 1; min-width: 0; }
+
+.ed-name-amount-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+.ed-name-amount-row strong {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--main-text);
+}
+
+.ed-name-amount-row span {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary-purple);
+}
+
+.ed-bar-track-thin {
+  width: 100%;
+  height: 5px;
+  background: var(--main-bg);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.ed-bar-fill-thin {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-purple), #818cf8);
+  border-radius: 999px;
+  transition: width 0.5s ease;
+}
+
+.ed-student-info p {
+  font-size: 12px;
+  color: var(--secondary-text);
+  margin: 0;
+}
+
+/* ── Type rows ── */
+.ed-type-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.ed-type-row:last-child { border-bottom: none; }
+
+.ed-type-dot {
+  width: 10px;
+  height: 10px;
+  min-width: 10px;
+  border-radius: 50%;
+  margin-top: 4px;
+}
+
+/* ── Insights grid ── */
+.ed-insights-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.ed-insight-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 18px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.ed-insight-card span {
+  display: block;
+  color: var(--secondary-text);
+  font-size: 13px;
+}
+
+.ed-insight-card strong {
+  display: block;
+  color: var(--main-text);
+  font-size: 22px;
+  font-weight: 600;
+  margin-top: 6px;
+  letter-spacing: -0.5px;
+  /* Add these: */
+  word-break: break-all;
+  font-size: clamp(18px, 3.5vw, 22px);
+}
+
+.ed-insight-card p {
+  font-size: 13px;
+  margin-top: 6px;
+  color: var(--primary-purple);
+}

@@ -16,7 +16,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 20px 25px 20px;
-    border-bottom: 1px solid rgb(220, 218, 218);
+    border-bottom: 1px solid var(--border);
 }
 
 .settings-title {

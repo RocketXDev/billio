@@ -224,7 +224,7 @@ export default function LandingPage() {
 
       {/* ── Footer ── */}
       <footer className="landing-footer">
-        <div className="landing-footer-logo">Billio</div>
+        <img src="./logo.png" alt="Billio" className="landing-footer-logo" />
         <div className="landing-footer-links">
           <Link to="/privacy">Privacy Policy</Link>
           <Link to="/terms">Terms of Service</Link>

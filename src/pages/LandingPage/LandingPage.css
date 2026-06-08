@@ -16,7 +16,7 @@
 .landing-nav-bar {
   width: 100%;
   background: var(--main-bg);
-  border-bottom: 1px solid rgb(206, 205, 205);
+  border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
   z-index: 50;
@@ -370,7 +370,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 800;
+  font-weight: 700;
   font-size: 18px;
   flex-shrink: 0;
 }
@@ -470,7 +470,7 @@
 
 .price {
   font-size: 44px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--main-text);
   letter-spacing: -2px;
   margin: 0;
@@ -516,14 +516,14 @@
 
 .pricing-btn {
   width: 100%;
-  min-height: 48px;
+  min-height: 50px;
   border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   text-decoration: none;
   font-weight: 600;
-  font-size: 15px;
+  font-size: 16px;
   transition: opacity 0.15s;
 }
 
@@ -574,9 +574,9 @@
 }
 
 .landing-footer-logo {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--primary-purple);
+  width: 80px;
+  height: auto;
+  display: block;
   margin-bottom: 10px;
 }
 
@@ -794,7 +794,7 @@
 
   .landing-footer-logo {
     margin-bottom: 0;
-    font-size: 20px;
+    width: 90px;
   }
 
   .landing-footer-links {

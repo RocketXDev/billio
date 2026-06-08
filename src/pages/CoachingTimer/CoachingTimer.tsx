@@ -12,6 +12,9 @@ const MAX_TIMER_MS = MAX_TIMER_HOURS * 60 * 60 * 1000;
 export default function CoachingTimer() {
   const [coachId, setCoachId] = useState<string | null>(null);
   const [defaultRate, setDefaultRate] = useState<number | null>(null);
+  const [hourlyRate, setHourlyRate] = useState<string>("");
+  const [rateOptions, setRateOptions] = useState<any[]>([]);
+  const [showRateSheet, setShowRateSheet] = useState(false);
 
   // Same pattern as Lessons.tsx
   const [coachStudents, setCoachStudents] = useState<any[]>([]);
@@ -70,13 +73,25 @@ export default function CoachingTimer() {
 
     const { data: coachData } = await supabase
       .from("coaches")
-      .select("id, default_hourly_rate")
+      .select("id, default_hourly_rate, custom_rates")
       .eq("profile_id", profileData.id)
       .single();
     if (!coachData) { setTimerRestoring(false); return; }
 
     setCoachId(coachData.id);
     setDefaultRate(coachData.default_hourly_rate ?? null);
+
+    const options: any[] = [];
+    if (coachData.default_hourly_rate) {
+      options.push({ name: "Default", amount: Number(coachData.default_hourly_rate) });
+    }
+    if (Array.isArray(coachData.custom_rates)) {
+      options.push(...coachData.custom_rates);
+    }
+    setRateOptions(options);
+    if (coachData.default_hourly_rate) {
+      setHourlyRate(String(coachData.default_hourly_rate));
+    }
     setTimerRestoring(false);
   }
 
@@ -109,6 +124,7 @@ export default function CoachingTimer() {
       setSelectedStudentId(timer.studentId || null);
       setStartTime(timer.startTime);
       setElapsedMs(Math.min(elapsed, MAX_TIMER_MS));
+      if (timer.hourlyRate) setHourlyRate(timer.hourlyRate);
       if (elapsed < MAX_TIMER_MS) {
         setTimerRunning(true);
       } else {
@@ -123,15 +139,16 @@ export default function CoachingTimer() {
       return;
     }
     const now = Date.now();
-        setStartTime(now);
-        setElapsedMs(0);
-        setTimerRunning(true);
-        setMessage("");
-        localStorage.setItem("billio_active_timer", JSON.stringify({
-        studentName: studentName.trim(),
-        studentId: selectedStudentId,
-        startTime: now,
-        date: today,
+    setStartTime(now);
+    setElapsedMs(0);
+    setTimerRunning(true);
+    setMessage("");
+    localStorage.setItem("billio_active_timer", JSON.stringify({
+      studentName: studentName.trim(),
+      studentId: selectedStudentId,
+      startTime: now,
+      date: today,
+      hourlyRate: hourlyRate,
     }));
   }
 
@@ -149,42 +166,42 @@ export default function CoachingTimer() {
     localStorage.removeItem("billio_active_timer");
   }
 
-    async function getOrCreateStudent(): Promise<string | null> {
-        if (!coachId) return null;
-        const cleanName = studentName.trim();
+  async function getOrCreateStudent(): Promise<string | null> {
+    if (!coachId) return null;
+    const cleanName = studentName.trim();
 
-        if (selectedStudentId) return selectedStudentId;
+    if (selectedStudentId) return selectedStudentId;
 
-        const existingLink = coachStudents.find((link: any) =>
-            link.students?.student_name?.trim().toLowerCase() === cleanName.toLowerCase()
-        );
-        if (existingLink) return existingLink.student_id;
+    const existingLink = coachStudents.find((link: any) =>
+      link.students?.student_name?.trim().toLowerCase() === cleanName.toLowerCase()
+    );
+    if (existingLink) return existingLink.student_id;
 
-        const { data: newStudent, error: studentError } = await supabase
-            .from("students")
-            .insert({ student_name: cleanName, active: true })
-            .select()
-            .single();
+    const { data: newStudent, error: studentError } = await supabase
+      .from("students")
+      .insert({ student_name: cleanName, active: true })
+      .select()
+      .single();
 
-        if (studentError || !newStudent) {
-            setMessage(`Could not create student: ${studentError?.message}`);
-            return null;
-        }
-
-        const { error: linkError } = await supabase
-            .from("coach_students")
-            .insert({ coach_id: coachId, student_id: newStudent.id });
-
-        if (linkError) {
-            setMessage(`Could not link student: ${linkError?.message}`);
-            return null;
-        }
-
-        await loadCoachStudents();
-        return newStudent.id;
+    if (studentError || !newStudent) {
+      setMessage(`Could not create student: ${studentError?.message}`);
+      return null;
     }
 
-    async function saveLesson() {
+    const { error: linkError } = await supabase
+      .from("coach_students")
+      .insert({ coach_id: coachId, student_id: newStudent.id });
+
+    if (linkError) {
+      setMessage(`Could not link student: ${linkError?.message}`);
+      return null;
+    }
+
+    await loadCoachStudents();
+    return newStudent.id;
+  }
+
+  async function saveLesson() {
     if (!coachId || !startTime || saving) return;
     setSaving(true);
 
@@ -194,32 +211,31 @@ export default function CoachingTimer() {
     const durationMinutes = Math.max(1, Math.round(elapsedMs / 60000));
     const startedAt = new Date(startTime);
     const timeString = startedAt.toTimeString().slice(0, 5);
-    const rate = defaultRate
-        ? parseFloat(((defaultRate * durationMinutes) / 60).toFixed(2))
-        : null;
+    const parsedRate = hourlyRate ? Number(hourlyRate) : (defaultRate ?? 0);
+    const rate = parseFloat(((parsedRate * durationMinutes) / 60).toFixed(2));
 
     const { error } = await supabase.from("lessons").insert({
-        coach_id: coachId,
-        student_id: studentId,
-        lesson_date: today,
-        start_time: timeString,
-        duration_minutes: durationMinutes,
-        billing_status: "unbilled",
-        hourly_rate: defaultRate,
-        rate,
-        notes: "Created from lesson timer",
+      coach_id: coachId,
+      student_id: studentId,
+      lesson_date: today,
+      start_time: timeString,
+      duration_minutes: durationMinutes,
+      billing_status: "unbilled",
+      hourly_rate: parsedRate,
+      rate,
+      notes: "Created from lesson timer",
     });
 
     setSaving(false);
 
     if (error) {
-        setMessage(`Could not save lesson: ${error.message}`);
-        return;
+      setMessage(`Could not save lesson: ${error.message}`);
+      return;
     }
 
     setMessage("Lesson saved successfully.");
     clearTimer();
-    }
+  }
 
   function formatTime(ms: number) {
     const s = Math.floor(ms / 1000);
@@ -242,16 +258,16 @@ export default function CoachingTimer() {
 
   return (
     <div className="timer-page">
-        <div className="timer-header">
-          <div className="timer-header logo-wrapper">
-            <button type="button" className="up-back-btn" onClick={() => navigate(-1)}>
-              <FaArrowLeft />
-            </button>
-            <img src="/logo.png" alt="Billio" />
-          </div>
-          <h1>Lesson Timer</h1>
-          <p>Track a lesson live and save it when finished.</p>
+      <div className="timer-header">
+        <div className="timer-header logo-wrapper">
+          <button type="button" className="up-back-btn" onClick={() => navigate(-1)}>
+            <FaArrowLeft />
+          </button>
+          <img src="/logo.png" alt="Billio" />
         </div>
+        <h1>Lesson Timer</h1>
+        <p>Track a lesson live and save it when finished.</p>
+      </div>
 
       <div className="timer-card">
 
@@ -272,7 +288,6 @@ export default function CoachingTimer() {
               setSelectedStudentId(null);
             }}
           />
-
           {studentMatches.length > 0 && !selectedStudentId && !timerRunning && (
             <div className="student-suggestions">
               {studentMatches.map((link: any) => (
@@ -295,6 +310,41 @@ export default function CoachingTimer() {
         <div className="input-block">
           <label>Date</label>
           <input value={today} disabled />
+        </div>
+
+        <div className="input-block">
+          <label>Hourly Rate</label>
+          {rateOptions.length > 0 && !timerRunning && (
+            <div className="rate-options-row">
+              {rateOptions.slice(0, 3).map((rate, index) => (
+                <button
+                  key={`${rate.name}-${index}`}
+                  type="button"
+                  className={`rate-option-chip ${Number(hourlyRate) === Number(rate.amount) ? "active" : ""}`}
+                  onClick={() => setHourlyRate(String(rate.amount))}
+                >
+                  {rate.name} ${Number(rate.amount).toFixed(0)}
+                </button>
+              ))}
+              {rateOptions.length > 3 && (
+                <button
+                  type="button"
+                  className="rate-option-chip more-rate-chip"
+                  onClick={() => setShowRateSheet(true)}
+                >
+                  More +{rateOptions.length - 3}
+                </button>
+              )}
+            </div>
+          )}
+          <input
+            type="text"
+            inputMode="decimal"
+            value={hourlyRate ? `$${hourlyRate}` : ""}
+            disabled={timerRunning}
+            placeholder="$60"
+            onChange={(e) => setHourlyRate(e.target.value.replace(/[^0-9.]/g, ""))}
+          />
         </div>
 
         <div className="timer-display">
@@ -337,6 +387,11 @@ export default function CoachingTimer() {
                 {formatTime(elapsedMs)} with{" "}
                 <strong>{studentName || "this student"}</strong>
               </p>
+              {hourlyRate && (
+                <p style={{ fontSize: 14, color: "var(--secondary-text)", marginTop: 4 }}>
+                  Rate: <strong>${hourlyRate}/hr</strong>
+                </p>
+              )}
               <div className="timer-modal-actions">
                 <button
                   type="button"
@@ -360,7 +415,26 @@ export default function CoachingTimer() {
             </div>
           </div>
         )}
+
       </div>
+
+      {showRateSheet && (
+        <div className="rate-sheet-overlay" onClick={() => setShowRateSheet(false)}>
+          <div className="rate-sheet" onClick={(e) => e.stopPropagation()}>
+            <h3>Select Rate</h3>
+            {rateOptions.map((rate, index) => (
+              <button
+                key={`${rate.name}-${index}`}
+                type="button"
+                className="rate-sheet-item"
+                onClick={() => { setHourlyRate(String(rate.amount)); setShowRateSheet(false); }}
+              >
+                {rate.name} ${Number(rate.amount).toFixed(0)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

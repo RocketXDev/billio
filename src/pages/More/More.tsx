@@ -105,9 +105,9 @@ export default function More() {
             <FaChevronRight />
           </Link>
 
-          <Link to="/pricing" className="more-list-item">
+          <Link to="/upgrade" className="more-list-item">
             <FaCrown />
-            <span>Subscription / Upgrade</span>
+            <span>Subscription</span>
             <FaChevronRight />
           </Link>
 

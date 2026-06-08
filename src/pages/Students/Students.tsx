@@ -903,7 +903,7 @@ function Students() {
             <span>Invoices</span>
           </div>
 
-          <div className="nav-item" onClick={() => navigate("/settings")}>
+          <div className="nav-item" onClick={() => navigate("/more")}>
             <FaEllipsisH />
             <span>More</span>
           </div>

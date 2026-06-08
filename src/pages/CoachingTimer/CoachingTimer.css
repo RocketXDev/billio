@@ -25,12 +25,15 @@
 
 .timer-header h1 {
   margin: 0;
-  font-size: 32px;
-  letter-spacing: -0.04em;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  color: var(--main-text);
 }
 
 .timer-header p {
-  color: #6b7280;
+  color: var(--secondary-text);
+  font-size: 14px;
   margin: 2px 0 0;
 }
 
@@ -44,16 +47,22 @@
 }
 
 .timer-card label {
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--main-text);
 }
 
 .timer-card input {
   width: 100%;
-  height: 48px;
+  height: 50px;
   border-radius: 14px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
   padding: 0 14px;
-  font-size: 1rem;
+  font-size: 16px;
+  font-family: inherit;
+  color: var(--main-text);
+  outline: none;
 }
 
 .timer-student-wrapper {
@@ -96,12 +105,12 @@
 
 .timer-start-btn,
 .timer-stop-btn {
-  height: 54px;
+  height: 52px;
   border: none;
   border-radius: 16px;
   color: white;
-  font-size: 1.15rem;
-  font-weight: 550;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .timer-start-btn {
@@ -127,9 +136,10 @@
 }
 
 .timer-actions button {
-  height: 46px;
+  height: 48px;
   border-radius: 14px;
   border: none;
+  font-size: 15px;
   font-weight: 600;
 }
 
@@ -165,12 +175,16 @@
 
 .timer-modal h2 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 20px;
+  font-weight: 650;
+  color: var(--main-text);
+  letter-spacing: -0.3px;
 }
 
 .timer-modal p {
   margin: 10px 0 22px;
-  color: #6b7280;
+  color: var(--secondary-text);
+  font-size: 14px;
   line-height: 1.5;
 }
 
@@ -181,11 +195,11 @@
 }
 
 .timer-modal-actions button {
-  height: 46px;
+  height: 48px;
   border: none;
-  font-size: 18px;
+  font-size: 15px;
   border-radius: 14px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .timer-modal-cancel {
@@ -221,22 +235,3 @@
   }
 }
 
-@media (min-width: 900px) {
-  .timer-page {
-    max-width: 760px;
-    margin: 0 auto;
-    padding: 42px;
-  }
-
-  .timer-header h1 {
-    font-size: 2.7rem;
-  }
-
-  .timer-card {
-    padding: 34px;
-  }
-
-  .timer-display {
-    font-size: 4rem;
-  }
-}

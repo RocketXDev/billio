@@ -2,8 +2,8 @@ button {
   margin: 0 auto;
   width: 90%;
   height: 50px;
-  font-size: 20px;
-  font-weight: 400;
+  font-size: 16px;
+  font-weight: 600;
   color: var(--card-bg);
   background-color: var(--primary-purple);
   border-radius: 10px;

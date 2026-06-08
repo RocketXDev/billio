@@ -40,9 +40,9 @@
 }
 
 .rl-title {
-  font-size: 26px;
+  font-size: 30px;
   font-weight: 700;
-  letter-spacing: -0.6px;
+  letter-spacing: -1px;
   color: var(--main-text);
   margin: 0 0 6px;
 }
@@ -80,13 +80,13 @@
 }
 
 .rl-empty-btn {
-  height: 48px;
-  padding: 0 22px;
+  height: 52px;
+  padding: 0 24px;
   border-radius: 14px;
   background: var(--primary-purple);
   color: #fff;
-  font-size: 14px;
-  font-weight: 550;
+  font-size: 16px;
+  font-weight: 600;
   border: none;
   cursor: pointer;
 }
@@ -208,7 +208,7 @@
   border: 1px solid var(--border);
   background: var(--input-bg);
   color: var(--secondary-text);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.12s;

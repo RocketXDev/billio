@@ -170,25 +170,3 @@
   color: var(--main-text);
 }
 
-/* Desktop */
-@media (min-width: 900px) {
-  .more-page {
-    padding: 42px;
-    max-width: 720px;
-    margin: 0 auto;
-  }
-
-  .more-header h1 {
-    font-size: 36px;
-  }
-
-  .more-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
-  }
-
-  .more-card {
-    padding: 22px;
-  }
-}

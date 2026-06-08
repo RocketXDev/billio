@@ -27,7 +27,9 @@
 .legal-card h1 {
   margin: 0 0 8px;
   color: var(--main-text);
-  font-size: 32px;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
 }
 
 .legal-updated {

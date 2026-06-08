@@ -197,7 +197,7 @@
   display: block;
   color: var(--main-text);
   font-size: 15px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .lesson-page-time span {
@@ -210,8 +210,8 @@
 .lesson-page-info strong {
   display: block;
   color: var(--main-text);
-  font-size: 16px;
-  font-weight: 650;
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .lesson-page-info span {
@@ -834,9 +834,9 @@
   gap: 10px;
   border: none;
   border-radius: 16px;
-  height: 52px;
-  font-size: 19px;
-  font-weight:550;
+  height: 50px;
+  font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
 }
 

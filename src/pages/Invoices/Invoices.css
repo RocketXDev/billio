@@ -738,6 +738,7 @@
 .invoice-lesson-option strong {
   display: block;
   font-size: 15px;
+  font-weight: 600;
   color: var(--main-text);
 }
 
@@ -766,6 +767,10 @@
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+}
+
+.billing-status {
+  font-weight: 550;
 }
 
 .billing-status.unbilled { color: #dc2626; }

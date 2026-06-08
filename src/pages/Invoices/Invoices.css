@@ -198,30 +198,6 @@
   border-bottom: none;
 }
 
-.invoice-section {
-  margin-top: 20px;
-}
-
-.invoice-section-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.invoice-section-title h2 {
-  margin: 0;
-  color: var(--main-text);
-  font-size: 20px;
-  font-weight: 750;
-}
-
-.invoice-section-title span {
-  color: var(--secondary-text);
-  font-size: 13px;
-  font-weight: 700;
-}
-
 .invoices-avatar {
   width: 48px;
   height: 48px;
@@ -266,6 +242,8 @@
   align-items: center;
   justify-content: center;
   font-size: 15px;
+  border: none;
+  cursor: pointer;
 }
 
 .invoice-edit-btn {
@@ -282,6 +260,31 @@
 
 .invoice-edit-btn:hover { background: #e2e8f0; }
 .invoice-send-btn:hover { background: #dbe4ff; }
+
+/* ── Invoice status pill (click to cycle) ── */
+.invoice-status-pill {
+  display: inline-flex;
+  align-items: center;
+  margin: 4px 0 0;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  height: auto;
+  width: auto;
+  transition: opacity 0.15s, transform 0.1s;
+  line-height: 1;
+  background: none;
+}
+
+.invoice-status-pill:active  { transform: scale(0.95); opacity: 0.8; }
+.invoice-status-pill:disabled { opacity: 0.5; cursor: not-allowed; }
+.invoice-status-pill.unbilled { background: #fff7ed; color: #f59e0b; border-color: #fde68a; }
+.invoice-status-pill.billed   { background: #eff6ff; color: #3b82f6; border-color: #bfdbfe; }
+.invoice-status-pill.paid     { background: #ecfdf5; color: #22c55e; border-color: #bbf7d0; }
 
 /* SUCCESS / ERROR OVERLAYS */
 
@@ -335,9 +338,7 @@
   line-height: 1.5;
 }
 
-.invoice-success-card p strong {
-  color: var(--main-text);
-}
+.invoice-success-card p strong { color: var(--main-text); }
 
 .invoice-success-card button {
   width: 100%;
@@ -348,6 +349,8 @@
   color: white;
   font-size: 16px;
   font-weight: 750;
+  border: none;
+  cursor: pointer;
 }
 
 .invoice-error-icon {
@@ -399,7 +402,6 @@
 
 .invoice-readonly-number {
   width: 100%;
-  margin-bottom: 0px;
 }
 
 .invoice-readonly-number span {
@@ -451,12 +453,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  border: none;
+  cursor: pointer;
 }
 
 .invoices-add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   width: 100%;
   min-width: 0;
-  gap: 16px;
 }
 
 .invoices-add-form .input-block {
@@ -497,17 +503,8 @@
   font-size: 16px;
   appearance: none;
   -webkit-appearance: none;
-  text-align: left;
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
   -webkit-text-fill-color: var(--main-text);
   background-image: none;
-}
-
-.invoices-add-form input[type="date"]::-webkit-date-and-time-value {
-  text-align: left;
-  color: var(--main-text);
 }
 
 .invoices-add-form input[type="date"]::-webkit-calendar-picker-indicator {
@@ -548,9 +545,7 @@
   animation: billioSpin 0.8s linear infinite;
 }
 
-@keyframes billioSpin {
-  to { transform: rotate(360deg); }
-}
+@keyframes billioSpin { to { transform: rotate(360deg); } }
 
 .invoice-sending-card h2 {
   margin: 0 0 8px;
@@ -597,6 +592,7 @@
   font-size: 16px;
   font-weight: 400;
   box-sizing: border-box;
+  cursor: pointer;
 }
 
 /* FLOATING CALENDAR */
@@ -609,7 +605,7 @@
   border: 1px solid var(--border);
   background: white;
   box-sizing: border-box;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08), 0 4px 12px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
   animation: invoiceCalendarExpand 0.22s ease;
 }
 
@@ -624,7 +620,7 @@
 
 @keyframes invoiceCalendarCollapse {
   from { opacity: 1; transform: translateY(0); max-height: 420px; }
-  to   { opacity: 0; transform: translateY(8px); max-height: 0; padding-top: 0; padding-bottom: 0; margin-top: 0; }
+  to   { opacity: 0; transform: translateY(8px); max-height: 0; padding: 0; margin-top: 0; }
 }
 
 .invoice-calendar-header {
@@ -641,12 +637,14 @@
   margin: 0;
   padding: 0;
   border-radius: 50%;
+  border: none;
   background: #eef2ff;
   color: var(--primary-purple);
   font-size: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
 }
 
 .invoice-calendar-header strong {
@@ -662,9 +660,7 @@
   gap: 5px;
 }
 
-.invoice-calendar-weekdays {
-  margin-bottom: 8px;
-}
+.invoice-calendar-weekdays { margin-bottom: 8px; }
 
 .invoice-calendar-weekdays span {
   text-align: center;
@@ -673,11 +669,7 @@
   font-weight: 650;
 }
 
-.invoice-calendar-grid {
-  gap: 9px;
-  width: 100%;
-  min-width: 0;
-}
+.invoice-calendar-grid { gap: 9px; width: 100%; min-width: 0; }
 
 .invoice-calendar-day {
   width: 38px;
@@ -686,6 +678,7 @@
   margin: 0 auto;
   padding: 0;
   border-radius: 50%;
+  border: none;
   background: var(--input-bg);
   color: var(--main-text);
   font-size: 14px;
@@ -693,18 +686,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
 }
 
-.invoice-calendar-day:disabled { opacity: 0; }
+.invoice-calendar-day:disabled { opacity: 0; pointer-events: none; }
 .invoice-calendar-day.selected { background: var(--primary-purple); color: white; }
 .invoice-calendar-day.in-range { background: #eef2ff; color: var(--primary-purple); }
 
 /* LESSON PICKER */
 
-.invoice-lessons-section {
-  width: 100%;
-  min-width: 0;
-}
+.invoice-lessons-section { width: 100%; min-width: 0; }
 
 .invoice-lessons-section h3 {
   color: var(--main-text);
@@ -738,17 +729,11 @@
   align-items: center;
   gap: 12px;
   text-align: left;
+  cursor: pointer;
 }
 
-.invoice-lesson-option.selected {
-  background: #eef2ff;
-  border-color: #c7d2fe;
-}
-
-.invoice-lesson-option > div {
-  flex: 1;
-  min-width: 0;
-}
+.invoice-lesson-option.selected { background: #eef2ff; border-color: #c7d2fe; }
+.invoice-lesson-option > div { flex: 1; min-width: 0; }
 
 .invoice-lesson-option strong {
   display: block;
@@ -777,7 +762,6 @@
   font-weight: 700;
 }
 
-.invoice-load-lessons-btn,
 .invoices-save-btn {
   width: 100%;
   max-width: 100%;
@@ -794,17 +778,19 @@
   margin-top: 4px;
   background: #fee2e2;
   color: #dc2626;
+  border: none;
+  border-radius: 16px;
+  height: 52px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .invoices-delete-btn:hover { background: #fecaca; }
 
 /* INVOICE ARCHIVE */
 
-.invoice-archive {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
+.invoice-archive { display: flex; flex-direction: column; gap: 12px; }
 
 .invoice-month-group {
   background: var(--card-bg);
@@ -825,38 +811,13 @@
   color: var(--main-text);
   font-weight: 600;
   text-align: left;
+  cursor: pointer;
 }
 
-.invoice-month-toggle {
-  padding: 16px 18px;
-  font-size: 16px;
-}
+.invoice-month-toggle { padding: 16px 18px; font-size: 16px; }
 
-.invoice-toggle-label {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.invoice-toggle-label svg {
-  width: 14px;
-  min-width: 14px;
-  height: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  position: relative;
-  top: -1px;
-}
-
-.invoice-week-list {
-  padding: 0 12px 12px;
-}
-
-.invoice-week-group {
-  border-top: 1px solid var(--border);
-}
+.invoice-week-list { padding: 0 12px 12px; }
+.invoice-week-group { border-top: 1px solid var(--border); }
 
 .invoice-week-toggle {
   padding: 14px 6px;
@@ -871,9 +832,7 @@
   font-weight: 700;
 }
 
-.invoice-week-group .invoices-group-card {
-  margin-bottom: 12px;
-}
+.invoice-week-group .invoices-group-card { margin-bottom: 12px; }
 
 /* INVOICE SETTINGS */
 
@@ -921,101 +880,18 @@
   background: var(--input-bg);
   color: var(--main-text);
   font-size: 24px;
-  z-index: 150;
-}
-
-.isf-freq-group {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.isf-freq-btn {
-  width: 100%;
-  height: 44px;
-  margin: 0;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: var(--input-bg);
-  color: var(--secondary-text);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.isf-freq-btn.active {
-  background: var(--primary-purple);
-  color: #fff;
-  border-color: var(--primary-purple);
-}
-
-.isf-dom-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
-  margin-top: 6px;
-}
-
-.isf-dom-btn {
-  width: 100%;
-  aspect-ratio: 1;
-  margin: 0;
-  padding: 0;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--input-bg);
-  color: var(--main-text);
-  font-size: 13px;
-  font-weight: 600;
+  border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.12s ease;
-}
-
-button.isf-dom-btn {
-  width: 40px;
-  height: 40px;
-}
-
-.isf-dom-btn.active {
-  background: var(--primary-purple);
-  color: #fff;
-  border-color: var(--primary-purple);
-  box-shadow: 0 4px 10px rgba(59, 51, 217, 0.22);
-}
-
-.isf-dom-btn:hover:not(.active) {
-  background: #eef2ff;
-  border-color: var(--shadow);
-  color: var(--primary-purple);
-}
-
-.isf-dom-note {
-  font-size: 13px;
-  color: var(--secondary-text);
-  line-height: 1.5;
-  padding: 10px 14px;
-  background: #eef2ff;
-  border-radius: 12px;
-  border: 1px solid var(--shadow);
-}
-
-p.isf-dom-note {
-  margin-top: 15px !important;
-}
-
-.isf-dom-note strong {
-  color: var(--primary-purple);
 }
 
 .invoice-settings-section {
   padding-bottom: 20px;
   border-bottom: 1px solid var(--border);
   width: 100%;
+  margin-bottom: 20px;
 }
 
 .invoice-settings-section h3 {
@@ -1056,8 +932,14 @@ p.isf-dom-note {
   color: white;
   font-size: 16px;
   font-weight: 800;
+  border: none;
+  cursor: pointer;
 }
 
-.invoice-settings-save-btn:disabled {
-  opacity: 0.65;
-}
+.invoice-settings-save-btn:disabled { opacity: 0.65; }
+
+/* CALENDAR BILLING LABEL */
+.calendar-billing-label { display: inline-flex; font-size: 13px; font-weight: 600; }
+.calendar-billing-label.unbilled { color: #f59e0b; }
+.calendar-billing-label.billed   { color: #3b82f6; }
+.calendar-billing-label.paid     { color: #22c55e; }

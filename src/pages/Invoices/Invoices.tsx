@@ -72,6 +72,7 @@ function Invoices() {
   // Loading
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadInvoices();
@@ -626,6 +627,30 @@ function Invoices() {
     return `INV-${year}-${randomCode}`;
   }
 
+  async function quickUpdateInvoiceStatus(invoice: any) {
+    if (statusUpdatingId === invoice.id) return;
+    const cycle: Record<string, string> = { unbilled: "billed", billed: "paid", paid: "unbilled" };
+    const next = cycle[invoice.status || "unbilled"] || "unbilled";
+    setStatusUpdatingId(invoice.id);
+    const { data, error } = await supabase
+      .from("invoices")
+      .update({ status: next })
+      .eq("id", invoice.id)
+      .eq("coach_id", coachId)
+      .select("*, students(student_name, email, phone_number, parent_name, parent_phone)")
+      .single();
+    if (!error && data) {
+      setInvoices((prev) => prev.map((inv) => inv.id === invoice.id ? data : inv));
+      const { data: lessonLinks } = await supabase
+        .from("invoice_lessons").select("lesson_id").eq("invoice_id", invoice.id);
+      const lessonIds = (lessonLinks || []).map((l: any) => l.lesson_id);
+      if (lessonIds.length > 0) {
+        await supabase.from("lessons").update({ billing_status: next }).in("id", lessonIds);
+      }
+    }
+    setStatusUpdatingId(null);
+  }
+
   function getInvoiceStatusFromLessons(lessons: any[]) {
     if (lessons.length === 0) return "unbilled";
 
@@ -912,31 +937,43 @@ function Invoices() {
 
 
             <div className="invoices-list-view">
-              {/* ── Unbilled ── */}
               <section className="invoices-group">
                 <div className="invoices-group-title">
                   <h2>Current Invoices</h2>
-                  <span>{currentInvoices.length} {currentInvoices.length === 1 ? "invoice" : "invoices"}</span>
+                  <span>
+                    {currentInvoices.length}{" "}
+                    {currentInvoices.length === 1 ? "invoice" : "invoices"}
+                  </span>
                 </div>
+
                 {currentInvoices.length === 0 ? (
                   <p className="invoices-empty">No current invoices.</p>
                 ) : (
                   <div className="invoices-group-card">
                     {currentInvoices.map((invoice) => (
-                      <div key={invoice.id} className="invoices-row">
+                      <div key={invoice.id} className="invoices-row" style={{ cursor: "pointer" }}
+                        onClick={() => quickUpdateInvoiceStatus(invoice)}>
                         <div className="invoices-avatar">
                           {invoice.students?.student_name ? invoice.students.student_name.charAt(0).toUpperCase() : "I"}
                         </div>
                         <div className="invoices-info">
                           <strong>{invoice.invoice_number || "Invoice"}</strong>
                           <span>{invoice.students?.student_name || "Student"} • {formatMoney(invoice.total)}</span>
-                          <span><div className="calendar-billing-label unbilled">Unbilled</div></span>
+                          <button type="button"
+                            className={`invoice-status-pill ${invoice.status || "unbilled"}`}
+                            onClick={(e) => { e.stopPropagation(); quickUpdateInvoiceStatus(invoice); }}
+                            disabled={statusUpdatingId === invoice.id}>
+                            {statusUpdatingId === invoice.id ? "..." : (invoice.status || "unbilled").charAt(0).toUpperCase() + (invoice.status || "unbilled").slice(1)}
+                          </button>
                         </div>
                         <div className="invoice-actions">
-                          <button type="button" className="invoice-edit-btn" onClick={(e) => { e.stopPropagation(); openEditInvoice(invoice); }}>
+                          <button type="button" className="invoice-edit-btn"
+                            onClick={(e) => { e.stopPropagation(); openEditInvoice(invoice); }}>
                             <FaEdit />
                           </button>
-                          <button type="button" className="invoice-send-btn" disabled={sendingInvoiceId === invoice.id} onClick={(e) => { e.stopPropagation(); sendInvoice(invoice.id); }}>
+                          <button type="button" className="invoice-send-btn"
+                            disabled={sendingInvoiceId === invoice.id}
+                            onClick={(e) => { e.stopPropagation(); sendInvoice(invoice.id); }}>
                             {sendingInvoiceId === invoice.id ? "..." : <FaPaperPlane />}
                           </button>
                         </div>
@@ -956,7 +993,8 @@ function Invoices() {
                 ) : (
                   <div className="invoices-group-card">
                     {billedInvoices.map((invoice) => (
-                      <div key={invoice.id} className="invoices-row">
+                      <div key={invoice.id} className="invoices-row" style={{ cursor: "pointer" }}
+                        onClick={() => quickUpdateInvoiceStatus(invoice)}>
                         <div className="invoices-avatar" style={{ background: "#dbeafe", color: "#2563eb" }}>
                           {invoice.students?.student_name ? invoice.students.student_name.charAt(0).toUpperCase() : "I"}
                         </div>
@@ -964,16 +1002,22 @@ function Invoices() {
                           <strong>{invoice.invoice_number || "Invoice"}</strong>
                           <span>{invoice.students?.student_name || "Student"} • {formatMoney(invoice.total)}</span>
                           <span>
-                            <div className="calendar-billing-label billed">Billed</div>
+                            <button type="button"
+                              className={`invoice-status-pill ${invoice.status || "unbilled"}`}
+                              onClick={(e) => { e.stopPropagation(); quickUpdateInvoiceStatus(invoice); }}
+                              disabled={statusUpdatingId === invoice.id}>
+                              {statusUpdatingId === invoice.id ? "..." : (invoice.status || "unbilled").charAt(0).toUpperCase() + (invoice.status || "unbilled").slice(1)}
+                            </button>
                             {invoice.due_date && (
-                              <span style={{ fontSize: 11, color: new Date(invoice.due_date + "T00:00:00") < new Date() ? "#ef4444" : "var(--secondary-text)", marginLeft: 6 }}>
+                              <span style={{ fontSize: 11, marginLeft: 6, color: new Date(invoice.due_date + "T00:00:00") < new Date() ? "#ef4444" : "var(--secondary-text)" }}>
                                 Due {formatDate(invoice.due_date)}
                               </span>
                             )}
                           </span>
                         </div>
                         <div className="invoice-actions">
-                          <button type="button" className="invoice-edit-btn" onClick={(e) => { e.stopPropagation(); openEditInvoice(invoice); }}>
+                          <button type="button" className="invoice-edit-btn"
+                            onClick={(e) => { e.stopPropagation(); openEditInvoice(invoice); }}>
                             <FaEdit />
                           </button>
                         </div>
@@ -1057,52 +1101,24 @@ function Invoices() {
                                   {openWeeks[weekKey] && (
                                     <div className="invoices-group-card">
                                       {week.invoices.map((invoice: any) => (
-                                        <div
-                                          key={invoice.id}
-                                          className="invoices-row past-invoice-row"
-                                        >
+                                        <div key={invoice.id} className="invoices-row past-invoice-row"
+                                          style={{ cursor: "pointer" }} onClick={() => quickUpdateInvoiceStatus(invoice)}>
                                           <div className="invoices-avatar">
-                                            {invoice.students?.student_name
-                                              ? invoice.students.student_name
-                                                  .charAt(0)
-                                                  .toUpperCase()
-                                              : "I"}
+                                            {invoice.students?.student_name ? invoice.students.student_name.charAt(0).toUpperCase() : "I"}
                                           </div>
-
                                           <div className="invoices-info">
-                                            <strong>
-                                              {invoice.invoice_number || "Invoice"}
-                                            </strong>
-
-                                            <span>
-                                              {invoice.students?.student_name ||
-                                                "Student"}{" "}
-                                              • {formatMoney(invoice.total)}
-                                            </span>
-
-                                            <div
-                                              className={`calendar-billing-label ${
-                                                (invoice.status || "unbilled")
-                                                  .trim()
-                                                  .toLowerCase()
-                                              }`}
-                                            >
-                                              {(invoice.status || "unbilled")
-                                                .charAt(0)
-                                                .toUpperCase() +
-                                                (invoice.status || "unbilled").slice(1)}
-                                            </div>
+                                            <strong>{invoice.invoice_number || "Invoice"}</strong>
+                                            <span>{invoice.students?.student_name || "Student"} • {formatMoney(invoice.total)}</span>
+                                            <button type="button"
+                                              className={`invoice-status-pill ${(invoice.status || "unbilled").trim().toLowerCase()}`}
+                                              onClick={(e) => { e.stopPropagation(); quickUpdateInvoiceStatus(invoice); }}
+                                              disabled={statusUpdatingId === invoice.id}>
+                                              {statusUpdatingId === invoice.id ? "..." : (invoice.status || "unbilled").charAt(0).toUpperCase() + (invoice.status || "unbilled").slice(1)}
+                                            </button>
                                           </div>
-
                                           <div className="invoice-actions">
-                                            <button
-                                              type="button"
-                                              className="invoice-edit-btn"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                openEditInvoice(invoice);
-                                              }}
-                                            >
+                                            <button type="button" className="invoice-edit-btn"
+                                              onClick={(e) => { e.stopPropagation(); openEditInvoice(invoice); }}>
                                               <FaEdit />
                                             </button>
                                           </div>

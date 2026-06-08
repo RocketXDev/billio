@@ -1,0 +1,342 @@
+/* RECURRING LESSONS PAGE */
+
+.rl-page {
+  min-height: 100vh;
+  background: var(--main-bg);
+  padding-bottom: 95px;
+}
+
+/* ── Header ── */
+.rl-header {
+  padding: 20px 18px 0;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.rl-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.rl-add-btn {
+  width: 42px;
+  height: 42px;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--primary-purple);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(91, 61, 245, 0.25);
+}
+
+.rl-title {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.6px;
+  color: var(--main-text);
+  margin: 0 0 6px;
+}
+
+.rl-subtitle {
+  font-size: 14px;
+  color: var(--secondary-text);
+  margin: 0 0 20px;
+}
+
+/* ── Body ── */
+.rl-body {
+  padding: 0 18px;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+/* ── Empty state ── */
+.rl-empty {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.rl-empty-icon {
+  font-size: 36px;
+  color: var(--border);
+  margin-bottom: 14px;
+}
+
+.rl-empty p {
+  color: var(--secondary-text);
+  font-size: 15px;
+  margin-bottom: 18px;
+}
+
+.rl-empty-btn {
+  height: 48px;
+  padding: 0 22px;
+  border-radius: 14px;
+  background: var(--primary-purple);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+}
+
+/* ── Series list cards ── */
+.rl-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rl-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 16px;
+}
+
+.rl-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.rl-card-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #eef2ff;
+  color: var(--primary-purple);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.rl-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.rl-card-info strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--main-text);
+}
+
+.rl-card-title {
+  display: block;
+  font-size: 13px;
+  color: var(--primary-purple);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.rl-card-info span {
+  display: block;
+  font-size: 12px;
+  color: var(--secondary-text);
+  margin-top: 3px;
+}
+
+.rl-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.rl-edit-btn,
+.rl-delete-btn {
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.rl-edit-btn  { background: #eef2ff; color: var(--primary-purple); }
+.rl-delete-btn { background: #fee2e2; color: #dc2626; }
+
+.rl-card-dates {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--secondary-text);
+}
+
+.rl-card-dates span:last-child {
+  font-weight: 600;
+  color: var(--primary-purple);
+}
+
+/* ── Frequency chips ── */
+.rl-chip-group {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.rl-chip {
+  flex: 1;
+  height: 50px;
+  margin: 0;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--secondary-text);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.rl-chip.active {
+  background: var(--primary-purple);
+  color: #fff;
+  border-color: var(--primary-purple);
+}
+
+/* ── Day buttons ── */
+.rl-days-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.rl-day-btn {
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--secondary-text);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.12s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rl-day-btn.active {
+  background: var(--primary-purple);
+  color: #fff;
+  border-color: var(--primary-purple);
+}
+
+/* ── Preview banner ── */
+.rl-preview {
+  display: flex;
+  align-items: center;
+  padding: 13px 16px;
+  border-radius: 14px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  font-size: 14px;
+  color: var(--primary-purple);
+  font-weight: 500;
+}
+
+.rl-preview strong {
+  font-weight: 700;
+}
+
+/* ── Form inputs — override to match forms.css exactly ── */
+.invoices-add-form .input-block label {
+  display: block;
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--main-text);
+  margin-bottom: 8px;
+}
+
+.invoices-add-form .input-block input,
+.invoices-add-form .input-block select,
+.invoices-add-form .input-block textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.invoices-add-form .input-block input:not([type="checkbox"]),
+.invoices-add-form .input-block select {
+  height: 50px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--main-text);
+  font-size: 16px;
+  font-weight: 400;
+  padding: 0 15px;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.invoices-add-form .input-block input:focus,
+.invoices-add-form .input-block select:focus {
+  background: var(--border);
+}
+
+.invoices-add-form .input-block select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 38px;
+  cursor: pointer;
+}
+
+.invoices-add-form .input-block textarea {
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  padding: 14px 15px;
+  font-size: 16px;
+  font-family: inherit;
+  resize: none;
+  outline: none;
+  min-height: 90px;
+  color: var(--main-text);
+}
+
+.invoices-add-form .input-block textarea:focus {
+  background: var(--border);
+}
+
+/* Two-column grid inside form */
+.rl-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.rl-form-row .input-block {
+  width: 100%;
+  margin: 0;
+}

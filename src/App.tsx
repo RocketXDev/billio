@@ -26,6 +26,7 @@ import CoachingTimer from "./pages/CoachingTimer/CoachingTimer";
 import About from "./pages/About/About";
 import Settings from "./pages/Settings/Settings";
 import MarkInvoicePaid from "./pages/MarkInvoicePaid/MarkInvoicePaid";
+import RecurringLessons from "./pages/RecurringLessons/RecurringLessons";
 
 function App() {
 
@@ -139,6 +140,17 @@ function App() {
             </DesktopLayout>
           </ProtectedRoute>
         }
+      />
+
+      <Route 
+        path="/recurring-lessons" 
+        element={
+          <ProtectedRoute>
+            <DesktopLayout>
+              <RecurringLessons />
+            </DesktopLayout>
+          </ProtectedRoute>
+        } 
       />
 
       <Route

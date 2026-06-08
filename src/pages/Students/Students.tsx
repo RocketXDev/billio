@@ -8,20 +8,13 @@ import {
   FaEllipsisH,
   FaPlus,
   FaEdit,
-  FaFilter,
-  FaLock,
-  FaCrown,
+  FaFilter
 } from "react-icons/fa";
-import './Students.css';
 import { supabase } from "../../lib/supabaseClient";
-import { usePlan } from "../../hooks/usePlan";
-import { useSettings } from "../../hooks/useSettings";
+import "./Students.css"
 
 function Students() {
   const navigate = useNavigate();
-  const { isPro } = usePlan();
-  const { settings } = useSettings();
-  const FREE_STUDENT_LIMIT = 5;
 
   const [students, setStudents] = useState<any[]>([]);
   const [coachId, setCoachId] = useState("");
@@ -70,14 +63,20 @@ function Students() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
   const [showStudentLimitModal, setShowStudentLimitModal] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
 
-  // Filter states
+  // Lesson filter states
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterRange, setFilterRange] = useState<string>("all");
   const [filterSort, setFilterSort] = useState<string>("newest");
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
   const [showFilterSheet, setShowFilterSheet] = useState(false);
+
+  // Invoice filter states
+  const [invoiceFilterStatus, setInvoiceFilterStatus] = useState<string>("all");
+  const [invoiceFilterSort, setInvoiceFilterSort] = useState<string>("newest");
+  const [showInvoiceFilterSheet, setShowInvoiceFilterSheet] = useState(false);
 
   useEffect(() => {
     loadStudents();
@@ -496,38 +495,42 @@ function Students() {
   }
 
   async function openStudentDetails(link: any) {
+    setFilterStatus("all");
+    setFilterRange("all");
+    setFilterSort("newest");
+    setFilterDateFrom("");
+    setFilterDateTo("");
+    setInvoiceFilterStatus("all");
+    setInvoiceFilterSort("newest");
+
     const student = link.students;
-
     setSelectedStudent(student);
+    setDetailLoading(true);
+    setStudentLessons([]);
+    setStudentInvoices([]);
 
-    if (!coachId || !student?.id) return;
-
-    const { data: lessonsData, error: lessonsError } = await supabase
-      .from("lessons")
-      .select("*")
-      .eq("coach_id", coachId)
-      .eq("student_id", student.id)
-      .order("lesson_date", { ascending: false })
-      .order("start_time", { ascending: false });
-
-    if (lessonsError) {
-      console.log("Student lessons error:", lessonsError);
-    } else {
-      setStudentLessons(lessonsData || []);
+    if (!coachId || !student?.id) {
+      setDetailLoading(false);
+      return;
     }
 
-    const { data: invoicesData, error: invoicesError } = await supabase
-      .from("invoices")
-      .select("*")
-      .eq("coach_id", coachId)
-      .eq("student_id", student.id)
-      .order("created_at", { ascending: false });
+    const [lessonsResult, invoicesResult] = await Promise.all([
+      supabase.from("lessons").select("*")
+        .eq("coach_id", coachId).eq("student_id", student.id)
+        .order("lesson_date", { ascending: false })
+        .order("start_time", { ascending: false }),
+      supabase.from("invoices").select("*")
+        .eq("coach_id", coachId).eq("student_id", student.id)
+        .order("created_at", { ascending: false }),
+    ]);
 
-    if (invoicesError) {
-      console.log("Student invoices error:", invoicesError);
-    } else {
-      setStudentInvoices(invoicesData || []);
-    }
+    if (lessonsResult.error) console.log("Student lessons error:", lessonsResult.error);
+    else setStudentLessons(lessonsResult.data || []);
+
+    if (invoicesResult.error) console.log("Student invoices error:", invoicesResult.error);
+    else setStudentInvoices(invoicesResult.data || []);
+
+    setDetailLoading(false);
   }
 
   function formatUSPhoneInput(value: string) {
@@ -734,6 +737,20 @@ function Students() {
     filterStatus !== "all",
     filterRange !== "all",
   ].filter(Boolean).length;
+
+  // Filtered and sorted invoices
+  const filteredStudentInvoices = studentInvoices
+    .filter((invoice) => {
+      if (invoiceFilterStatus !== "all" && invoice.status !== invoiceFilterStatus) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
+      return invoiceFilterSort === "newest" ? dateB - dateA : dateA - dateB;
+    });
+
+  const activeInvoiceFilterCount = [invoiceFilterStatus !== "all"].filter(Boolean).length;
 
   if (loading) {
     return (
@@ -1181,14 +1198,28 @@ function Students() {
                       onChange={(e) => setPhoneNumber(formatUSPhoneInput(e.target.value))}
                       autoComplete="off"
                   />
-                  <div className="sms-consent-note">
-                    By adding a phone number, you confirm this person agreed to receive lesson
-                    reminders, invoice notifications, and account-related texts from Billio.{" "}
-                    <a href="/terms" target="_blank" rel="noreferrer">
-                      Read terms
-                    </a>
-                    .
-                  </div>
+                  <label className="sms-consent-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={smsConsent}
+                        onChange={(e) => setSmsConsent(e.target.checked)}
+                      />
+
+                      <span>
+                        I confirm that the student or parent agreed to receive transactional SMS
+                        messages from Billio for lesson reminders, invoice notifications, payment
+                        reminders, and account-related updates. Message frequency varies. Message
+                        and data rates may apply. Reply STOP to opt out. Reply HELP for help.{" "}
+                        <a href="/terms" target="_blank" rel="noreferrer">
+                          Terms
+                        </a>{" "}
+                        and{" "}
+                        <a href="/privacy" target="_blank" rel="noreferrer">
+                          Privacy Policy
+                        </a>
+                        .
+                      </span>
+                    </label>
                 </div>
 
                 <div className="input-block">
@@ -1223,14 +1254,28 @@ function Students() {
                       onChange={(e) => setParentPhone(formatUSPhoneInput(e.target.value))}
                       autoComplete="off"
                   />
-                  <div className="sms-consent-note">
-                    By adding a phone number, you confirm this person agreed to receive lesson
-                    reminders, invoice notifications, and account-related texts from Billio.{" "}
-                    <a href="/terms" target="_blank" rel="noreferrer">
-                      Read terms
-                    </a>
-                    .
-                  </div>
+                  <label className="sms-consent-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={smsConsent}
+                        onChange={(e) => setSmsConsent(e.target.checked)}
+                      />
+
+                      <span>
+                        I confirm that the student or parent agreed to receive transactional SMS
+                        messages from Billio for lesson reminders, invoice notifications, payment
+                        reminders, and account-related updates. Message frequency varies. Message
+                        and data rates may apply. Reply STOP to opt out. Reply HELP for help.{" "}
+                        <a href="/terms" target="_blank" rel="noreferrer">
+                          Terms
+                        </a>{" "}
+                        and{" "}
+                        <a href="/privacy" target="_blank" rel="noreferrer">
+                          Privacy Policy
+                        </a>
+                        .
+                      </span>
+                    </label>
                 </div>
 
                 <div className="input-block">
@@ -1372,25 +1417,7 @@ function Students() {
                 <h2>{selectedStudent.student_name}</h2>
                 <span>Student details</span>
               </div>
-
-              <button
-                type="button"
-                className="students-filter-btn"
-                style={activeFilterCount > 0 ? { background: "#eef2ff", color: "var(--primary-purple)", position: "relative" } : { position: "relative" }}
-                onClick={() => setShowFilterSheet(true)}
-              >
-                <FaFilter />
-                {activeFilterCount > 0 && (
-                  <span style={{
-                    position: "absolute", top: -4, right: -4,
-                    width: 16, height: 16, borderRadius: "50%",
-                    background: "var(--primary-purple)", color: "#fff",
-                    fontSize: 10, fontWeight: 700,
-                    display: "flex", alignItems: "center", justifyContent: "center"
-                  }}>{activeFilterCount}</span>
-                )}
-              </button>
-
+ 
               <button
                 type="button"
                 className="students-close-btn"
@@ -1399,16 +1426,44 @@ function Students() {
                 ×
               </button>
             </div>
-
+ 
+            {detailLoading ? (
+              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "48px 0" }}>
+                <div className="billio-mini-spinner" />
+              </div>
+            ) : (
+              <>
             <section className="students-detail-section">
               <div className="students-detail-title">
                 <h3>Lessons</h3>
-                <span>
-                  {filteredStudentLessons.length}
-                  {filteredStudentLessons.length !== studentLessons.length && ` of ${studentLessons.length}`}
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span>
+                    {filteredStudentLessons.length === studentLessons.length
+                      ? `${filteredStudentLessons.length} ${filteredStudentLessons.length === 1 ? "lesson" : "lessons"}`
+                      : `${filteredStudentLessons.length} of ${studentLessons.length} lessons`}
+                  </span>
+                  <button
+                    type="button"
+                    className="students-filter-btn"
+                    style={activeFilterCount > 0
+                      ? { background: "#eef2ff", color: "var(--primary-purple)", position: "relative", width: 32, height: 32, fontSize: 13 }
+                      : { position: "relative", width: 32, height: 32, fontSize: 13 }}
+                    onClick={() => setShowFilterSheet(true)}
+                  >
+                    <FaFilter />
+                    {activeFilterCount > 0 && (
+                      <span style={{
+                        position: "absolute", top: -4, right: -4,
+                        width: 14, height: 14, borderRadius: "50%",
+                        background: "var(--primary-purple)", color: "#fff",
+                        fontSize: 9, fontWeight: 700,
+                        display: "flex", alignItems: "center", justifyContent: "center"
+                      }}>{activeFilterCount}</span>
+                    )}
+                  </button>
+                </div>
               </div>
-
+ 
               {filteredStudentLessons.length === 0 ? (
                 <p className="students-empty">
                   {studentLessons.length === 0 ? "No lessons for this student yet." : "No lessons match your filters."}
@@ -1440,7 +1495,7 @@ function Students() {
                         >
                           Edit
                         </button>
-
+ 
                         <button
                           type="button"
                           className="students-lesson-delete-action"
@@ -1457,11 +1512,13 @@ function Students() {
                         <div>
                           <strong>{lesson.lesson_date}</strong>
                           <span>
-                            {lesson.start_time?.slice(0, 5)} •{" "}
-                            {lesson.duration_minutes} min
+                            {lesson.start_time?.slice(0, 5)} • {lesson.duration_minutes} min •{" "}
+                            <div className={`sd-status-badge sd-status-${lesson.billing_status || "unbilled"}`}>
+                              {(lesson.billing_status || "unbilled").charAt(0).toUpperCase() + (lesson.billing_status || "unbilled").slice(1)}
+                            </div>
                           </span>
+ 
                         </div>
-
                         <strong>${Number(lesson.rate || 0).toFixed(2)}</strong>
                       </>
                     )}
@@ -1470,39 +1527,72 @@ function Students() {
                 </div>
               )}
             </section>
-
+ 
             <section className="students-detail-section">
               <div className="students-detail-title">
                 <h3>Invoices</h3>
-                <span>{studentInvoices.length}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span>
+                    {filteredStudentInvoices.length}
+                    {filteredStudentInvoices.length !== studentInvoices.length && ` of ${studentInvoices.length}`}
+                  </span>
+                  <button
+                    type="button"
+                    className="students-filter-btn"
+                    style={activeInvoiceFilterCount > 0
+                      ? { background: "#eef2ff", color: "var(--primary-purple)", position: "relative", width: 32, height: 32, fontSize: 13 }
+                      : { position: "relative", width: 32, height: 32, fontSize: 13 }}
+                    onClick={() => setShowInvoiceFilterSheet(true)}
+                  >
+                    <FaFilter />
+                    {activeInvoiceFilterCount > 0 && (
+                      <span style={{
+                        position: "absolute", top: -4, right: -4,
+                        width: 14, height: 14, borderRadius: "50%",
+                        background: "var(--primary-purple)", color: "#fff",
+                        fontSize: 9, fontWeight: 700,
+                        display: "flex", alignItems: "center", justifyContent: "center"
+                      }}>{activeInvoiceFilterCount}</span>
+                    )}
+                  </button>
+                </div>
               </div>
-
-              {studentInvoices.length === 0 ? (
+ 
+              {filteredStudentInvoices.length === 0 ? (
                 <p className="students-empty">
-                  No invoices for this student yet.
+                  {studentInvoices.length === 0 ? "No invoices for this student yet." : "No invoices match your filters."}
                 </p>
               ) : (
                 <div className="students-detail-card">
-                  {studentInvoices.map((invoice) => (
+                  {filteredStudentInvoices.map((invoice) => (
                     <div key={invoice.id} className="students-detail-row">
                       <div>
                         <strong>{invoice.invoice_number || "Invoice"}</strong>
-                        <span>
-                          {invoice.status
-                            ? invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)
-                            : "No status"}
-                        </span>
+                        <div className={`sd-status-badge sd-status-${invoice.status || "unbilled"}`} style={{ marginTop: 4, display: "block" }}>
+                          {(invoice.status || "unbilled").charAt(0).toUpperCase() + (invoice.status || "unbilled").slice(1)}
+                        </div>
+                        {invoice.due_date && (
+                          <span style={{
+                            fontSize: 11,
+                            color: invoice.status !== "paid" && new Date(invoice.due_date + "T00:00:00") < new Date() ? "#ef4444" : "var(--secondary-text)",
+                            marginTop: 2, display: "block"
+                          }}>
+                            Due {new Date(invoice.due_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          </span>
+                        )}
                       </div>
-
                       <strong>${Number(invoice.total || 0).toFixed(2)}</strong>
                     </div>
                   ))}
                 </div>
               )}
             </section>
+              </>
+            )}
           </div>
         </div>
       )}
+
       {studentToDelete && (
         <div
           className="billio-confirm-overlay"
@@ -1680,12 +1770,9 @@ function Students() {
               <h3>Billing Status</h3>
               <div className="isf-freq-group" style={{ gridTemplateColumns: "repeat(2,1fr)" }}>
                 {["all","unbilled","billed","paid"].map((s) => (
-                  <button
-                    key={s}
-                    type="button"
+                  <button key={s} type="button"
                     className={`isf-freq-btn${filterStatus === s ? " active" : ""}`}
-                    onClick={() => setFilterStatus(s)}
-                  >
+                    onClick={() => setFilterStatus(s)}>
                     {s === "all" ? "All" : s.charAt(0).toUpperCase() + s.slice(1)}
                   </button>
                 ))}
@@ -1702,12 +1789,9 @@ function Students() {
                   { value: "year", label: "This year" },
                   { value: "custom", label: "Custom" },
                 ].map(({ value, label }) => (
-                  <button
-                    key={value}
-                    type="button"
+                  <button key={value} type="button"
                     className={`isf-freq-btn${filterRange === value ? " active" : ""}`}
-                    onClick={() => setFilterRange(value)}
-                  >
+                    onClick={() => setFilterRange(value)}>
                     {label}
                   </button>
                 ))}
@@ -1716,21 +1800,15 @@ function Students() {
                 <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
                   <div className="input-block" style={{ flex: 1, margin: 0 }}>
                     <label>From</label>
-                    <input
-                      type="date"
-                      value={filterDateFrom}
+                    <input type="date" value={filterDateFrom}
                       onChange={(e) => setFilterDateFrom(e.target.value)}
-                      style={{ height: 48, borderRadius: 12, border: "1px solid var(--border)", background: "var(--input-bg)", color: "var(--main-text)", fontSize: 15, padding: "0 14px", width: "100%", boxSizing: "border-box" as any }}
-                    />
+                      style={{ height: 48, borderRadius: 12, border: "1px solid var(--border)", background: "var(--input-bg)", color: "var(--main-text)", fontSize: 15, padding: "0 14px", width: "100%", boxSizing: "border-box" as any }} />
                   </div>
                   <div className="input-block" style={{ flex: 1, margin: 0 }}>
                     <label>To</label>
-                    <input
-                      type="date"
-                      value={filterDateTo}
+                    <input type="date" value={filterDateTo}
                       onChange={(e) => setFilterDateTo(e.target.value)}
-                      style={{ height: 48, borderRadius: 12, border: "1px solid var(--border)", background: "var(--input-bg)", color: "var(--main-text)", fontSize: 15, padding: "0 14px", width: "100%", boxSizing: "border-box" as any }}
-                    />
+                      style={{ height: 48, borderRadius: 12, border: "1px solid var(--border)", background: "var(--input-bg)", color: "var(--main-text)", fontSize: 15, padding: "0 14px", width: "100%", boxSizing: "border-box" as any }} />
                   </div>
                 </div>
               )}
@@ -1739,17 +1817,61 @@ function Students() {
             <section className="invoice-settings-section under-divider">
               <h3>Sort</h3>
               <div className="isf-freq-group">
+                <button type="button" className={`isf-freq-btn${filterSort === "newest" ? " active" : ""}`} onClick={() => setFilterSort("newest")}>Newest first</button>
+                <button type="button" className={`isf-freq-btn${filterSort === "oldest" ? " active" : ""}`} onClick={() => setFilterSort("oldest")}>Oldest first</button>
+              </div>
+            </section>
+
+            <button type="button" className="invoice-settings-save-btn" onClick={() => setShowFilterSheet(false)}>Apply Filters</button>
+
+            {activeFilterCount > 0 && (
+              <button type="button" className="up-cancel-btn" style={{ marginTop: 8 }}
+                onClick={() => { setFilterStatus("all"); setFilterRange("all"); setFilterSort("newest"); setFilterDateFrom(""); setFilterDateTo(""); }}>
+                Clear all filters
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showInvoiceFilterSheet && (
+        <div className="invoice-settings-overlay" onClick={() => setShowInvoiceFilterSheet(false)}>
+          <div className="invoice-settings-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="invoice-settings-header">
+              <h2>Filter Invoices</h2>
+              <button type="button" onClick={() => setShowInvoiceFilterSheet(false)}>×</button>
+            </div>
+
+            <section className="invoice-settings-section">
+              <h3>Status</h3>
+              <div className="isf-freq-group" style={{ gridTemplateColumns: "repeat(2,1fr)" }}>
+                {["all","unbilled","billed","paid"].map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className={`isf-freq-btn${invoiceFilterStatus === s ? " active" : ""}`}
+                    onClick={() => setInvoiceFilterStatus(s)}
+                  >
+                    {s === "all" ? "All" : s.charAt(0).toUpperCase() + s.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section className="invoice-settings-section under-divider">
+              <h3>Sort</h3>
+              <div className="isf-freq-group">
                 <button
                   type="button"
-                  className={`isf-freq-btn${filterSort === "newest" ? " active" : ""}`}
-                  onClick={() => setFilterSort("newest")}
+                  className={`isf-freq-btn${invoiceFilterSort === "newest" ? " active" : ""}`}
+                  onClick={() => setInvoiceFilterSort("newest")}
                 >
                   Newest first
                 </button>
                 <button
                   type="button"
-                  className={`isf-freq-btn${filterSort === "oldest" ? " active" : ""}`}
-                  onClick={() => setFilterSort("oldest")}
+                  className={`isf-freq-btn${invoiceFilterSort === "oldest" ? " active" : ""}`}
+                  onClick={() => setInvoiceFilterSort("oldest")}
                 >
                   Oldest first
                 </button>
@@ -1759,25 +1881,22 @@ function Students() {
             <button
               type="button"
               className="invoice-settings-save-btn"
-              onClick={() => setShowFilterSheet(false)}
+              onClick={() => setShowInvoiceFilterSheet(false)}
             >
               Apply Filters
             </button>
 
-            {activeFilterCount > 0 && (
+            {activeInvoiceFilterCount > 0 && (
               <button
                 type="button"
                 className="up-cancel-btn"
                 style={{ marginTop: 8 }}
                 onClick={() => {
-                  setFilterStatus("all");
-                  setFilterRange("all");
-                  setFilterSort("newest");
-                  setFilterDateFrom("");
-                  setFilterDateTo("");
+                  setInvoiceFilterStatus("all");
+                  setInvoiceFilterSort("newest");
                 }}
               >
-                Clear all filters
+                Clear filters
               </button>
             )}
           </div>

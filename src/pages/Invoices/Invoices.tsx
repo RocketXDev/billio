@@ -1,7 +1,5 @@
-import './Invoices.css';
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { usePlan } from "../../hooks/usePlan";
 import {
   FaHome,
   FaCalendarAlt,
@@ -11,8 +9,7 @@ import {
   FaPlus,
   FaPaperPlane,
   FaEdit,
-  FaLock,
-  FaCrown,
+  FaFilter,
   FaReceipt,
   FaClock,
   FaWallet,
@@ -21,11 +18,10 @@ import {
   FaCog
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
-import { useSettings } from "../../hooks/useSettings";
+import "./Invoices.css"
 
 function Invoices() {
   const navigate = useNavigate();
-  const { isPro } = usePlan();
 
   const [invoices, setInvoices] = useState<any[]>([]);
   const [coachId, setCoachId] = useState("");
@@ -72,18 +68,10 @@ function Invoices() {
   const [invoiceReviewTime, setInvoiceReviewTime] = useState("15:05");
   const [invoiceTimezone, setInvoiceTimezone] = useState("America/Denver");
   const [savingInvoiceSettings, setSavingInvoiceSettings] = useState(false);
-  const [invoiceGenerationFrequency, setInvoiceGenerationFrequency] = useState("weekly");
-  const [invoiceGenerationDayOfMonth, setInvoiceGenerationDayOfMonth] = useState(1);
-  const [invoiceReviewFrequency, setInvoiceReviewFrequency] = useState("weekly");
-  const [invoiceReviewDayOfMonth, setInvoiceReviewDayOfMonth] = useState(1);
-  const [genCalendarMonth, setGenCalendarMonth] = useState(new Date());
-  const [reviewCalendarMonth, setReviewCalendarMonth] = useState(new Date());
 
   // Loading
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  const { settings } = useSettings();
 
   useEffect(() => {
     loadInvoices();
@@ -266,11 +254,6 @@ function Invoices() {
 
       const invoiceNumber = generateInvoiceNumber();
 
-      const today = new Date().toLocaleDateString("en-CA");
-      const dueDate = new Date();
-      dueDate.setDate(dueDate.getDate() + settings.defaultDueDateDays);
-      const dueDateStr = dueDate.toLocaleDateString("en-CA");
-
       const { data: invoiceData, error: invoiceError } = await supabase
         .from("invoices")
         .insert({
@@ -280,8 +263,7 @@ function Invoices() {
           status: "unbilled",
           subtotal: total,
           total,
-          issue_date: today,
-          due_date: dueDateStr,
+          issue_date: new Date().toISOString().split("T")[0],
           notes: null,
         })
         .select(`
@@ -635,8 +617,13 @@ function Invoices() {
 
   function generateInvoiceNumber() {
     const year = new Date().getFullYear();
-    const randomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `${settings.invoicePrefix}-${year}-${randomCode}`;
+
+    const randomCode = Math.random()
+      .toString(36)
+      .substring(2, 6)
+      .toUpperCase();
+
+    return `INV-${year}-${randomCode}`;
   }
 
   function getInvoiceStatusFromLessons(lessons: any[]) {
@@ -660,9 +647,12 @@ function Invoices() {
     (invoice) => (invoice.status || "unbilled") === "unbilled"
   );
 
+  const billedInvoices = invoices.filter(
+    (invoice) => invoice.status === "billed"
+  );
+
   const pastInvoices = invoices.filter(
-    (invoice) =>
-      invoice.status === "billed" || invoice.status === "paid"
+    (invoice) => invoice.status === "paid"
   );
 
   async function sendInvoice(invoiceId: string) {
@@ -807,11 +797,7 @@ function Invoices() {
         invoice_generation_time,
         invoice_review_day,
         invoice_review_time,
-        invoice_timezone,
-        invoice_generation_frequency,
-        invoice_generation_day_of_month,
-        invoice_review_frequency,
-        invoice_review_day_of_month
+        invoice_timezone
       `)
       .eq("id", currentCoachId)
       .single();
@@ -826,13 +812,7 @@ function Invoices() {
     setInvoiceReviewDay(String(data.invoice_review_day ?? 0));
     setInvoiceReviewTime(data.invoice_review_time || "15:05");
     setInvoiceTimezone(data.invoice_timezone || "America/Denver");
-    setInvoiceGenerationFrequency(data.invoice_generation_frequency ?? "weekly");
-    setInvoiceGenerationDayOfMonth(data.invoice_generation_day_of_month ?? 1);
-    setInvoiceReviewFrequency(data.invoice_review_frequency ?? "weekly");
-    setInvoiceReviewDayOfMonth(data.invoice_review_day_of_month ?? 1);
   }
-
-  const WEEKDAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 
   async function handleSaveInvoiceSettings(e: any) {
     e.preventDefault();
@@ -849,10 +829,6 @@ function Invoices() {
         invoice_review_day: Number(invoiceReviewDay),
         invoice_review_time: invoiceReviewTime,
         invoice_timezone: invoiceTimezone,
-        invoice_generation_frequency: invoiceGenerationFrequency,
-        invoice_generation_day_of_month: invoiceGenerationDayOfMonth,
-        invoice_review_frequency: invoiceReviewFrequency,
-        invoice_review_day_of_month: invoiceReviewDayOfMonth,
       })
       .eq("id", coachId);
 
@@ -864,79 +840,6 @@ function Invoices() {
     }
 
     setShowInvoiceSettings(false);
-  }
-
-  const paidThisWeek = invoices
-    .filter((invoice) => {
-      if (invoice.status !== "paid") return false;
-      const invoiceDate = new Date(invoice.issue_date || invoice.created_at);
-      const now = new Date();
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      return invoiceDate >= weekAgo;
-    })
-    .reduce((total, invoice) => total + Number(invoice.total || 0), 0);
-
-
-  function DomCalendar({
-    selectedDay,
-    onSelect,
-    calMonth,
-    setCalMonth,
-    freq,
-  }: {
-    selectedDay: number;
-    onSelect: (day: number) => void;
-    calMonth: Date;
-    setCalMonth: (d: Date) => void;
-    freq: string;
-  }) {
-    const year = calMonth.getFullYear();
-    const month = calMonth.getMonth();
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const cells: (number | null)[] = [];
-    for (let i = 0; i < firstDay; i++) cells.push(null);
-    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-    const domOpts = Array.from({ length: 28 }, (_, i) => ({
-      value: i + 1,
-      label: `${i + 1}${i === 0 ? "st" : i === 1 ? "nd" : i === 2 ? "rd" : "th"}`,
-    }));
-
-    return (
-      <div className="invoice-calendar-floating" style={{ marginTop: 10 }}>
-        <div className="invoice-calendar-header">
-          <button type="button" onClick={() => setCalMonth(new Date(year, month - 1, 1))}>‹</button>
-          <strong>{calMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</strong>
-          <button type="button" onClick={() => setCalMonth(new Date(year, month + 1, 1))}>›</button>
-        </div>
-        <div className="invoice-calendar-weekdays">
-          {["S","M","T","W","T","F","S"].map((d, i) => <span key={i}>{d}</span>)}
-        </div>
-        <div className="invoice-calendar-grid">
-          {cells.map((day, i) => (
-            <button
-              key={i}
-              type="button"
-              className={`invoice-calendar-day${day === selectedDay ? " selected" : ""}`}
-              disabled={!day || day > 28}
-              onClick={() => { if (day && day <= 28) onSelect(day); }}
-            >
-              {day || ""}
-            </button>
-          ))}
-        </div>
-        {selectedDay > 0 && (
-          <p className="isf-dom-note">
-            {freq === "biweekly" ? (
-              <>Runs on the <strong>{domOpts[selectedDay - 1]?.label}</strong> and{" "}
-              <strong>{domOpts[Math.min(selectedDay + 13, 27)]?.label}</strong> of each month</>
-            ) : (
-              <>Runs on the <strong>{domOpts[selectedDay - 1]?.label}</strong> of each month</>
-            )}
-          </p>
-        )}
-      </div>
-    );
   }
 
   if (loading) {
@@ -987,14 +890,9 @@ function Invoices() {
 
               <div className="invoice-stat-card green-stat">
                 <div className="invoice-stat-icon"><FaFileInvoiceDollar /></div>
-                <span>Paid this week</span>
-                <strong>{formatMoney(paidThisWeek)}</strong>
-                <p>{invoices.filter((i) => {
-                  if (i.status !== "paid") return false;
-                  const d = new Date(i.issue_date || i.created_at);
-                  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-                  return d >= weekAgo;
-                }).length} invoices</p>
+                <span>Paid total</span>
+                <strong>{formatMoney(paidThisMonth)}</strong>
+                <p>{invoices.filter((i) => i.status === "paid").length} invoices</p>
               </div>
 
               <div className="invoice-stat-card orange-stat">
@@ -1012,24 +910,14 @@ function Invoices() {
               </div>
             </div>
 
-            {!isPro && (
-              <div className="pro-teaser-banner" style={{ margin: "16px 0 0" }}>
-                <div className="pro-teaser-banner-icon"><FaLock /></div>
-                <p><strong>Free plan:</strong> Email invoices only. Upgrade to Pro for SMS delivery and automatic invoicing.</p>
-              </div>
-            )}
-
 
             <div className="invoices-list-view">
+              {/* ── Unbilled ── */}
               <section className="invoices-group">
                 <div className="invoices-group-title">
                   <h2>Current Invoices</h2>
-                  <span>
-                    {currentInvoices.length}{" "}
-                    {currentInvoices.length === 1 ? "invoice" : "invoices"}
-                  </span>
+                  <span>{currentInvoices.length} {currentInvoices.length === 1 ? "invoice" : "invoices"}</span>
                 </div>
-
                 {currentInvoices.length === 0 ? (
                   <p className="invoices-empty">No current invoices.</p>
                 ) : (
@@ -1037,55 +925,56 @@ function Invoices() {
                     {currentInvoices.map((invoice) => (
                       <div key={invoice.id} className="invoices-row">
                         <div className="invoices-avatar">
-                          {invoice.students?.student_name
-                            ? invoice.students.student_name.charAt(0).toUpperCase()
-                            : "I"}
+                          {invoice.students?.student_name ? invoice.students.student_name.charAt(0).toUpperCase() : "I"}
                         </div>
-
                         <div className="invoices-info">
                           <strong>{invoice.invoice_number || "Invoice"}</strong>
-
-                          <span>
-                            {invoice.students?.student_name || "Student"} •{" "}
-                            {formatMoney(invoice.total)}
-                          </span>
-
-                          <span>
-                            <div
-                              className={`calendar-billing-label ${
-                                invoice.status || "unbilled"
-                              }`}
-                            >
-                              {(invoice.status || "unbilled")
-                                .charAt(0)
-                                .toUpperCase() +
-                                (invoice.status || "unbilled").slice(1)}
-                            </div>
-                          </span>
+                          <span>{invoice.students?.student_name || "Student"} • {formatMoney(invoice.total)}</span>
+                          <span><div className="calendar-billing-label unbilled">Unbilled</div></span>
                         </div>
-
                         <div className="invoice-actions">
-                          <button
-                            type="button"
-                            className="invoice-edit-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openEditInvoice(invoice);
-                            }}
-                          >
+                          <button type="button" className="invoice-edit-btn" onClick={(e) => { e.stopPropagation(); openEditInvoice(invoice); }}>
                             <FaEdit />
                           </button>
-
-                          <button
-                            type="button"
-                            className="invoice-send-btn"
-                            disabled={sendingInvoiceId === invoice.id}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              sendInvoice(invoice.id);
-                            }}
-                          >
+                          <button type="button" className="invoice-send-btn" disabled={sendingInvoiceId === invoice.id} onClick={(e) => { e.stopPropagation(); sendInvoice(invoice.id); }}>
                             {sendingInvoiceId === invoice.id ? "..." : <FaPaperPlane />}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section className="invoices-group">
+                <div className="invoices-group-title">
+                  <h2>Billed Invoices</h2>
+                  <span>{billedInvoices.length} {billedInvoices.length === 1 ? "invoice" : "invoices"}</span>
+                </div>
+                {billedInvoices.length === 0 ? (
+                  <p className="invoices-empty">No billed invoices awaiting payment.</p>
+                ) : (
+                  <div className="invoices-group-card">
+                    {billedInvoices.map((invoice) => (
+                      <div key={invoice.id} className="invoices-row">
+                        <div className="invoices-avatar" style={{ background: "#dbeafe", color: "#2563eb" }}>
+                          {invoice.students?.student_name ? invoice.students.student_name.charAt(0).toUpperCase() : "I"}
+                        </div>
+                        <div className="invoices-info">
+                          <strong>{invoice.invoice_number || "Invoice"}</strong>
+                          <span>{invoice.students?.student_name || "Student"} • {formatMoney(invoice.total)}</span>
+                          <span>
+                            <div className="calendar-billing-label billed">Billed</div>
+                            {invoice.due_date && (
+                              <span style={{ fontSize: 11, color: new Date(invoice.due_date + "T00:00:00") < new Date() ? "#ef4444" : "var(--secondary-text)", marginLeft: 6 }}>
+                                Due {formatDate(invoice.due_date)}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        <div className="invoice-actions">
+                          <button type="button" className="invoice-edit-btn" onClick={(e) => { e.stopPropagation(); openEditInvoice(invoice); }}>
+                            <FaEdit />
                           </button>
                         </div>
                       </div>
@@ -1668,28 +1557,9 @@ function Invoices() {
             onClick={() => setShowInvoiceSettings(false)}
           >
             <div
-              style={{ position: "relative", width: "100%", maxWidth: 480, display: "flex", flexDirection: "column" }}
+              className="invoice-settings-sheet"
               onClick={(e) => e.stopPropagation()}
             >
-              {!isPro && (
-                <div className="invoice-pro-overlay">
-                  <div className="invoice-pro-overlay-card">
-                    <FaLock className="invoice-pro-overlay-icon" />
-                    <strong>Pro feature</strong>
-                    <p>Automatic invoice scheduling is available on Pro.</p>
-                    <button
-                      type="button"
-                      className="invoice-pro-overlay-btn"
-                      onClick={() => { setShowInvoiceSettings(false); navigate("/upgrade"); }}
-                    >
-                      <FaCrown style={{ fontSize: 11, marginRight: 6 }} />
-                      Upgrade to Pro
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <div className="invoice-settings-sheet">
               <div className="invoice-settings-header">
                 <h2>Invoice Settings</h2>
 
@@ -1702,66 +1572,30 @@ function Invoices() {
               </div>
 
               <form className="invoice-settings-form" onSubmit={handleSaveInvoiceSettings}>
-
-                {/* Generate Invoices */}
                 <section className="invoice-settings-section">
                   <h3>Generate Invoices</h3>
-                  <p>Choose how often Billio automatically creates invoices from unbilled lessons.</p>
+                  <p>
+                    Choose when Billio should automatically create invoices from
+                    unbilled lessons.
+                  </p>
 
-                  <div className="isf-freq-group">
-                    {["weekly", "biweekly", "monthly"].map((f) => (
-                      <button
-                        key={f}
-                        type="button"
-                        className={`isf-freq-btn${invoiceGenerationFrequency === f ? " active" : ""}`}
-                        onClick={() => setInvoiceGenerationFrequency(f)}
-                      >
-                        {f.charAt(0).toUpperCase() + f.slice(1)}
-                      </button>
-                    ))}
+                  <div className="input-block">
+                    <label>Day</label>
+                    <select
+                      value={invoiceGenerationDay}
+                      onChange={(e) => setInvoiceGenerationDay(e.target.value)}
+                    >
+                      <option value="0">Sunday</option>
+                      <option value="1">Monday</option>
+                      <option value="2">Tuesday</option>
+                      <option value="3">Wednesday</option>
+                      <option value="4">Thursday</option>
+                      <option value="5">Friday</option>
+                      <option value="6">Saturday</option>
+                    </select>
                   </div>
 
-                  {invoiceGenerationFrequency === "weekly" && (
-                    <div className="input-block" style={{ marginTop: 14 }}>
-                      <label>Day of week</label>
-                      <select
-                        value={invoiceGenerationDay}
-                        onChange={(e) => setInvoiceGenerationDay(e.target.value)}
-                      >
-                        {WEEKDAYS.map((d, i) => (
-                          <option key={d} value={i}>{d}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {invoiceGenerationFrequency === "biweekly" && (
-                    <div className="input-block" style={{ marginTop: 14 }}>
-                      <label>First occurrence (repeats 14 days later)</label>
-                      <DomCalendar
-                        selectedDay={invoiceGenerationDayOfMonth}
-                        onSelect={setInvoiceGenerationDayOfMonth}
-                        calMonth={genCalendarMonth}
-                        setCalMonth={setGenCalendarMonth}
-                        freq="biweekly"
-                      />
-                    </div>
-                  )}
-
-                  {invoiceGenerationFrequency === "monthly" && (
-                    <div className="input-block" style={{ marginTop: 14 }}>
-                      <label>Day of month</label>
-                      <DomCalendar
-                        selectedDay={invoiceGenerationDayOfMonth}
-                        onSelect={setInvoiceGenerationDayOfMonth}
-                        calMonth={genCalendarMonth}
-                        setCalMonth={setGenCalendarMonth}
-                        freq="monthly"
-                      />
-                    </div>
-                  )}
-
-                  <div className="input-block" style={{ marginTop: 14 }}>
+                  <div className="input-block">
                     <label>Time</label>
                     <input
                       type="time"
@@ -1771,65 +1605,30 @@ function Invoices() {
                   </div>
                 </section>
 
-                {/* Review Reminder */}
                 <section className="invoice-settings-section">
                   <h3>Send Review Reminder</h3>
-                  <p>Choose when Billio notifies you that invoices are ready to review.</p>
+                  <p>
+                    Choose when Billio should notify you that invoices are ready to
+                    review.
+                  </p>
 
-                  <div className="isf-freq-group">
-                    {["weekly", "biweekly", "monthly"].map((f) => (
-                      <button
-                        key={f}
-                        type="button"
-                        className={`isf-freq-btn${invoiceReviewFrequency === f ? " active" : ""}`}
-                        onClick={() => setInvoiceReviewFrequency(f)}
-                      >
-                        {f.charAt(0).toUpperCase() + f.slice(1)}
-                      </button>
-                    ))}
+                  <div className="input-block">
+                    <label>Day</label>
+                    <select
+                      value={invoiceReviewDay}
+                      onChange={(e) => setInvoiceReviewDay(e.target.value)}
+                    >
+                      <option value="0">Sunday</option>
+                      <option value="1">Monday</option>
+                      <option value="2">Tuesday</option>
+                      <option value="3">Wednesday</option>
+                      <option value="4">Thursday</option>
+                      <option value="5">Friday</option>
+                      <option value="6">Saturday</option>
+                    </select>
                   </div>
 
-                  {invoiceReviewFrequency === "weekly" && (
-                    <div className="input-block" style={{ marginTop: 14 }}>
-                      <label>Day of week</label>
-                      <select
-                        value={invoiceReviewDay}
-                        onChange={(e) => setInvoiceReviewDay(e.target.value)}
-                      >
-                        {WEEKDAYS.map((d, i) => (
-                          <option key={d} value={i}>{d}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {invoiceReviewFrequency === "biweekly" && (
-                    <div className="input-block" style={{ marginTop: 14 }}>
-                      <label>First occurrence (repeats 14 days later)</label>
-                      <DomCalendar
-                        selectedDay={invoiceReviewDayOfMonth}
-                        onSelect={setInvoiceReviewDayOfMonth}
-                        calMonth={reviewCalendarMonth}
-                        setCalMonth={setReviewCalendarMonth}
-                        freq="biweekly"
-                      />
-                    </div>
-                  )}
-
-                  {invoiceReviewFrequency === "monthly" && (
-                    <div className="input-block" style={{ marginTop: 14 }}>
-                      <label>Day of month</label>
-                      <DomCalendar
-                        selectedDay={invoiceReviewDayOfMonth}
-                        onSelect={setInvoiceReviewDayOfMonth}
-                        calMonth={reviewCalendarMonth}
-                        setCalMonth={setReviewCalendarMonth}
-                        freq="monthly"
-                      />
-                    </div>
-                  )}
-
-                  <div className="input-block" style={{ marginTop: 14 }}>
+                  <div className="input-block">
                     <label>Time</label>
                     <input
                       type="time"
@@ -1839,10 +1638,12 @@ function Invoices() {
                   </div>
                 </section>
 
-                {/* Timezone */}
                 <section className="invoice-settings-section">
                   <h3>Timezone</h3>
-                  <p>Used for all invoice automation timing.</p>
+                  <p>
+                    Used for invoice automation timing.
+                  </p>
+
                   <div className="input-block">
                     <label>Timezone</label>
                     <select
@@ -1865,7 +1666,6 @@ function Invoices() {
                   {savingInvoiceSettings ? "Saving..." : "Save Settings"}
                 </button>
               </form>
-            </div>
             </div>
           </div>
         )}

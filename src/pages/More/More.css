@@ -1,54 +1,65 @@
+/* MORE PAGE */
+
 .more-page {
   min-height: 100vh;
-  padding: 22px 22px 80px 22px;
+  padding: 22px 18px 95px;
   background: var(--main-bg);
-  color: #111827;
 }
 
+/* Header */
 .more-header {
-  margin-bottom: 15px;
+  margin-bottom: 20px;
 }
 
 .more-header .logo-wrapper {
   display: flex;
   justify-content: space-between;
-  align-self: center;
+  align-items: center;
   flex-direction: row;
   width: 100%;
-  padding: 0px 5px 15px;
-  border-bottom: 1px solid rgb(220, 218, 218)
+  padding: 0 5px 15px;
+  border-bottom: 1px solid var(--border);
 }
 
 .more-header .logo-wrapper > img {
   width: 88px;
-  height: auto
+  height: auto;
 }
 
 .more-header h1 {
-  margin: 0;
-  font-size: 32px;
-  letter-spacing: -0.04em;
+  margin: 16px 0 4px;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.8px;
+  color: var(--main-text);
 }
 
 .more-header p {
-  margin: 8px 0 0;
-  color: #6b7280;
+  margin: 0;
+  color: var(--secondary-text);
+  font-size: 14px;
   line-height: 1.5;
 }
 
+/* Section */
 .more-section {
-  margin-bottom: 30px;
+  margin-bottom: 28px;
 }
 
 .more-section h2 {
-  font-size: 1rem;
-  margin: 0 0 12px;
-  color: #374151;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--secondary-text);
+  margin: 0 0 10px 4px;
 }
 
+/* Grid cards */
 .more-grid {
-  display: grid;
-  gap: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .more-card {
@@ -58,62 +69,69 @@
   gap: 14px;
   align-items: center;
   padding: 18px;
-  background: white;
+  background: var(--card-bg);
   border-radius: 20px;
   text-decoration: none;
-  color: inherit;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  color: var(--main-text);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+  transition: box-shadow 0.15s;
 }
 
-.more-card.featured {
-  background: linear-gradient(135deg, #4338ca, #4f46e5);
-  color: white;
+.more-card:hover {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.09);
 }
 
 .more-icon {
   width: 44px;
   height: 44px;
   border-radius: 14px;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: #eef2ff;
-  color: #4338ca;
-  font-size: 1.2rem;
-}
-
-.more-card.featured .more-icon {
-  background: rgba(255, 255, 255, 0.18);
-  color: white;
+  color: var(--primary-purple);
+  font-size: 18px;
+  flex-shrink: 0;
 }
 
 .more-card h3 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--main-text);
 }
 
 .more-card p {
   margin: 4px 0 0;
-  color: #6b7280;
+  color: var(--secondary-text);
   line-height: 1.4;
-  font-size: 0.92rem;
-}
-
-.more-card.featured p {
-  color: rgba(255, 255, 255, 0.82);
+  font-size: 13px;
 }
 
 .more-arrow {
-  color: #9ca3af;
+  color: var(--secondary-text);
+  font-size: 13px;
 }
 
-.more-card.featured .more-arrow {
-  color: white;
+/* Locked state */
+.more-card-locked {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
+.more-icon-locked {
+  background: var(--input-bg);
+  color: var(--secondary-text);
+}
+
+/* List items */
 .more-list {
-  display: grid;
-  gap: 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
 }
 
 .more-list-item {
@@ -122,52 +140,55 @@
   align-items: center;
   gap: 14px;
   padding: 16px 18px;
-  background: white;
-  border-radius: 16px;
   text-decoration: none;
-  color: #111827;
-  border: 1px solid #e5e7eb;
+  color: var(--main-text);
+  border-bottom: 1px solid var(--border);
+  transition: background 0.12s;
+}
+
+.more-list-item:last-child {
+  border-bottom: none;
+}
+
+.more-list-item:hover {
+  background: var(--main-bg);
 }
 
 .more-list-item svg:first-child {
-  color: #4338ca;
+  color: var(--primary-purple);
+  font-size: 16px;
 }
 
 .more-list-item svg:last-child {
-  color: #9ca3af;
+  color: var(--secondary-text);
+  font-size: 12px;
 }
 
 .more-list-item span {
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--main-text);
 }
 
-.more-card-locked {
-  opacity: 0.6;
-  cursor: not-allowed;
-  pointer-events: none;
-}
-
-.more-icon-locked {
-  background: #f1f5f9;
-  color: #94a3b8;
-}
-
+/* Desktop */
 @media (min-width: 900px) {
   .more-page {
     padding: 42px;
-    max-width: 1100px;
+    max-width: 720px;
     margin: 0 auto;
   }
 
   .more-header h1 {
-    font-size: 2.8rem;
+    font-size: 36px;
   }
 
   .more-grid {
+    display: grid;
     grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
   }
 
   .more-card {
-    padding: 24px;
+    padding: 22px;
   }
 }

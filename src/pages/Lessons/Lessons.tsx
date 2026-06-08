@@ -1,4 +1,3 @@
-import './Lessons.css';
 import { useState, useEffect } from "react";
 import {
   FaHome,
@@ -13,13 +12,10 @@ import {
   FaClock,
   FaEdit,
   FaTrash,
-  FaLock,
-  FaCrown,
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
 import { useNavigate } from "react-router-dom";
-import { usePlan } from "../../hooks/usePlan";
-import { useSettings } from "../../hooks/useSettings";
+import "./Lessons.css"
 
 function Lessons() {
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
@@ -50,13 +46,8 @@ function Lessons() {
 
   const [isSaving, setIsSaving] = useState(false); 
   const [isDeleting, setIsDeleting] = useState(false);
+  const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
   const [lessonsLoading, setLessonsLoading] = useState(false);
-
-  const { settings } = useSettings();
-
-  useEffect(() => {
-    setDurationMinutes(String(settings.defaultLessonDuration));
-  }, [settings.defaultLessonDuration]);
 
 
   // Calendar 
@@ -71,7 +62,6 @@ function Lessons() {
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(getLocalDateString(new Date()));
 
   const navigate = useNavigate();
-  const { isPro } = usePlan();
 
   useEffect(() => {
     async function loadLessons() {
@@ -280,13 +270,15 @@ function Lessons() {
 
   function formatTime(time: string) {
     if (!time) return "";
+
     const [hourString, minuteString] = time.split(":");
     const date = new Date();
     date.setHours(Number(hourString), Number(minuteString), 0);
+
     return date.toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
-      hour12: settings.timeFormat === "12h",
+      hour12: true,
     });
   }
 
@@ -401,6 +393,29 @@ function Lessons() {
       setIsDeleting(false)
     }
 
+  }
+
+  async function quickUpdateStatus(lesson: any) {
+    if (statusUpdatingId === lesson.id) return;
+    const cycle: Record<string, string> = {
+      unbilled: "billed",
+      billed: "paid",
+      paid: "unbilled",
+    };
+    const next = cycle[lesson.billing_status || "unbilled"] || "unbilled";
+    setStatusUpdatingId(lesson.id);
+    const { data, error } = await supabase
+      .from("lessons")
+      .update({ billing_status: next })
+      .eq("id", lesson.id)
+      .eq("coach_id", coachId)
+      .select("*, students(student_name)")
+      .single();
+    if (!error && data) {
+      setLessons((prev) => prev.map((l) => (l.id === lesson.id ? data : l)));
+      await syncInvoiceStatusFromLesson(lesson.id);
+    }
+    setStatusUpdatingId(null);
   }
 
   function getLessonStatus(lesson: any) {
@@ -758,11 +773,6 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     month: "long",
     year: "numeric",
   });
-
-  const now = new Date();
-  const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const selectedMonthStr = selectedCalendarDate.slice(0, 7);
-  const isLockedMonth = !isPro && selectedMonthStr !== currentMonthStr;
   
 
   return (
@@ -840,42 +850,29 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                     ))}
                   </div>
 
-                  <div className="calendar-grid-wrapper">
-                    <div className="calendar-grid">
-                      {calendarMonthDays.map((day) => (
-                        <button
-                          key={day.full}
-                          type="button"
-                          className={`calendar-day-card ${
-                            selectedCalendarDate === day.full ? "active" : ""
-                          } ${!day.isCurrentMonth ? "muted" : ""}`}
-                          onClick={() => setSelectedCalendarDate(day.full)}
-                        >
-                          <strong>{day.dayNumber}</strong>
-                          {day.lessons.length > 0 && (
-                            <div className="calendar-lesson-dot purple-dot" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
+                  <div className="calendar-grid">
+                    {calendarMonthDays.map((day) => (
+                      <button
+                        key={day.full}
+                        type="button"
+                        className={`calendar-day-card ${
+                          selectedCalendarDate === day.full ? "active" : ""
+                        } ${!day.isCurrentMonth ? "muted" : ""}`}
+                        onClick={() => setSelectedCalendarDate(day.full)}
+                      >
+                        <strong>{day.dayNumber}</strong>
 
-                    {isLockedMonth && (
-                      <div className="calendar-pro-overlay">
-                        <div className="calendar-pro-overlay-card">
-                          <FaLock className="calendar-pro-overlay-icon" />
-                          <strong>Pro feature</strong>
-                          <p>Unlimited calendar navigation is available for Pro accounts.</p>
-                          <button
-                            type="button"
-                            className="calendar-pro-overlay-btn"
-                            onClick={() => navigate("/upgrade")}
-                          >
-                            <FaCrown style={{ fontSize: 11, marginRight: 6 }} />
-                            Upgrade to Pro
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                        {day.lessons.length > 0 && (
+                          <>
+                            <div className="calendar-lesson-dot purple-dot" />
+                            {/* <p>
+                              {day.lessons.length}{" "}
+                              {day.lessons.length === 1 ? "lesson" : "lessons"}
+                            </p> */}
+                          </>
+                        )}
+                      </button>
+                    ))}
                   </div>
 
                   <section className="calendar-detail-card">
@@ -900,24 +897,20 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                       </span>
                     </div>
 
-                    {(isPro || selectedMonthStr === currentMonthStr) && (
-                      <button
-                        type="button"
-                        className="calendar-add-lesson-btn"
-                        onClick={() => {
-                          setLessonDate(selectedCalendarDate);
-                          openAddLesson();
-                        }}
-                      >
-                        <FaPlus />
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      className="calendar-add-lesson-btn"
+                      onClick={()=> {setLessonDate(selectedCalendarDate);
+                      openAddLesson();}}
+                    >
+                      <FaPlus />
+                    </button>
                   </div>
                   {selectedCalendarLessons.length === 0 ? (
                       <p className="empty-lessons">No lessons for this day.</p>
                     ) : (
                       selectedCalendarLessons.map((lesson) => (
-                        <div key={lesson.id} className="calendar-detail-row">
+                        <div onClick={(e) => { e.stopPropagation(); quickUpdateStatus(lesson); }} key={lesson.id} className="calendar-detail-row">
                           <div
                             className={`calendar-time-icon ${
                               lesson.billing_status || "unbilled"
@@ -939,16 +932,13 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                               {" • $"}
                               {formatMoney(lesson.rate)} 
                               {" • "}
-                              <div
-                              className={`calendar-billing-label ${
-                                lesson.billing_status || "unbilled"
-                              }`}
+                              <button
+                              type="button"
+                              className={`calendar-billing-label clickable-status ${lesson.billing_status || "unbilled"}`}
+                              disabled={statusUpdatingId === lesson.id}
                             >
-                              {(lesson.billing_status || "unbilled")
-                                .charAt(0)
-                                .toUpperCase() +
-                                (lesson.billing_status || "unbilled").slice(1)}
-                            </div>
+                              {statusUpdatingId === lesson.id ? "..." : (lesson.billing_status || "unbilled").charAt(0).toUpperCase() + (lesson.billing_status || "unbilled").slice(1)}
+                            </button>
                             </span>
                           </div>
 
@@ -1005,13 +995,14 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                                       </span>
                                     </div>
 
-                                    <span
-                                      className={`lesson-page-status ${getLessonStatus(
-                                        lesson
-                                      )}`}
+                                    <button
+                                      type="button"
+                                      className={`lesson-billing-pill ${lesson.billing_status || "unbilled"}`}
+                                      onClick={() => quickUpdateStatus(lesson)}
+                                      disabled={statusUpdatingId === lesson.id}
                                     >
-                                      {getLessonStatus(lesson)}
-                                    </span>
+                                      {statusUpdatingId === lesson.id ? "..." : (lesson.billing_status || "unbilled").charAt(0).toUpperCase() + (lesson.billing_status || "unbilled").slice(1)}
+                                    </button>
 
                                     <button
                                       type="button"

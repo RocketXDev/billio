@@ -68,7 +68,8 @@
 
 .rl-empty-icon {
   font-size: 36px;
-  color: var(--border);
+  color: var(--primary-purple);
+  opacity: 0.6;
   margin-bottom: 14px;
 }
 
@@ -85,7 +86,7 @@
   background: var(--primary-purple);
   color: #fff;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 550;
   border: none;
   cursor: pointer;
 }

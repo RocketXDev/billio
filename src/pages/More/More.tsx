@@ -24,7 +24,7 @@ import { usePlan } from "../../hooks/usePlan";
 
 export default function More() {
   const navigate = useNavigate();
-  const { isPro, planLoading } = usePlan();
+  const { isPro, isFree, planLoading, fullName } = usePlan();
 
   if (planLoading) {
     return (
@@ -106,6 +106,11 @@ export default function More() {
       <section className="more-section">
         <h2>Account</h2>
         <div className="more-list">
+          {isFree && (
+            <Link to="/upgrade" className="more-list-item more-upgrade-item">
+              <FaCrown /><span>Upgrade to Pro</span><FaChevronRight />
+            </Link>
+          )}
           <Link to="/settings" className="more-list-item">
             <FaCog /><span>Settings</span><FaChevronRight />
           </Link>

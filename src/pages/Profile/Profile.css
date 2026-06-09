@@ -198,12 +198,12 @@
 .profile-hero-info h2 {
   margin: 0;
   color: var(--main-text);
-  font-size: 22px;
-  font-weight: 800;
+  font-size: 20px;
+  font-weight: 700;
 }
 
 .profile-hero-info p {
-  margin: 0px 0 0;
+  margin: 5px 0 0;
   color: var(--secondary-text);
   font-size: 14px;
   line-height: 1.45;

@@ -24,6 +24,13 @@ form > .input-block > .lock-wrapper > input {
   padding: 15px;
   max-width: 100%;
   box-sizing: border-box;
+  text-align: left;
+}
+
+input[type="date"],
+input[type="time"] {
+  text-align: left;
+  -webkit-text-align: left;
 }
 
 form > .input-block > input:focus {

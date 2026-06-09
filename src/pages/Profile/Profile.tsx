@@ -621,7 +621,7 @@ function Profile() {
             <span>Invoices</span>
           </div>
 
-          <div className="nav-item active" onClick={() => navigate("/profile")}>
+          <div className="nav-item active" onClick={() => navigate("/more")}>
             <FaEllipsisH />
             <span>More</span>
           </div>

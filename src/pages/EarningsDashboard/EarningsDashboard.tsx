@@ -147,7 +147,6 @@ export default function EarningsDashboard() {
             <FaArrowLeft />
           </button>
           <img src="/logo.png" alt="Billio" className="about-logo" />
-          <div style={{ width: 42 }} />
         </div>
         <h1 className="ed-title">Earnings</h1>
         <p className="ed-subtitle">{now.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</p>
@@ -259,8 +258,8 @@ export default function EarningsDashboard() {
                 <strong>{selectedMonthData.count}</strong>
               </div>
               <div>
-                <span>Avg/lesson</span>
-                <strong>{selectedMonthData.count > 0 ? fmt(selectedMonthData.revenue / selectedMonthData.count) : "$0"}</strong>
+                <span>Avg/week</span>
+                <strong>{fmt(selectedMonthData.revenue / 4)}</strong>
               </div>
             </div>
           </div>

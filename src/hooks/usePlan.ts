@@ -6,6 +6,7 @@ export type Plan = "free" | "pro";
 export function usePlan() {
   const [plan, setPlan] = useState<Plan>("free");
   const [planLoading, setPlanLoading] = useState(true);
+  const [fullName, setFullName] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -15,11 +16,13 @@ export function usePlan() {
 
       const { data: profileData } = await supabase
         .from("profiles")
-        .select("id")
+        .select("id, full_name")
         .eq("user_id", user.id)
         .single();
 
       if (!profileData) { setPlanLoading(false); return; }
+
+      setFullName(profileData.full_name || "");
 
       const { data: coachData } = await supabase
         .from("coaches")
@@ -42,5 +45,5 @@ export function usePlan() {
   const isPro = plan === "pro";
   const isFree = plan === "free";
 
-  return { plan, planLoading, isPro, isFree };
+  return { plan, planLoading, isPro, isFree, fullName };
 }

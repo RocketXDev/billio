@@ -173,8 +173,13 @@ function Invoices() {
     .filter((invoice) => invoice.status === "unbilled" || invoice.status === "billed")
     .reduce((total, invoice) => total + Number(invoice.total || 0), 0);
 
+  const now = new Date();
   const paidThisMonth = invoices
-    .filter((invoice) => invoice.status === "paid")
+    .filter((invoice) => {
+      if (invoice.status !== "paid") return false;
+      const d = new Date(invoice.created_at);
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    })
     .reduce((total, invoice) => total + Number(invoice.total || 0), 0);
 
   const draftInvoices = invoices.filter((invoice) => invoice.status === "unbilled");
@@ -915,9 +920,9 @@ function Invoices() {
 
               <div className="invoice-stat-card green-stat">
                 <div className="invoice-stat-icon"><FaFileInvoiceDollar /></div>
-                <span>Paid total</span>
+                <span>Paid this month</span>
                 <strong>{formatMoney(paidThisMonth)}</strong>
-                <p>{invoices.filter((i) => i.status === "paid").length} invoices</p>
+                <p>{invoices.filter((i) => { if (i.status !== "paid") return false; const d = new Date(i.created_at); return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth(); }).length} invoices</p>
               </div>
 
               <div className="invoice-stat-card orange-stat">

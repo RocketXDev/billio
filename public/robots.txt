@@ -1,0 +1,33 @@
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /signup
+Allow: /about
+Allow: /support
+Allow: /privacy
+Allow: /terms
+
+# Block authenticated app routes
+Disallow: /dashboard
+Disallow: /lessons
+Disallow: /students
+Disallow: /invoices
+Disallow: /profile
+Disallow: /settings
+Disallow: /more
+Disallow: /timer
+Disallow: /recurring-lessons
+Disallow: /earnings-dashboard
+Disallow: /upgrade
+Disallow: /app
+
+# Block transactional/utility routes
+Disallow: /email-confirmed
+Disallow: /verify-email
+Disallow: /update-password
+Disallow: /forgot-password
+Disallow: /password-updated
+Disallow: /sms-opt-in
+Disallow: /mark-invoice-paid
+
+Sitemap: https://www.mybillioapp.com/sitemap.xml

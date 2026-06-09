@@ -131,6 +131,9 @@ function DesktopLayout({ children }: Props) {
           <NavLink to="/invoices" className={navLinkClass}>
             <FaFileInvoiceDollar /> Invoices
           </NavLink>
+          <NavLink to="/more" className={navLinkClass}>
+            <FaFileInvoiceDollar /> More
+          </NavLink>
 
           <div className="desktop-sidebar-divider" />
 

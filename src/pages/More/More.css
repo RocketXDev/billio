@@ -150,10 +150,6 @@
   border-bottom: none;
 }
 
-.more-list-item:hover {
-  background: var(--main-bg);
-}
-
 .more-list-item svg:first-child {
   color: var(--primary-purple);
   font-size: 16px;

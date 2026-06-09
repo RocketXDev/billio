@@ -180,7 +180,7 @@ function Invoices() {
   const paidThisMonth = invoices
     .filter((invoice) => {
       if (invoice.status !== "paid") return false;
-      const d = new Date(invoice.paid_at || invoice.created_at);
+      const d = new Date(invoice.updated_at || invoice.created_at);
       return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
     })
     .reduce((total, invoice) => total + Number(invoice.total || 0), 0);
@@ -642,7 +642,7 @@ function Invoices() {
     setStatusUpdatingId(invoice.id);
     const { data, error } = await supabase
       .from("invoices")
-      .update({ status: next, paid_at: next === "paid" ? new Date().toISOString() : null })
+      .update({ status: next })
       .eq("id", invoice.id)
       .eq("coach_id", coachId)
       .select("*, students(student_name, email, phone_number, parent_name, parent_phone)")
@@ -925,7 +925,7 @@ function Invoices() {
                 <div className="invoice-stat-icon"><FaFileInvoiceDollar /></div>
                 <span>Paid this month</span>
                 <strong>{formatMoney(paidThisMonth)}</strong>
-                <p>{invoices.filter((i) => { if (i.status !== "paid") return false; const d = new Date(i.paid_at || i.created_at); return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth(); }).length} invoices</p>
+                <p>{invoices.filter((i) => { if (i.status !== "paid") return false; const d = new Date(i.updated_at || i.created_at); return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth(); }).length} invoices</p>
               </div>
 
               <div className="invoice-stat-card orange-stat">

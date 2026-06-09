@@ -180,7 +180,7 @@ function Invoices() {
   const paidThisMonth = invoices
     .filter((invoice) => {
       if (invoice.status !== "paid") return false;
-      const d = new Date(invoice.updated_at || invoice.created_at);
+      const d = new Date(invoice.created_at);
       return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
     })
     .reduce((total, invoice) => total + Number(invoice.total || 0), 0);

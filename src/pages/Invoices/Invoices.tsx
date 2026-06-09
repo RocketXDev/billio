@@ -13,15 +13,18 @@ import {
   FaReceipt,
   FaClock,
   FaWallet,
-  FaChevronDown, 
+  FaChevronDown,
   FaChevronRight,
-  FaCog
+  FaCog,
+  FaLock,
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
+import { usePlan } from "../../hooks/usePlan";
 import "./Invoices.css"
 
 function Invoices() {
   const navigate = useNavigate();
+  const { isPro } = usePlan();
 
   const [invoices, setInvoices] = useState<any[]>([]);
   const [coachId, setCoachId] = useState("");
@@ -1591,6 +1594,25 @@ function Invoices() {
                   ×
                 </button>
               </div>
+
+              {!isPro && (
+                <div className="invoice-pro-overlay">
+                  <div className="invoice-pro-overlay-card">
+                    <div className="invoice-pro-overlay-icon">
+                      <FaLock />
+                    </div>
+                    <strong>Pro Feature</strong>
+                    <p>Invoice automation is available for Pro users only.</p>
+                    <button
+                      type="button"
+                      className="invoice-pro-overlay-btn"
+                      onClick={() => navigate("/upgrade")}
+                    >
+                      Upgrade to Pro
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <form className="invoice-settings-form" onSubmit={handleSaveInvoiceSettings}>
                 <section className="invoice-settings-section">

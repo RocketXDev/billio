@@ -12,12 +12,15 @@ import {
   FaClock,
   FaEdit,
   FaTrash,
+  FaLock,
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
 import { useNavigate } from "react-router-dom";
+import { usePlan } from "../../hooks/usePlan";
 import "./Lessons.css"
 
 function Lessons() {
+  const { isPro } = usePlan();
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [showAddLesson, setShowAddLesson] = useState(false);
   const [lessons, setLessons] = useState<any[]>([]);
@@ -773,6 +776,12 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     month: "long",
     year: "numeric",
   });
+
+  const today = new Date();
+  const selectedDate = new Date(`${selectedCalendarDate}T00:00:00`);
+  const isViewingCurrentMonth =
+    selectedDate.getMonth() === today.getMonth() &&
+    selectedDate.getFullYear() === today.getFullYear();
   
 
   return (
@@ -850,29 +859,46 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                     ))}
                   </div>
 
-                  <div className="calendar-grid">
-                    {calendarMonthDays.map((day) => (
-                      <button
-                        key={day.full}
-                        type="button"
-                        className={`calendar-day-card ${
-                          selectedCalendarDate === day.full ? "active" : ""
-                        } ${!day.isCurrentMonth ? "muted" : ""}`}
-                        onClick={() => setSelectedCalendarDate(day.full)}
-                      >
-                        <strong>{day.dayNumber}</strong>
+                  <div className="calendar-grid-wrapper">
+                    <div className="calendar-grid">
+                      {calendarMonthDays.map((day) => (
+                        <button
+                          key={day.full}
+                          type="button"
+                          className={`calendar-day-card ${
+                            selectedCalendarDate === day.full ? "active" : ""
+                          } ${!day.isCurrentMonth ? "muted" : ""}`}
+                          onClick={() => setSelectedCalendarDate(day.full)}
+                        >
+                          <strong>{day.dayNumber}</strong>
 
-                        {day.lessons.length > 0 && (
-                          <>
-                            <div className="calendar-lesson-dot purple-dot" />
-                            {/* <p>
-                              {day.lessons.length}{" "}
-                              {day.lessons.length === 1 ? "lesson" : "lessons"}
-                            </p> */}
-                          </>
-                        )}
-                      </button>
-                    ))}
+                          {day.lessons.length > 0 && (
+                            <>
+                              <div className="calendar-lesson-dot purple-dot" />
+                            </>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+
+                    {!isPro && !isViewingCurrentMonth && (
+                      <div className="calendar-pro-overlay">
+                        <div className="calendar-pro-overlay-card">
+                          <div className="calendar-pro-overlay-icon">
+                            <FaLock />
+                          </div>
+                          <strong>Pro Feature</strong>
+                          <p>Unlimited calendar available only for Pro users.</p>
+                          <button
+                            type="button"
+                            className="calendar-pro-overlay-btn"
+                            onClick={() => navigate("/upgrade")}
+                          >
+                            Upgrade to Pro
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <section className="calendar-detail-card">
@@ -897,14 +923,16 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                       </span>
                     </div>
 
-                    <button
-                      type="button"
-                      className="calendar-add-lesson-btn"
-                      onClick={()=> {setLessonDate(selectedCalendarDate);
-                      openAddLesson();}}
-                    >
-                      <FaPlus />
-                    </button>
+                    {(isPro || isViewingCurrentMonth) && (
+                      <button
+                        type="button"
+                        className="calendar-add-lesson-btn"
+                        onClick={()=> {setLessonDate(selectedCalendarDate);
+                        openAddLesson();}}
+                      >
+                        <FaPlus />
+                      </button>
+                    )}
                   </div>
                   {selectedCalendarLessons.length === 0 ? (
                       <p className="empty-lessons">No lessons for this day.</p>

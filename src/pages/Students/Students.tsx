@@ -8,13 +8,16 @@ import {
   FaEllipsisH,
   FaPlus,
   FaEdit,
-  FaFilter
+  FaFilter,
+  FaLock,
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
+import { usePlan } from "../../hooks/usePlan";
 import "./Students.css"
 
 function Students() {
   const navigate = useNavigate();
+  const { isPro } = usePlan();
 
   const [students, setStudents] = useState<any[]>([]);
   const [coachId, setCoachId] = useState("");
@@ -776,13 +779,34 @@ function Students() {
 
               <button
                 type="button"
-                className="students-add-btn"
-                onClick={() => setShowAddStudent(true)}
+                className={`students-add-btn${!isPro && activeStudents.length >= 5 ? " students-add-btn-dimmed" : ""}`}
+                onClick={() => {
+                  if (!isPro && activeStudents.length >= 5) {
+                    setShowStudentLimitModal(true);
+                  } else {
+                    setShowAddStudent(true);
+                  }
+                }}
               >
                 <FaPlus />
               </button>
             </div>
           </div>
+
+          {!isPro && (
+            <div className="student-limit-bar">
+              <div className="student-limit-bar-header">
+                <span>Free Plan</span>
+                <span>{activeStudents.length} / 5 students</span>
+              </div>
+              <div className="student-limit-progress-track">
+                <div
+                  className="student-limit-progress-fill"
+                  style={{ width: `${Math.min((activeStudents.length / 5) * 100, 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
 
           <div className="students-list-view">
             <section className="students-group">
@@ -912,6 +936,38 @@ function Students() {
           </div>
         </nav>
       </div>
+
+      {showStudentLimitModal && (
+        <div
+          className="student-limit-overlay"
+          onClick={() => setShowStudentLimitModal(false)}
+        >
+          <div
+            className="student-limit-popup"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="student-limit-close"
+              onClick={() => setShowStudentLimitModal(false)}
+            >
+              ×
+            </button>
+            <div className="student-limit-modal-icon">
+              <FaLock />
+            </div>
+            <strong>Unlimited students available for Pro users only</strong>
+            <p>You've reached the 5-student limit on the free plan. Upgrade to Pro to add unlimited students.</p>
+            <button
+              type="button"
+              className="student-limit-upgrade-btn"
+              onClick={() => navigate("/upgrade")}
+            >
+              Upgrade to Pro
+            </button>
+          </div>
+        </div>
+      )}
 
       {showAddStudent && (
         <div
@@ -1100,24 +1156,26 @@ function Students() {
                     </span>
 
                     <div className="student-choice-group">
-                      {["auto", "email", "text", "both"].map((choice) => (
-                        <button
-                          key={choice}
-                          type="button"
-                          className={`student-choice ${
-                            invoiceDeliveryMethod === choice ? "active" : ""
-                          }`}
-                          onClick={() => setInvoiceDeliveryMethod(choice)}
-                        >
-                          {choice === "auto"
-                            ? "Auto"
-                            : choice === "email"
-                            ? "Email"
-                            : choice === "text"
-                            ? "Text"
-                            : "Both"}
-                        </button>
-                      ))}
+                      {["auto", "email", "text", "both"].map((choice) => {
+                        const isLocked = !isPro && (choice === "text" || choice === "both");
+                        return (
+                          <div key={choice} className="lock-wrapper">
+                            <button
+                              type="button"
+                              className={`student-choice ${invoiceDeliveryMethod === choice ? "active" : ""}${isLocked ? " pro-locked-choice" : ""}`}
+                              onClick={() => !isLocked && setInvoiceDeliveryMethod(choice)}
+                              disabled={isLocked}
+                            >
+                              {choice === "auto" ? "Auto" : choice === "email" ? "Email" : choice === "text" ? "Text" : "Both"}
+                            </button>
+                            {isLocked && (
+                              <span className="pro-only-bubble">
+                                <FaLock style={{ fontSize: 8 }} /> Pro only
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -1326,24 +1384,26 @@ function Students() {
                     </span>
 
                     <div className="student-choice-group">
-                      {["auto", "email", "text", "both"].map((choice) => (
-                        <button
-                          key={choice}
-                          type="button"
-                          className={`student-choice ${
-                            invoiceDeliveryMethod === choice ? "active" : ""
-                          }`}
-                          onClick={() => setInvoiceDeliveryMethod(choice)}
-                        >
-                          {choice === "auto"
-                            ? "Auto"
-                            : choice === "email"
-                            ? "Email"
-                            : choice === "text"
-                            ? "Text"
-                            : "Both"}
-                        </button>
-                      ))}
+                      {["auto", "email", "text", "both"].map((choice) => {
+                        const isLocked = !isPro && (choice === "text" || choice === "both");
+                        return (
+                          <div key={choice} className="lock-wrapper">
+                            <button
+                              type="button"
+                              className={`student-choice ${invoiceDeliveryMethod === choice ? "active" : ""}${isLocked ? " pro-locked-choice" : ""}`}
+                              onClick={() => !isLocked && setInvoiceDeliveryMethod(choice)}
+                              disabled={isLocked}
+                            >
+                              {choice === "auto" ? "Auto" : choice === "email" ? "Email" : choice === "text" ? "Text" : "Both"}
+                            </button>
+                            {isLocked && (
+                              <span className="pro-only-bubble">
+                                <FaLock style={{ fontSize: 8 }} /> Pro only
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>

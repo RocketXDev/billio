@@ -10,7 +10,8 @@ import {
   FaUsers,
   FaFileInvoiceDollar,
   FaEllipsisH,
-  FaTrash
+  FaTrash,
+  FaLock,
 } from "react-icons/fa";
 import { useNavigate, useLocation } from "react-router-dom";
 import { usePlan } from "../../hooks/usePlan";
@@ -71,7 +72,7 @@ function Dashboard() {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const { plan } = usePlan();
+  const { isPro } = usePlan();
   const { settings } = useSettings();
   const { shouldShow, remindLater } = useInstallPrompt();
   const [showUpgradeToast, setShowUpgradeToast] = useState(false);
@@ -1471,22 +1472,26 @@ function Dashboard() {
                 </p>
 
                 <div className="onboarding-choice-group">
-                  {["email", "text", "both"].map((choice) => (
-                    <button
-                      key={choice}
-                      type="button"
-                      className={`onboarding-choice ${
-                        preferredCommunication === choice ? "active" : ""
-                      }`}
-                      onClick={() => setPreferredCommunication(choice)}
-                    >
-                      {choice === "email"
-                        ? "Email"
-                        : choice === "text"
-                        ? "Text Message"
-                        : "Email + Text"}
-                    </button>
-                  ))}
+                  {["email", "text", "both"].map((choice) => {
+                    const isLocked = !isPro && (choice === "text" || choice === "both");
+                    return (
+                      <div key={choice} className="lock-wrapper">
+                        <button
+                          type="button"
+                          className={`onboarding-choice ${preferredCommunication === choice ? "active" : ""}${isLocked ? " pro-locked-choice" : ""}`}
+                          onClick={() => !isLocked && setPreferredCommunication(choice)}
+                          disabled={isLocked}
+                        >
+                          {choice === "email" ? "Email" : choice === "text" ? "Text Message" : "Email + Text"}
+                        </button>
+                        {isLocked && (
+                          <span className="pro-only-bubble">
+                            <FaLock style={{ fontSize: 8 }} /> Pro only
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1497,22 +1502,26 @@ function Dashboard() {
                 </p>
 
                 <div className="onboarding-choice-group">
-                  {["email", "text", "both"].map((choice) => (
-                    <button
-                      key={choice}
-                      type="button"
-                      className={`onboarding-choice ${
-                        preferredInvoiceDelivery === choice ? "active" : ""
-                      }`}
-                      onClick={() => setPreferredInvoiceDelivery(choice)}
-                    >
-                      {choice === "email"
-                        ? "Email"
-                        : choice === "text"
-                        ? "Text Message"
-                        : "Email + Text"}
-                    </button>
-                  ))}
+                  {["email", "text", "both"].map((choice) => {
+                    const isLocked = !isPro && (choice === "text" || choice === "both");
+                    return (
+                      <div key={choice} className="lock-wrapper">
+                        <button
+                          type="button"
+                          className={`onboarding-choice ${preferredInvoiceDelivery === choice ? "active" : ""}${isLocked ? " pro-locked-choice" : ""}`}
+                          onClick={() => !isLocked && setPreferredInvoiceDelivery(choice)}
+                          disabled={isLocked}
+                        >
+                          {choice === "email" ? "Email" : choice === "text" ? "Text Message" : "Email + Text"}
+                        </button>
+                        {isLocked && (
+                          <span className="pro-only-bubble">
+                            <FaLock style={{ fontSize: 8 }} /> Pro only
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 

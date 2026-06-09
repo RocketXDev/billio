@@ -796,7 +796,11 @@
   height: 100%;
   background: var(--primary-purple);
   border-radius: 999px;
-  transition: width 0.3s ease;
+  transition: width 0.3s ease, background 0.3s ease;
+}
+
+.student-limit-progress-fill.student-limit-progress-over {
+  background: #ef4444;
 }
 
 /* STUDENT LIMIT DIMMED BUTTON */

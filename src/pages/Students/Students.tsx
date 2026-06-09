@@ -594,7 +594,13 @@ function Students() {
 
   async function handleRestoreStudent(studentId: string) {
 
-    if (isMoving) return; 
+    if (!isPro && activeStudents.length >= 5) {
+      setShowStudentLimitModal(true);
+      closeEditStudent();
+      return;
+    }
+
+    if (isMoving) return;
     setIsMoving(true);
 
     try {
@@ -801,7 +807,7 @@ function Students() {
               </div>
               <div className="student-limit-progress-track">
                 <div
-                  className="student-limit-progress-fill"
+                  className={`student-limit-progress-fill${activeStudents.length > 5 ? " student-limit-progress-over" : ""}`}
                   style={{ width: `${Math.min((activeStudents.length / 5) * 100, 100)}%` }}
                 />
               </div>

@@ -1107,6 +1107,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                 <input
                   id="lessonDate"
                   type="date"
+                  placeholder="Lesson Date"
                   value={lessonDate}
                   onChange={(e) => setLessonDate(e.target.value)}
                   required
@@ -1118,6 +1119,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                 <input
                   id="startTime"
                   type="time"
+                  placeholder="Lesson Time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
                   required
@@ -1233,6 +1235,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                 <input
                   id="editLessonDate"
                   type="date"
+                  placeholder="Lesson Date"
                   value={lessonDate}
                   onChange={(e) => setLessonDate(e.target.value)}
                   required
@@ -1244,6 +1247,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                 <input
                   id="editStartTime"
                   type="time"
+                  placeholder="Lesson Time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
                   required

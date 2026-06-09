@@ -450,6 +450,9 @@ function Students() {
           parent_phone: parentPhone || null,
           active,
           notes: notes || null,
+          sms_consent: smsConsent,
+          sms_consent_at: smsConsent ? new Date().toISOString() : null,
+          sms_consent_source: smsConsent ? "coach_confirmed" : null,
         })
         .eq("id", editingStudent.id)
         .select()

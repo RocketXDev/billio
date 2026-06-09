@@ -591,8 +591,11 @@ export default function RecurringLessons() {
               {previewCount > 0 && (
                 <div className="rl-preview">
                   <FaRedoAlt style={{ fontSize: 12, marginRight: 8 }} />
-                  This will create <strong>&nbsp;{previewCount} lessons</strong>
-                  {editingSeries ? " going forward" : ""}.
+                  <>
+                    This will create{" "}
+                    <strong>&nbsp;{previewCount} lessons&nbsp;</strong>
+                    {editingSeries && " going forward"}.
+                  </>
                 </div>
               )}
 

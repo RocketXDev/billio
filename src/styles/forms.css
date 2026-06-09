@@ -29,8 +29,18 @@ form > .input-block > .lock-wrapper > input {
 
 input[type="date"],
 input[type="time"] {
+  text-align: left !important;
+  -webkit-text-align: left !important;
+}
+
+input[type="date"]::-webkit-datetime-edit,
+input[type="time"]::-webkit-datetime-edit {
   text-align: left;
-  -webkit-text-align: left;
+}
+
+input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+input[type="time"]::-webkit-datetime-edit-fields-wrapper {
+  justify-content: flex-start;
 }
 
 form > .input-block > input:focus {

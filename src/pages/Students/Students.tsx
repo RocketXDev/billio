@@ -140,7 +140,8 @@ function Students() {
           parent_phone,
           active,
           notes,
-          created_at
+          created_at,
+          sms_consent
         )
       `)
       .eq("coach_id", coachData.id);
@@ -195,14 +196,12 @@ function Students() {
           active,
           notes: notes || null,
           sms_consent: smsConsent,
-          sms_consent_at: smsConsent ? new Date().toISOString() : null,
-          sms_consent_source: smsConsent ? "coach_confirmed" : null,
         })
         .select()
         .single();
 
       if (studentError) {
-        console.log("Student create error:", studentError);
+        alert("Error saving student: " + studentError.message);
         return;
       }
 
@@ -216,7 +215,7 @@ function Students() {
         });
 
       if (linkError) {
-        console.log("Coach-student link error:", linkError);
+        alert("Error linking student: " + linkError.message);
         return;
       }
 
@@ -259,7 +258,7 @@ function Students() {
   }
 
   function closeEditStudent() {
-    setShowAddStudent(false);
+    setShowEditStudent(false);
     resetStudentForm();
   }
 
@@ -357,9 +356,6 @@ function Students() {
           hourly_rate: Number(hourlyRate),
           rate: calculatedRate,
           notes: lessonNotes || null,
-          sms_consent: smsConsent,
-          sms_consent_at: smsConsent ? new Date().toISOString() : null,
-          sms_consent_source: smsConsent ? "coach_confirmed" : null,
         })
         .eq("id", editingLesson.id)
         .eq("coach_id", coachId)
@@ -367,7 +363,7 @@ function Students() {
         .single();
 
       if (error) {
-        console.log("Update student lesson error:", error);
+        alert("Error saving lesson: " + error.message);
         return;
       }
 
@@ -454,15 +450,13 @@ function Students() {
           active,
           notes: notes || null,
           sms_consent: smsConsent,
-          sms_consent_at: smsConsent ? new Date().toISOString() : null,
-          sms_consent_source: smsConsent ? "coach_confirmed" : null,
         })
         .eq("id", editingStudent.id)
         .select()
         .single();
 
       if (studentError) {
-        console.log("Student update error:", studentError);
+        alert("Error saving student: " + studentError.message);
         return;
       }
 
@@ -476,7 +470,7 @@ function Students() {
         .eq("student_id", editingStudent.id);
 
       if (linkError) {
-        console.log("Coach-student preference update error:", linkError);
+        alert("Error saving preferences: " + linkError.message);
         return;
       }
 
@@ -1206,7 +1200,7 @@ function Students() {
                 </button>
 
                 <button type="submit" className="students-save-btn" disabled={isSaving}>
-                    {isSaving ? "Saving..." : "Save Lesson"}
+                    {isSaving ? "Saving..." : "Save Student"}
                 </button>
                 </form>
           </div>

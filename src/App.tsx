@@ -47,6 +47,7 @@ function App() {
       <Route path="/support" element={<Support />} />
       <Route path="/about" element={<About />} />
       <Route path="/mark-invoice-paid" element={<MarkInvoicePaid />} />
+      <Route path="/pay" element={<MarkInvoicePaid />} />
 
       <Route
         path="/app"

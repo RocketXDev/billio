@@ -172,22 +172,58 @@ function Invoices() {
       ? invoices
       : invoices.filter((invoice) => invoice.status === selectedFilter);
 
-  const unpaidThisWeek = invoices
-    .filter((invoice) => invoice.status === "unbilled" || invoice.status === "billed")
-    .reduce((total, invoice) => total + Number(invoice.total || 0), 0);
-
   const now = new Date();
-  const paidThisMonth = invoices
-    .filter((invoice) => {
-      if (invoice.status !== "paid") return false;
-      const d = new Date(invoice.created_at);
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-    })
-    .reduce((total, invoice) => total + Number(invoice.total || 0), 0);
 
-  const draftInvoices = invoices.filter((invoice) => invoice.status === "unbilled");
+  function getInvoiceDate(invoice: any) {
+    return (
+      invoice.paid_at ||
+      invoice.updated_at ||
+      invoice.issue_date ||
+      invoice.created_at
+    );
+  }
 
-  const pendingInvoices = invoices.filter((invoice) => invoice.status === "billed");
+  function isCurrentMonth(dateValue: any) {
+    if (!dateValue) return false;
+
+    const d = new Date(dateValue);
+
+    return (
+      d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth()
+    );
+  }
+
+  const paidInvoicesThisMonth = invoices.filter((invoice) => {
+    return (
+      invoice.status === "paid" &&
+      isCurrentMonth(getInvoiceDate(invoice))
+    );
+  });
+
+  const paidThisMonth = paidInvoicesThisMonth.reduce(
+    (total, invoice) => total + Number(invoice.total || 0),
+    0
+  );
+
+  const draftInvoices = invoices.filter(
+    (invoice) => (invoice.status || "unbilled") === "unbilled"
+  );
+
+  const pendingInvoices = invoices.filter(
+    (invoice) => invoice.status === "billed"
+  );
+
+  const unpaidInvoices = invoices.filter(
+    (invoice) =>
+      invoice.status === "unbilled" ||
+      invoice.status === "billed"
+  );
+
+  const unpaidTotal = unpaidInvoices.reduce(
+    (total, invoice) => total + Number(invoice.total || 0),
+    0
+  );
 
   async function openAddInvoice() {
     if (!coachId) return;
@@ -917,7 +953,7 @@ function Invoices() {
               <div className="invoice-stat-card purple-stat">
                 <div className="invoice-stat-icon"><FaWallet /></div>
                 <span>Unpaid this week</span>
-                <strong>{formatMoney(unpaidThisWeek)}</strong>
+                <strong>{formatMoney(unpaidTotal)}</strong>
                 <p>{pendingInvoices.length} invoices</p>
               </div>
 
@@ -925,7 +961,7 @@ function Invoices() {
                 <div className="invoice-stat-icon"><FaFileInvoiceDollar /></div>
                 <span>Paid this month</span>
                 <strong>{formatMoney(paidThisMonth)}</strong>
-                <p>{invoices.filter((i) => { if (i.status !== "paid") return false; const d = new Date(i.updated_at || i.created_at); return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth(); }).length} invoices</p>
+                <p>{paidInvoicesThisMonth.length} invoices</p>
               </div>
 
               <div className="invoice-stat-card orange-stat">

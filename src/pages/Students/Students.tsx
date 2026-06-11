@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
@@ -70,6 +70,17 @@ function Students() {
   const [showStudentLimitModal, setShowStudentLimitModal] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
 
+  // Tutorial
+  const [showStudentsTutorial, setShowStudentsTutorial] = useState(false);
+  const [studentsTutorialStep, setStudentsTutorialStep] = useState(0);
+  const addStudentBtnRef = useRef<HTMLButtonElement>(null);
+  const [studentsSpotlightRect, setStudentsSpotlightRect] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  } | null>(null);
+
   // Lesson filter states
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterRange, setFilterRange] = useState<string>("all");
@@ -102,6 +113,62 @@ function Students() {
   useEffect(() => { if (!coachId && !identityLoading) navigate("/login"); }, [coachId, identityLoading]);
 
   const loading = identityLoading || studentsLoading;
+
+  useEffect(() => {
+    if (!loading) {
+      const seen = localStorage.getItem("billio_students_tutorial_seen");
+
+      if (!seen) {
+        setTimeout(() => setShowStudentsTutorial(true), 500);
+      }
+    }
+  }, [loading]);
+
+  useEffect(() => {
+    function updateStudentsSpotlight() {
+      if (
+        showStudentsTutorial &&
+        studentsTutorialStep === 1 &&
+        addStudentBtnRef.current
+      ) {
+        const rect = addStudentBtnRef.current.getBoundingClientRect();
+
+        setStudentsSpotlightRect({
+          top: rect.top - 9,
+          left: rect.left - 9,
+          width: rect.width + 18,
+          height: rect.height + 18,
+        });
+      } else {
+        setStudentsSpotlightRect(null);
+      }
+    }
+
+    updateStudentsSpotlight();
+
+    window.addEventListener("resize", updateStudentsSpotlight);
+    window.addEventListener("scroll", updateStudentsSpotlight, true);
+
+    return () => {
+      window.removeEventListener("resize", updateStudentsSpotlight);
+      window.removeEventListener("scroll", updateStudentsSpotlight, true);
+    };
+  }, [showStudentsTutorial, studentsTutorialStep]);
+
+  function dismissStudentsTutorial() {
+    localStorage.setItem("billio_students_tutorial_seen", "1");
+    setShowStudentsTutorial(false);
+    setStudentsTutorialStep(0);
+    setStudentsSpotlightRect(null);
+  }
+
+  function advanceStudentsTutorial() {
+    if (studentsTutorialStep < 3) {
+      setStudentsTutorialStep((prev) => prev + 1);
+    } else {
+      dismissStudentsTutorial();
+    }
+  }
 
   async function handleCreateStudent(e: any) {
     e.preventDefault();
@@ -730,9 +797,13 @@ function Students() {
               <h1>Students</h1>
 
               <button
+                ref={addStudentBtnRef}
                 type="button"
-                className={`students-add-btn${!isPro && activeStudents.length >= 5 ? " students-add-btn-dimmed" : ""}`}
+                aria-disabled={showStudentsTutorial}
+                className={`students-add-btn${!isPro && activeStudents.length >= 5 ? " students-add-btn-dimmed" : ""}${showStudentsTutorial && studentsTutorialStep === 1 ? " students-tutorial-highlighted" : ""}`}
                 onClick={() => {
+                  if (showStudentsTutorial) return;
+
                   if (!isPro && activeStudents.length >= 5) {
                     setShowStudentLimitModal(true);
                   } else {
@@ -1944,6 +2015,146 @@ function Students() {
             ))}
           </div>
         </div>
+      )}
+
+
+      {showStudentsTutorial && (
+        <>
+          <div
+            className="students-tutorial-overlay"
+            style={studentsTutorialStep === 1 ? { background: "transparent" } : undefined}
+            onClick={studentsTutorialStep === 1 ? dismissStudentsTutorial : undefined}
+          />
+
+          {studentsTutorialStep === 1 && studentsSpotlightRect && (
+            <div
+              className="students-tutorial-spotlight"
+              style={{
+                top: studentsSpotlightRect.top,
+                left: studentsSpotlightRect.left,
+                width: studentsSpotlightRect.width,
+                height: studentsSpotlightRect.height,
+              }}
+            />
+          )}
+
+          <div className={`students-tutorial-card${studentsTutorialStep === 1 ? " students-tutorial-card-bottom" : ""}`}>
+            {studentsTutorialStep === 0 && (
+              <>
+                <div className="students-tutorial-icon-wrap">👥</div>
+                <h2 className="students-tutorial-title">Welcome to Students</h2>
+                <p className="students-tutorial-text">
+                  This page keeps your active and archived students organized in one place.
+                  Open a student to view their lesson history, invoice history, and saved details.
+                </p>
+                <ul className="students-tutorial-list">
+                  <li>Track each student you coach or teach</li>
+                  <li>Keep contact and parent information ready for billing</li>
+                  <li>Archive students without losing their history</li>
+                </ul>
+                <div className="students-tutorial-dots">
+                  <span className="students-tutorial-dot students-tutorial-dot-active" />
+                  <span className="students-tutorial-dot" />
+                  <span className="students-tutorial-dot" />
+                  <span className="students-tutorial-dot" />
+                </div>
+                <button className="students-tutorial-btn-primary" onClick={advanceStudentsTutorial}>
+                  Next →
+                </button>
+                <button className="students-tutorial-btn-skip" onClick={dismissStudentsTutorial}>
+                  Skip tutorial
+                </button>
+              </>
+            )}
+
+            {studentsTutorialStep === 1 && (
+              <>
+                <div className="students-tutorial-arrow-label">
+                  <span className="students-tutorial-arrow-up">↗</span>
+                  <span>Tap this icon later</span>
+                </div>
+                <h2 className="students-tutorial-title">Add a student</h2>
+                <p className="students-tutorial-text">
+                  Use the <strong>+ button</strong> to add a new student profile.
+                  You can save contact info, parent info, notes, SMS consent, and invoice preferences.
+                </p>
+                <ul className="students-tutorial-list">
+                  <li>Free users can keep up to 5 active students</li>
+                  <li>Pro users can add unlimited active students</li>
+                  <li>Highlighted areas are preview only during the tutorial</li>
+                </ul>
+                <div className="students-tutorial-dots">
+                  <span className="students-tutorial-dot" />
+                  <span className="students-tutorial-dot students-tutorial-dot-active" />
+                  <span className="students-tutorial-dot" />
+                  <span className="students-tutorial-dot" />
+                </div>
+                <button className="students-tutorial-btn-primary" onClick={advanceStudentsTutorial}>
+                  Next →
+                </button>
+                <button className="students-tutorial-btn-skip" onClick={dismissStudentsTutorial}>
+                  Skip tutorial
+                </button>
+              </>
+            )}
+
+            {studentsTutorialStep === 2 && (
+              <>
+                <div className="students-tutorial-icon-wrap">📋</div>
+                <h2 className="students-tutorial-title">Student list</h2>
+                <p className="students-tutorial-text">
+                  Your active students appear at the top. Tap a student row to open their detail sheet,
+                  or tap the edit icon to update their profile.
+                </p>
+                <ul className="students-tutorial-list">
+                  <li>Student details show saved lessons and invoices</li>
+                  <li>Use filters inside the detail sheet to review history faster</li>
+                  <li>Edit student info when contact or billing preferences change</li>
+                </ul>
+                <div className="students-tutorial-dots">
+                  <span className="students-tutorial-dot" />
+                  <span className="students-tutorial-dot" />
+                  <span className="students-tutorial-dot students-tutorial-dot-active" />
+                  <span className="students-tutorial-dot" />
+                </div>
+                <button className="students-tutorial-btn-primary" onClick={advanceStudentsTutorial}>
+                  Next →
+                </button>
+                <button className="students-tutorial-btn-skip" onClick={dismissStudentsTutorial}>
+                  Skip tutorial
+                </button>
+              </>
+            )}
+
+            {studentsTutorialStep === 3 && (
+              <>
+                <div className="students-tutorial-icon-wrap">🗂️</div>
+                <h2 className="students-tutorial-title">Archived students</h2>
+                <p className="students-tutorial-text">
+                  Archive students when you no longer teach them. This keeps your active list clean
+                  while preserving their lesson and invoice history.
+                </p>
+                <ul className="students-tutorial-list">
+                  <li>Archived students move to the Archived Students section</li>
+                  <li>You can restore an archived student later</li>
+                  <li>Permanent delete is available only after a student is archived</li>
+                </ul>
+                <div className="students-tutorial-dots">
+                  <span className="students-tutorial-dot" />
+                  <span className="students-tutorial-dot" />
+                  <span className="students-tutorial-dot" />
+                  <span className="students-tutorial-dot students-tutorial-dot-active" />
+                </div>
+                <button className="students-tutorial-btn-primary" onClick={advanceStudentsTutorial}>
+                  Finish
+                </button>
+                <button className="students-tutorial-btn-skip" onClick={dismissStudentsTutorial}>
+                  Skip tutorial
+                </button>
+              </>
+            )}
+          </div>
+        </>
       )}
     </div>
   );

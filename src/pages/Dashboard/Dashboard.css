@@ -872,6 +872,7 @@
 .dashboard-tutorial-highlighted {
   position: relative;
   z-index: 652;
+  pointer-events: none;
 }
 
 .dashboard-tutorial-card {
@@ -980,12 +981,6 @@
   border: none;
   cursor: pointer;
   margin-bottom: 8px;
-}
-
-.dashboard-tutorial-highlighted {
-  position: relative;
-  z-index: 652;
-  pointer-events: none;
 }
 
 .dashboard-tutorial-btn-skip {

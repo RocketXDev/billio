@@ -108,6 +108,7 @@ function Dashboard() {
         "Choose or create a student",
         "Set date, time, duration, and rate",
         "Save notes for your records",
+        "Highlighted areas are preview only during the tutorial",
       ],
     },
     {
@@ -131,6 +132,22 @@ function Dashboard() {
       ],
     },
   ];
+
+  const tutorialStorageKeys = [
+    "billio_dashboard_tutorial_seen",
+    "billio_lessons_tutorial_seen",
+    "billio_students_tutorial_seen",
+    "billio_invoices_tutorial_seen",
+    "billio_more_tutorial_seen",
+  ];
+
+  function resetAllTutorials() {
+    tutorialStorageKeys.forEach((key) => localStorage.removeItem(key));
+    setNotificationsOpen(false);
+    setDashboardTutorialStep(0);
+    setAddLessonSpotlightRect(null);
+    setShowDashboardTutorial(true);
+  }
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -266,9 +283,43 @@ function Dashboard() {
         console.log("Notification load error:", notificationError);
       }
 
-      if (notificationData) {
-        setNotifications(notificationData);
+      let loadedNotifications = notificationData || [];
+
+      const tutorialResetNotificationDeleted =
+        localStorage.getItem("billio_tutorial_reset_notification_deleted") === "1";
+
+      const hasTutorialResetNotification = loadedNotifications.some(
+        (notification) => notification.type === "tutorial_reset"
+      );
+
+      if (!tutorialResetNotificationDeleted && !hasTutorialResetNotification) {
+        const { data: tutorialResetNotification, error: tutorialResetNotificationError } =
+          await supabase
+            .from("notifications")
+            .insert({
+              profile_id: profileData.id,
+              title: "Complete tutorials again",
+              message:
+                "Tap here to reset the walkthroughs for Dashboard, Lessons, Students, Invoices, and More.",
+              type: "tutorial_reset",
+              is_read: false,
+            })
+            .select()
+            .single();
+
+        if (tutorialResetNotificationError) {
+          console.log(
+            "Tutorial reset notification error:",
+            tutorialResetNotificationError
+          );
+        }
+
+        if (tutorialResetNotification) {
+          loadedNotifications = [tutorialResetNotification, ...loadedNotifications];
+        }
       }
+
+      setNotifications(loadedNotifications);
 
       // Create coach profile if role is coach
       if (profileData.role === "coach") {
@@ -374,9 +425,14 @@ function Dashboard() {
     if (notification.type === "onboarding") {
       setShowOnboarding(true);
     }
+
     if (notification.type === "install_prompt") {
       setShowInstallGuide(true);
       setNotificationsOpen(false);
+    }
+
+    if (notification.type === "tutorial_reset") {
+      resetAllTutorials();
     }
 
     const { error } = await supabase
@@ -398,7 +454,11 @@ function Dashboard() {
     );
   }
 
-  async function deleteNotification(notificationId: string) {
+  async function deleteNotification(notificationId: string, notificationType?: string) {
+    if (notificationType === "tutorial_reset") {
+      localStorage.setItem("billio_tutorial_reset_notification_deleted", "1");
+    }
+
     const { error } = await supabase
       .from("notifications")
       .delete()
@@ -1506,7 +1566,7 @@ function Dashboard() {
                         className="notification-delete"
                         onClick={(e) => {
                           e.stopPropagation();
-                          deleteNotification(notification.id);
+                          deleteNotification(notification.id, notification.type);
                         }}
                       >
                         <FaTrash/>

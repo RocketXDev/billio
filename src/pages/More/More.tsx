@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   FaClock,
   FaChartLine,
@@ -24,7 +25,84 @@ import { usePlan } from "../../hooks/usePlan";
 
 export default function More() {
   const navigate = useNavigate();
-  const { isPro, isFree, planLoading, fullName } = usePlan();
+  const { isPro, isFree, planLoading } = usePlan();
+
+  const [showMoreTutorial, setShowMoreTutorial] = useState(false);
+  const [moreTutorialStep, setMoreTutorialStep] = useState(0);
+  const moreTutorialSteps = [
+    {
+      icon: "✨",
+      title: "More Tools & Settings",
+      text: "This page gives you quick access to extra Billio tools, account options, and support links.",
+      bullets: [
+        "Use it when you need tools that do not fit directly into Lessons, Students, or Invoices.",
+        "Some tools are included for everyone, while advanced tools may require Pro.",
+      ],
+      target: "none",
+    },
+    {
+      icon: "🛠️",
+      title: "Coaching Tools",
+      text: "This section is for extra features that help you manage your coaching work faster.",
+      bullets: [
+        "Lesson Timer helps you track lesson time live.",
+        "Recurring Lessons and advanced summaries are available here when enabled for your plan.",
+      ],
+      target: "coaching",
+    },
+    {
+      icon: "👤",
+      title: "Account Options",
+      text: "This section helps you manage your Billio account, subscription, profile, and settings.",
+      bullets: [
+        "Upgrade to Pro or review your subscription from here.",
+        "Settings and Profile let you adjust your account details.",
+      ],
+      target: "account",
+    },
+    {
+      icon: "💬",
+      title: "Help & Information",
+      text: "This section gives you access to support and important Billio information.",
+      bullets: [
+        "Use Support if you need help with the app.",
+        "About Billio, Privacy Policy, and other pages live here.",
+      ],
+      target: "help",
+    },
+  ];
+
+  const currentMoreTutorialStep = moreTutorialSteps[moreTutorialStep];
+
+  useEffect(() => {
+    if (!planLoading) {
+      const seen = localStorage.getItem("billio_more_tutorial_seen");
+      if (!seen) {
+        const timer = window.setTimeout(() => setShowMoreTutorial(true), 500);
+        return () => window.clearTimeout(timer);
+      }
+    }
+  }, [planLoading]);
+
+  function dismissMoreTutorial() {
+    localStorage.setItem("billio_more_tutorial_seen", "1");
+    setShowMoreTutorial(false);
+    setMoreTutorialStep(0);
+  }
+
+  function advanceMoreTutorial() {
+    if (moreTutorialStep < moreTutorialSteps.length - 1) {
+      setMoreTutorialStep((prev) => prev + 1);
+    } else {
+      dismissMoreTutorial();
+    }
+  }
+
+  function backMoreTutorial() {
+    if (moreTutorialStep > 0) {
+      setMoreTutorialStep((prev) => prev - 1);
+    }
+  }
 
   if (planLoading) {
     return (
@@ -146,6 +224,61 @@ export default function More() {
         <div className="nav-item" onClick={() => navigate("/invoices")}><FaFileInvoiceDollar /><span>Invoices</span></div>
         <div className="nav-item active" onClick={() => navigate("/more")}><FaEllipsisH /><span>More</span></div>
       </nav>
+
+      {showMoreTutorial && (
+        <>
+          <div className="more-tutorial-overlay" />
+
+          <div className="more-tutorial-card">
+            <div className="more-tutorial-icon-wrap">{currentMoreTutorialStep.icon}</div>
+            <h2 className="more-tutorial-title">{currentMoreTutorialStep.title}</h2>
+            <p className="more-tutorial-text">{currentMoreTutorialStep.text}</p>
+
+            <ul className="more-tutorial-list">
+              {currentMoreTutorialStep.bullets.map((bullet) => (
+                <li key={bullet}>{bullet}</li>
+              ))}
+            </ul>
+
+            <div className="more-tutorial-dots">
+              {moreTutorialSteps.map((_, index) => (
+                <span
+                  key={index}
+                  className={`more-tutorial-dot${index === moreTutorialStep ? " active" : ""}`}
+                />
+              ))}
+            </div>
+
+            <div className="more-tutorial-actions">
+              {moreTutorialStep > 0 && (
+                <button
+                  type="button"
+                  className="more-tutorial-btn-secondary"
+                  onClick={backMoreTutorial}
+                >
+                  Back
+                </button>
+              )}
+
+              <button
+                type="button"
+                className="more-tutorial-btn-primary"
+                onClick={advanceMoreTutorial}
+              >
+                {moreTutorialStep === moreTutorialSteps.length - 1 ? "Finish" : "Next →"}
+              </button>
+            </div>
+
+            <button
+              type="button"
+              className="more-tutorial-btn-skip"
+              onClick={dismissMoreTutorial}
+            >
+              Skip tutorial
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

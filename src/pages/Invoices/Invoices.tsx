@@ -86,7 +86,7 @@ function Invoices() {
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
 
   // Tutorial
-  const [showTutorial, setShowTutorial] = useState(true);
+  const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
   const addInvoiceBtnRef = useRef<HTMLButtonElement>(null);
   const settingsBtnRef = useRef<HTMLButtonElement>(null);

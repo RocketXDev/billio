@@ -136,7 +136,7 @@ function Lessons() {
       if (lessonTutorialStep === 1) return lessonsViewToggleRef.current;
       if (lessonTutorialStep === 2) return null;
       if (lessonTutorialStep === 3) return calendarDetailRef.current;
-      if (lessonTutorialStep === 4) return listViewRef.current;
+      if (lessonTutorialStep === 4) return lessonsViewToggleRef.current;
       return null;
     }
 
@@ -947,7 +947,8 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
             <div
               ref={lessonsViewToggleRef}
               className={`lessons-view-toggle ${
-                showLessonsTutorial && lessonTutorialStep === 1
+                showLessonsTutorial &&
+                (lessonTutorialStep === 1 || lessonTutorialStep === 4)
                   ? "lessons-tutorial-highlighted"
                   : ""
               }`}
@@ -1144,11 +1145,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
               {viewMode === "list" && (
                 <div
                   ref={listViewRef}
-                  className={`lessons-list-view ${
-                    showLessonsTutorial && lessonTutorialStep === 4
-                      ? "lessons-tutorial-highlighted"
-                      : ""
-                  }`}
+                  className="lessons-list-view"
                 >
                   {lessons.length === 0 ? (
                     <p className="empty-lessons">No lessons yet. Tap + to add one.</p>

@@ -1130,7 +1130,15 @@ function Dashboard() {
                 ? "dashboard-tutorial-highlighted"
                 : ""
             }`}
-            onClick={openAddLesson}
+            aria-disabled={showDashboardTutorial}
+            onClick={(e) => {
+              if (showDashboardTutorial) {
+                e.preventDefault();
+                return;
+              }
+
+              openAddLesson();
+            }}
           >
             <div className="add-circle">
               <FaPlus />

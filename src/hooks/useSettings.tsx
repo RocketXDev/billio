@@ -1,6 +1,6 @@
-// src/hooks/useSettings.ts
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../lib/supabaseClient";
+import { useCoachIdentity } from "./useCoachIdentity";
 
 export interface CoachSettings {
   defaultLessonDuration: number;
@@ -17,39 +17,30 @@ const DEFAULTS: CoachSettings = {
 };
 
 export function useSettings() {
-  const [settings, setSettings] = useState<CoachSettings>(DEFAULTS);
-  const [settingsLoading, setSettingsLoading] = useState(true);
+  const { coachId, identityLoading } = useCoachIdentity();
 
-  useEffect(() => {
-    async function load() {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const user = sessionData.session?.user;
-      if (!user) { setSettingsLoading(false); return; }
-
-      const { data: profileData } = await supabase
-        .from("profiles").select("id").eq("user_id", user.id).single();
-      if (!profileData) { setSettingsLoading(false); return; }
-
+  const { data, isLoading } = useQuery({
+    queryKey: ["settings", coachId],
+    queryFn: async () => {
       const { data: coachData } = await supabase
         .from("coaches")
         .select("default_lesson_duration, default_due_date_days, invoice_prefix, time_format")
-        .eq("profile_id", profileData.id)
+        .eq("id", coachId)
         .single();
+      return coachData;
+    },
+    enabled: !!coachId,
+  });
 
-      if (coachData) {
-        setSettings({
-          defaultLessonDuration: coachData.default_lesson_duration ?? 30,
-          defaultDueDateDays: coachData.default_due_date_days ?? 7,
-          invoicePrefix: coachData.invoice_prefix ?? "INV",
-          timeFormat: coachData.time_format ?? "12h",
-        });
-      }
-
-      setSettingsLoading(false);
-    }
-
-    load();
-  }, []);
-
-  return { settings, settingsLoading };
+  return {
+    settings: data
+      ? {
+          defaultLessonDuration: data.default_lesson_duration ?? 30,
+          defaultDueDateDays: data.default_due_date_days ?? 7,
+          invoicePrefix: data.invoice_prefix ?? "INV",
+          timeFormat: (data.time_format ?? "12h") as "12h" | "24h",
+        }
+      : DEFAULTS,
+    settingsLoading: identityLoading || isLoading,
+  };
 }

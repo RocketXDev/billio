@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   FaHome,
   FaFileInvoiceDollar,
@@ -17,15 +18,16 @@ import {
 import { supabase } from "../../lib/supabaseClient";
 import { useNavigate } from "react-router-dom";
 import { usePlan } from "../../hooks/usePlan";
+import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import "./Lessons.css"
 
 function Lessons() {
   const { isPro } = usePlan();
+  const { coachId, identityLoading } = useCoachIdentity();
+  const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [showAddLesson, setShowAddLesson] = useState(false);
   const [lessons, setLessons] = useState<any[]>([]);
-  const [coachId, setCoachId] = useState("");
-  const [loading, setLoading] = useState(true);
 
   // Form States
   const [studentName, setStudentName] = useState("");
@@ -66,70 +68,25 @@ function Lessons() {
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    async function loadLessons() {
-      setLoading(true);
-      setLessonsLoading(true);
-
-      const { data: sessionData } = await supabase.auth.getSession();
-      const user = sessionData.session?.user;
-
-      if (!user) {
-        window.location.href = "/login";
-        return;
-      }
-
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (profileError) {
-        console.log("Profile error:", profileError);
-        setLoading(false);
-        return;
-      }
-
-      const { data: coachData, error: coachError } = await supabase
-        .from("coaches")
-        .select("id")
-        .eq("profile_id", profileData.id)
-        .single();
-
-      if (coachError) {
-        console.log("Coach error:", coachError);
-        setLoading(false);
-        return;
-      }
-
-      setCoachId(coachData.id);
-
-      const { data: lessonData, error: lessonError } = await supabase
+  const { data: lessonsData, isLoading: lessonsQueryLoading } = useQuery({
+    queryKey: ["lessons", coachId],
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from("lessons")
-        .select(`
-          *,
-          students (
-            student_name
-          )
-        `)
-        .eq("coach_id", coachData.id)
+        .select("*, students(student_name)")
+        .eq("coach_id", coachId)
         .order("lesson_date", { ascending: true })
         .order("start_time", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!coachId,
+  });
 
-      if (lessonError) {
-        console.log("Lessons error:", lessonError);
-        setLoading(false);
-        return;
-      }
+  useEffect(() => { if (lessonsData) { setLessons(lessonsData); setLessonsLoading(false); } }, [lessonsData]);
+  useEffect(() => { if (!coachId && !identityLoading) window.location.href = "/login"; }, [coachId, identityLoading]);
 
-      setLessons(lessonData || []);
-      setLoading(false);
-      setLessonsLoading(false);
-    }
-
-    loadLessons();
-  }, []);
+  const loading = identityLoading || lessonsQueryLoading;
 
   async function handleCreateLesson(e: any) {
     e.preventDefault();
@@ -237,6 +194,7 @@ function Lessons() {
       }
 
       setLessons((prev) => [...prev, lessonData]);
+      queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
 
       setStudentName("");
       setSelectedStudentId(null);
@@ -357,6 +315,7 @@ function Lessons() {
       setLessons((prev) =>
         prev.map((lesson) => (lesson.id === editingLesson.id ? data : lesson))
       );
+      queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
 
       await syncInvoiceStatusFromLesson(editingLesson.id);
 
@@ -390,8 +349,9 @@ function Lessons() {
       }
 
       setLessons((prev) => prev.filter((lesson) => lesson.id !== lessonId));
+      queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
       setShowEditLesson(false);
-      
+
     } finally {
       setIsDeleting(false)
     }
@@ -416,6 +376,7 @@ function Lessons() {
       .single();
     if (!error && data) {
       setLessons((prev) => prev.map((l) => (l.id === lesson.id ? data : l)));
+      queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
       await syncInvoiceStatusFromLesson(lesson.id);
     }
     setStatusUpdatingId(null);

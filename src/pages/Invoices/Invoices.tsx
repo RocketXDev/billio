@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
   FaHome,
@@ -20,15 +21,16 @@ import {
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
 import { usePlan } from "../../hooks/usePlan";
+import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import "./Invoices.css"
 
 function Invoices() {
   const navigate = useNavigate();
   const { isPro } = usePlan();
+  const { coachId, identityLoading } = useCoachIdentity();
+  const queryClient = useQueryClient();
 
   const [invoices, setInvoices] = useState<any[]>([]);
-  const [coachId, setCoachId] = useState("");
-  const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [sendSuccessRecipient, setSendSuccessRecipient] = useState("");
@@ -89,9 +91,59 @@ function Invoices() {
   const settingsBtnRef = useRef<HTMLButtonElement>(null);
   const [spotlightRect, setSpotlightRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
 
+  // ── Cached data fetching ──────────────────────────────────────────────────
+
+  const { data: invoicesData, isLoading: invoicesLoading } = useQuery({
+    queryKey: ["invoices", coachId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("invoices")
+        .select(`*, students(student_name, email, phone_number, parent_name, parent_phone)`)
+        .eq("coach_id", coachId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!coachId,
+  });
+
+  const { data: invoiceSettingsData } = useQuery({
+    queryKey: ["invoice-settings", coachId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("coaches")
+        .select(`invoice_generation_day, invoice_generation_time, invoice_review_day,
+                 invoice_review_time, invoice_timezone, auto_invoice_enabled,
+                 auto_invoice_frequency, auto_invoice_day, auto_invoice_day_of_month,
+                 auto_invoice_time`)
+        .eq("id", coachId)
+        .single();
+      return data;
+    },
+    enabled: !!coachId,
+  });
+
+  useEffect(() => { if (invoicesData) setInvoices(invoicesData); }, [invoicesData]);
+
   useEffect(() => {
-    loadInvoices();
-  }, []);
+    if (!invoiceSettingsData) return;
+    setInvoiceGenerationDay(String(invoiceSettingsData.invoice_generation_day ?? 0));
+    setInvoiceGenerationTime(invoiceSettingsData.invoice_generation_time || "15:00");
+    setInvoiceReviewDay(String(invoiceSettingsData.invoice_review_day ?? 0));
+    setInvoiceReviewTime(invoiceSettingsData.invoice_review_time || "15:05");
+    setInvoiceTimezone(invoiceSettingsData.invoice_timezone || "America/Denver");
+    setAutoInvoiceEnabled(!!invoiceSettingsData.auto_invoice_enabled);
+    setAutoInvoiceFrequency(invoiceSettingsData.auto_invoice_frequency || "weekly");
+    setAutoInvoiceDay(String(invoiceSettingsData.auto_invoice_day ?? 0));
+    setAutoInvoiceDayOfMonth(String(invoiceSettingsData.auto_invoice_day_of_month ?? 1));
+    setAutoInvoiceTime((invoiceSettingsData.auto_invoice_time || "09:00").slice(0, 5));
+  }, [invoiceSettingsData]);
+
+  useEffect(() => {
+    if (!coachId && !identityLoading) navigate("/login");
+  }, [coachId, identityLoading]);
+
+  const loading = identityLoading || invoicesLoading;
 
   useEffect(() => {
     if (coachId && selectedStudentId && rangeStart && rangeEnd) {
@@ -138,66 +190,6 @@ function Invoices() {
     }
   }
 
-  async function loadInvoices() {
-    setLoading(true);
-
-    const { data: sessionData } = await supabase.auth.getSession();
-    const user = sessionData.session?.user;
-
-    if (!user) {
-      navigate("/login");
-      return;
-    }
-
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("user_id", user.id)
-      .single();
-
-    if (!profileData) {
-      setLoading(false);
-      return;
-    }
-
-    const { data: coachData } = await supabase
-      .from("coaches")
-      .select("id")
-      .eq("profile_id", profileData.id)
-      .single();
-
-    if (!coachData) {
-      setLoading(false);
-      return;
-    }
-
-    setCoachId(coachData.id);
-
-    const { data, error } = await supabase
-      .from("invoices")
-      .select(`
-        *,
-        students (
-          student_name,
-          email,
-          phone_number,
-          parent_name,
-          parent_phone
-        )
-      `)
-      .eq("coach_id", coachData.id)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.log("Invoices load error:", error);
-      setLoading(false);
-      return;
-    }
-
-    setInvoices(data || []);
-    await loadInvoiceSettings(coachData.id);
-    setLoading(false);
-  }
 
   function formatMoney(amount: any) {
     return Number(amount || 0).toLocaleString("en-US", {
@@ -909,41 +901,6 @@ function Invoices() {
     return groups;
   }, {});
 
-  async function loadInvoiceSettings(currentCoachId: string) {
-    const { data, error } = await supabase
-      .from("coaches")
-      .select(`
-        invoice_generation_day,
-        invoice_generation_time,
-        invoice_review_day,
-        invoice_review_time,
-        invoice_timezone,
-        auto_invoice_enabled,
-        auto_invoice_frequency,
-        auto_invoice_day,
-        auto_invoice_day_of_month,
-        auto_invoice_time
-      `)
-      .eq("id", currentCoachId)
-      .single();
-
-    if (error || !data) {
-      console.log("Load invoice settings error:", error);
-      return;
-    }
-
-    setInvoiceGenerationDay(String(data.invoice_generation_day ?? 0));
-    setInvoiceGenerationTime(data.invoice_generation_time || "15:00");
-    setInvoiceReviewDay(String(data.invoice_review_day ?? 0));
-    setInvoiceReviewTime(data.invoice_review_time || "15:05");
-    setInvoiceTimezone(data.invoice_timezone || "America/Denver");
-    setAutoInvoiceEnabled(!!data.auto_invoice_enabled);
-    setAutoInvoiceFrequency(data.auto_invoice_frequency || "weekly");
-    setAutoInvoiceDay(String(data.auto_invoice_day ?? 0));
-    setAutoInvoiceDayOfMonth(String(data.auto_invoice_day_of_month ?? 1));
-    setAutoInvoiceTime((data.auto_invoice_time || "09:00").slice(0, 5));
-  }
-
   async function handleSaveInvoiceSettings(e: any) {
     e.preventDefault();
 
@@ -974,6 +931,7 @@ function Invoices() {
       return;
     }
 
+    queryClient.invalidateQueries({ queryKey: ["invoice-settings", coachId] });
     setShowInvoiceSettings(false);
   }
 

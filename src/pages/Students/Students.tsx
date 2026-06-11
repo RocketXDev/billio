@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
   FaHome,
@@ -13,15 +14,16 @@ import {
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
 import { usePlan } from "../../hooks/usePlan";
+import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import "./Students.css"
 
 function Students() {
   const navigate = useNavigate();
   const { isPro } = usePlan();
+  const { coachId, identityLoading } = useCoachIdentity();
+  const queryClient = useQueryClient();
 
   const [students, setStudents] = useState<any[]>([]);
-  const [coachId, setCoachId] = useState("");
-  const [loading, setLoading] = useState(true);
   const [showAddStudent, setShowAddStudent] = useState(false);
   const [showEditStudent, setShowEditStudent] = useState(false);
   const [editingStudent, setEditingStudent] = useState<any>(null);
@@ -81,80 +83,25 @@ function Students() {
   const [invoiceFilterSort, setInvoiceFilterSort] = useState<string>("newest");
   const [showInvoiceFilterSheet, setShowInvoiceFilterSheet] = useState(false);
 
-  useEffect(() => {
-    loadStudents();
-  }, []);
+  const { data: studentsData, isLoading: studentsLoading } = useQuery({
+    queryKey: ["students", coachId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("coach_students")
+        .select(`student_id, invoice_contact_target, invoice_delivery_method,
+          students(id, student_name, email, phone_number, parent_name, parent_email,
+                   parent_phone, active, notes, created_at, sms_consent)`)
+        .eq("coach_id", coachId);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!coachId,
+  });
 
-  async function loadStudents() {
-    setLoading(true);
+  useEffect(() => { if (studentsData) setStudents(studentsData); }, [studentsData]);
+  useEffect(() => { if (!coachId && !identityLoading) navigate("/login"); }, [coachId, identityLoading]);
 
-    const { data: sessionData } = await supabase.auth.getSession();
-    const user = sessionData.session?.user;
-
-    if (!user) {
-      navigate("/login");
-      return;
-    }
-
-    const { data: profileData, error: profileError } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("user_id", user.id)
-      .single();
-
-    if (profileError || !profileData) {
-      console.log("Profile fetch error:", profileError);
-      setLoading(false);
-      return;
-    }
-
-    const { data: coachData, error: coachError } = await supabase
-      .from("coaches")
-      .select("id")
-      .eq("profile_id", profileData.id)
-      .single();
-
-    if (coachError || !coachData) {
-      console.log("Coach fetch error:", coachError);
-      setLoading(false);
-      return;
-    }
-
-    setCoachId(coachData.id);
-
-    await loadRateOptions(coachData.id)
-
-    const { data, error } = await supabase
-      .from("coach_students")
-      .select(`
-        student_id,
-        invoice_contact_target,
-        invoice_delivery_method,
-        students (
-          id,
-          student_name,
-          email,
-          phone_number,
-          parent_name,
-          parent_email,
-          parent_phone,
-          active,
-          notes,
-          created_at,
-          sms_consent
-        )
-      `)
-      .eq("coach_id", coachData.id);
-
-    if (error) {
-      console.log("Students load error:", error);
-      setLoading(false);
-      return;
-    }
-
-    setStudents(data || []);
-    setLoading(false);
-  }
+  const loading = identityLoading || studentsLoading;
 
   async function handleCreateStudent(e: any) {
     e.preventDefault();
@@ -228,6 +175,7 @@ function Students() {
           students: newStudent,
         },
       ]);
+      queryClient.invalidateQueries({ queryKey: ["students", coachId] });
 
     } finally {
       setIsSaving(false)
@@ -486,6 +434,7 @@ function Students() {
             : link
         )
       );
+      queryClient.invalidateQueries({ queryKey: ["students", coachId] });
 
     } finally {
       setIsSaving(false);
@@ -578,6 +527,7 @@ function Students() {
             : link
         )
       );
+      queryClient.invalidateQueries({ queryKey: ["students", coachId] });
 
     } finally {
       setIsMoving(false);
@@ -618,6 +568,7 @@ function Students() {
             : link
         )
       );
+      queryClient.invalidateQueries({ queryKey: ["students", coachId] });
 
     } finally {
       setIsMoving(false);
@@ -705,6 +656,7 @@ function Students() {
       setStudents((prev) =>
         prev.filter((link: any) => link.student_id !== studentId)
       );
+      queryClient.invalidateQueries({ queryKey: ["students", coachId] });
 
     } finally {
       setIsDeleting(false);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   FaHome,
@@ -54,6 +54,22 @@ function Lessons() {
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
   const [lessonsLoading, setLessonsLoading] = useState(false);
 
+  // Lessons tutorial
+  const [showLessonsTutorial, setShowLessonsTutorial] = useState(true);
+  const [lessonTutorialStep, setLessonTutorialStep] = useState(0);
+  const [lessonSpotlightRect, setLessonSpotlightRect] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const [lessonTutorialCardPosition, setLessonTutorialCardPosition] =
+    useState<"top" | "bottom">("bottom");
+
+  const lessonsViewToggleRef = useRef<HTMLDivElement>(null);
+  const calendarDetailRef = useRef<HTMLElement>(null);
+  const listViewRef = useRef<HTMLDivElement>(null);
+
 
   // Calendar 
   function getLocalDateString(date: Date) {
@@ -87,6 +103,99 @@ function Lessons() {
   useEffect(() => { if (!coachId && !identityLoading) window.location.href = "/login"; }, [coachId, identityLoading]);
 
   const loading = identityLoading || lessonsQueryLoading;
+
+  useEffect(() => {
+    if (!loading) {
+      const seen = localStorage.getItem("billio_lessons_tutorial_seen");
+
+      if (!seen) {
+        setTimeout(() => setShowLessonsTutorial(true), 500);
+      }
+    }
+  }, [loading]);
+
+  useEffect(() => {
+    if (!showLessonsTutorial) return;
+
+    if (lessonTutorialStep >= 1 && lessonTutorialStep <= 3 && viewMode !== "calendar") {
+      setViewMode("calendar");
+    }
+
+    if (lessonTutorialStep === 4 && viewMode !== "list") {
+      setViewMode("list");
+    }
+  }, [showLessonsTutorial, lessonTutorialStep, viewMode]);
+
+  useEffect(() => {
+    if (!showLessonsTutorial) {
+      setLessonSpotlightRect(null);
+      return;
+    }
+
+    function getTargetElement() {
+      if (lessonTutorialStep === 1) return lessonsViewToggleRef.current;
+      if (lessonTutorialStep === 2) return null;
+      if (lessonTutorialStep === 3) return calendarDetailRef.current;
+      if (lessonTutorialStep === 4) return listViewRef.current;
+      return null;
+    }
+
+    const timeout = window.setTimeout(() => {
+      const element = getTargetElement();
+
+      if (!element) {
+        setLessonSpotlightRect(null);
+        setLessonTutorialCardPosition("bottom");
+        return;
+      }
+
+      element.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+
+      window.setTimeout(() => {
+        const rect = element.getBoundingClientRect();
+
+        setLessonSpotlightRect({
+          top: Math.max(10, rect.top - 10),
+          left: Math.max(10, rect.left - 10),
+          width: Math.min(window.innerWidth - 20, rect.width + 20),
+          height: rect.height + 20,
+        });
+
+        setLessonTutorialCardPosition(
+          rect.top < window.innerHeight / 2 ? "bottom" : "top"
+        );
+      }, 260);
+    }, 80);
+
+    function handleResize() {
+      const element = getTargetElement();
+
+      if (!element) return;
+
+      const rect = element.getBoundingClientRect();
+
+      setLessonSpotlightRect({
+        top: Math.max(10, rect.top - 10),
+        left: Math.max(10, rect.left - 10),
+        width: Math.min(window.innerWidth - 20, rect.width + 20),
+        height: rect.height + 20,
+      });
+
+      setLessonTutorialCardPosition(
+        rect.top < window.innerHeight / 2 ? "bottom" : "top"
+      );
+    }
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.clearTimeout(timeout);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [showLessonsTutorial, lessonTutorialStep, viewMode, lessons.length]);
 
   async function handleCreateLesson(e: any) {
     e.preventDefault();
@@ -743,7 +852,81 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const isViewingCurrentMonth =
     selectedDate.getMonth() === today.getMonth() &&
     selectedDate.getFullYear() === today.getFullYear();
-  
+
+  const lessonsTutorialSteps = [
+    {
+      icon: "📘",
+      title: "Welcome to Lessons",
+      text:
+        "This page is where you manage every lesson you teach. You can add lessons, check your schedule, update billing status, and open lessons when you need to make changes.",
+      bullets: [
+        "Use Calendar mode for planning by date",
+        "Use List view for a full timeline of lessons",
+        "Tap a billing status to quickly move a lesson from unbilled to billed to paid",
+      ],
+    },
+    {
+      icon: "📅",
+      title: "Calendar mode",
+      text:
+        "Calendar is the default view because it is the fastest way to see which days already have lessons scheduled.",
+      bullets: [
+        "Switch between Calendar and List from this control",
+        "Calendar helps you plan around specific dates",
+        "List is helpful when you want to review many lessons at once",
+      ],
+    },
+    {
+      icon: "🗓️",
+      title: "Monthly calendar",
+      text:
+        "The calendar shows the selected month. Days with lessons have a small purple dot, and tapping a day updates the lesson details below.",
+      bullets: [
+        "Use the arrows to move by month or year",
+        "Tap a day to select it",
+        "Free users can use the current month; Pro unlocks unlimited calendar navigation",
+      ],
+    },
+    {
+      icon: "📌",
+      title: "Selected day details",
+      text:
+        "This card shows the lessons for the day you selected on the calendar.",
+      bullets: [
+        "Tap + here to add a lesson for the selected date",
+        "Tap a lesson status to update billing quickly",
+        "Tap the edit icon to open the full lesson editor",
+      ],
+    },
+    {
+      icon: "📋",
+      title: "List view",
+      text:
+        "List view groups your lessons into Current, Upcoming, and Past sections so you can review everything in order.",
+      bullets: [
+        "Great for checking older lessons",
+        "Quickly see each lesson's rate and billing status",
+        "Use the edit icon when a lesson needs changes",
+      ],
+    },
+  ];
+
+  const currentLessonsTutorial = lessonsTutorialSteps[lessonTutorialStep];
+
+  function dismissLessonsTutorial() {
+    localStorage.setItem("billio_lessons_tutorial_seen", "1");
+    setShowLessonsTutorial(false);
+    setLessonTutorialStep(0);
+    setLessonSpotlightRect(null);
+  }
+
+  function advanceLessonsTutorial() {
+    if (lessonTutorialStep < lessonsTutorialSteps.length - 1) {
+      setLessonTutorialStep((prev) => prev + 1);
+    } else {
+      dismissLessonsTutorial();
+    }
+  }
 
   return (
     <div className="lessons-page">
@@ -761,7 +944,14 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                     </button>
                 </div>
             </div>
-            <div className="lessons-view-toggle">
+            <div
+              ref={lessonsViewToggleRef}
+              className={`lessons-view-toggle ${
+                showLessonsTutorial && lessonTutorialStep === 1
+                  ? "lessons-tutorial-highlighted"
+                  : ""
+              }`}
+            >
             <div
                 className={`lessons-toggle-slider ${
                 viewMode === "list" ? "lessons-toggle-slider-right" : ""
@@ -862,7 +1052,14 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                     )}
                   </div>
 
-                  <section className="calendar-detail-card">
+                  <section
+                    ref={calendarDetailRef}
+                    className={`calendar-detail-card ${
+                      showLessonsTutorial && lessonTutorialStep === 3
+                        ? "lessons-tutorial-highlighted"
+                        : ""
+                    }`}
+                  >
                   <div className="calendar-detail-header">
                     <div>
                       <h3>
@@ -945,7 +1142,14 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                 </div>
               )}
               {viewMode === "list" && (
-                <div className="lessons-list-view">
+                <div
+                  ref={listViewRef}
+                  className={`lessons-list-view ${
+                    showLessonsTutorial && lessonTutorialStep === 4
+                      ? "lessons-tutorial-highlighted"
+                      : ""
+                  }`}
+                >
                   {lessons.length === 0 ? (
                     <p className="empty-lessons">No lessons yet. Tap + to add one.</p>
                   ) : (
@@ -1374,6 +1578,81 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
               ))}
             </div>
           </div>
+      )}
+
+      {showLessonsTutorial && currentLessonsTutorial && (
+        <>
+          <div
+            className={`lessons-tutorial-overlay ${
+              lessonSpotlightRect ? "lessons-tutorial-overlay-clear" : ""
+            }`}
+          />
+
+          {lessonSpotlightRect && (
+            <div
+              className="lessons-tutorial-spotlight"
+              style={{
+                top: lessonSpotlightRect.top,
+                left: lessonSpotlightRect.left,
+                width: lessonSpotlightRect.width,
+                height: lessonSpotlightRect.height,
+              }}
+            />
+          )}
+
+          <div
+            className={`lessons-tutorial-card lessons-tutorial-card-${lessonTutorialCardPosition}`}
+          >
+            <div className="lessons-tutorial-icon-wrap">
+              {currentLessonsTutorial.icon}
+            </div>
+
+            <h2 className="lessons-tutorial-title">
+              {currentLessonsTutorial.title}
+            </h2>
+
+            <p className="lessons-tutorial-text">
+              {currentLessonsTutorial.text}
+            </p>
+
+            <ul className="lessons-tutorial-list">
+              {currentLessonsTutorial.bullets.map((bullet) => (
+                <li key={bullet}>{bullet}</li>
+              ))}
+            </ul>
+
+            <div className="lessons-tutorial-dots">
+              {lessonsTutorialSteps.map((_, index) => (
+                <span
+                  key={index}
+                  className={`lessons-tutorial-dot ${
+                    index === lessonTutorialStep
+                      ? "lessons-tutorial-dot-active"
+                      : ""
+                  }`}
+                />
+              ))}
+            </div>
+
+            <button
+              type="button"
+              className="lessons-tutorial-btn-primary"
+              onClick={advanceLessonsTutorial}
+            >
+              {lessonTutorialStep === lessonsTutorialSteps.length - 1
+                ? "Finish"
+                : "Next →"}
+            </button>
+
+            <button
+              type="button"
+              className="lessons-tutorial-btn-skip"
+              onClick={dismissLessonsTutorial}
+            >
+              Skip tutorial
+            </button>
+          </div>
+        </>
       )}
     </div>
   );

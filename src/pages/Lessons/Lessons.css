@@ -843,3 +843,182 @@
 .delete-lesson-btn:hover {
   background: #fecaca;
 }
+
+/* LESSONS TUTORIAL */
+
+.lessons-tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 640;
+  background: rgba(10, 10, 20, 0.78);
+}
+
+.lessons-tutorial-overlay-clear {
+  background: transparent;
+}
+
+.lessons-tutorial-spotlight {
+  position: fixed;
+  z-index: 641;
+  border-radius: 24px;
+  pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(10, 10, 20, 0.78);
+  background: transparent;
+}
+
+.lessons-tutorial-highlighted {
+  position: relative;
+  z-index: 642;
+  pointer-events: none;
+}
+
+.lessons-tutorial-card {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 36px);
+  max-width: 420px;
+  max-height: min(62vh, 500px);
+  z-index: 643;
+  background: var(--card-bg);
+  border-radius: 26px;
+  padding: 24px 22px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  overflow-y: auto;
+  animation: lessonsTutorialSlideUp 0.28s ease;
+}
+
+.lessons-tutorial-card-bottom {
+  bottom: 96px;
+}
+
+.lessons-tutorial-card-top {
+  top: 24px;
+}
+
+@keyframes lessonsTutorialSlideUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(22px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.lessons-tutorial-icon-wrap {
+  font-size: 34px;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+
+.lessons-tutorial-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--main-text);
+  margin: 0 0 10px;
+  letter-spacing: -0.3px;
+}
+
+.lessons-tutorial-text {
+  font-size: 15px;
+  color: var(--secondary-text);
+  line-height: 1.5;
+  margin: 0 0 14px;
+}
+
+.lessons-tutorial-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 14px;
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lessons-tutorial-list li {
+  font-size: 14px;
+  color: var(--secondary-text);
+  padding-left: 20px;
+  position: relative;
+  line-height: 1.4;
+}
+
+.lessons-tutorial-list li::before {
+  content: "•";
+  position: absolute;
+  left: 6px;
+  color: var(--primary-purple);
+  font-weight: 800;
+}
+
+.lessons-tutorial-dots {
+  display: flex;
+  gap: 7px;
+  margin-bottom: 18px;
+}
+
+.lessons-tutorial-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: 0.2s ease;
+}
+
+.lessons-tutorial-dot-active {
+  width: 20px;
+  border-radius: 999px;
+  background: var(--primary-purple);
+}
+
+.lessons-tutorial-btn-primary {
+  width: 100%;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--primary-purple);
+  color: white;
+  font-size: 16px;
+  font-weight: 800;
+  border: none;
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.lessons-tutorial-btn-skip {
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  color: var(--secondary-text);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (max-height: 690px) {
+  .lessons-tutorial-card {
+    max-height: 54vh;
+    padding: 20px 20px 18px;
+  }
+
+  .lessons-tutorial-card-bottom {
+    bottom: 82px;
+  }
+
+  .lessons-tutorial-card-top {
+    top: 14px;
+  }
+
+  .lessons-tutorial-icon-wrap {
+    font-size: 28px;
+  }
+
+  .lessons-tutorial-text,
+  .lessons-tutorial-list li {
+    font-size: 13px;
+  }
+}

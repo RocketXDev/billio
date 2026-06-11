@@ -35,7 +35,7 @@ export default function LandingPage() {
         <div className="landing-hero-left">
           <p className="landing-badge">Built for private coaches, tutors & instructors</p>
 
-          <h1>Track lessons.<br />Bill faster.<br />Stay organized.</h1>
+          <h1>Track lessons.<br />Automate Invoices.<br />Bill Faster.</h1>
 
           <p className="landing-subtitle">
             Billio keeps your students, lessons, rates, and invoices in one simple

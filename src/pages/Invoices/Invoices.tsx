@@ -71,6 +71,12 @@ function Invoices() {
   const [invoiceReviewTime, setInvoiceReviewTime] = useState("15:05");
   const [invoiceTimezone, setInvoiceTimezone] = useState("America/Denver");
   const [savingInvoiceSettings, setSavingInvoiceSettings] = useState(false);
+  // Automatic invoices
+  const [autoInvoiceEnabled, setAutoInvoiceEnabled] = useState(false);
+  const [autoInvoiceFrequency, setAutoInvoiceFrequency] = useState("weekly");
+  const [autoInvoiceDay, setAutoInvoiceDay] = useState("0");
+  const [autoInvoiceDayOfMonth, setAutoInvoiceDayOfMonth] = useState("1");
+  const [autoInvoiceTime, setAutoInvoiceTime] = useState("09:00");
 
   // Loading
   const [isSaving, setIsSaving] = useState(false);
@@ -866,7 +872,12 @@ function Invoices() {
         invoice_generation_time,
         invoice_review_day,
         invoice_review_time,
-        invoice_timezone
+        invoice_timezone,
+        auto_invoice_enabled,
+        auto_invoice_frequency,
+        auto_invoice_day,
+        auto_invoice_day_of_month,
+        auto_invoice_time
       `)
       .eq("id", currentCoachId)
       .single();
@@ -881,6 +892,11 @@ function Invoices() {
     setInvoiceReviewDay(String(data.invoice_review_day ?? 0));
     setInvoiceReviewTime(data.invoice_review_time || "15:05");
     setInvoiceTimezone(data.invoice_timezone || "America/Denver");
+    setAutoInvoiceEnabled(!!data.auto_invoice_enabled);
+    setAutoInvoiceFrequency(data.auto_invoice_frequency || "weekly");
+    setAutoInvoiceDay(String(data.auto_invoice_day ?? 0));
+    setAutoInvoiceDayOfMonth(String(data.auto_invoice_day_of_month ?? 1));
+    setAutoInvoiceTime((data.auto_invoice_time || "09:00").slice(0, 5));
   }
 
   async function handleSaveInvoiceSettings(e: any) {
@@ -898,6 +914,11 @@ function Invoices() {
         invoice_review_day: Number(invoiceReviewDay),
         invoice_review_time: invoiceReviewTime,
         invoice_timezone: invoiceTimezone,
+        auto_invoice_enabled: autoInvoiceEnabled,
+        auto_invoice_frequency: autoInvoiceFrequency,
+        auto_invoice_day: Number(autoInvoiceDay),
+        auto_invoice_day_of_month: Number(autoInvoiceDayOfMonth),
+        auto_invoice_time: autoInvoiceTime,
       })
       .eq("id", coachId);
 
@@ -1715,6 +1736,84 @@ function Invoices() {
                       onChange={(e) => setInvoiceReviewTime(e.target.value)}
                     />
                   </div>
+                </section>
+
+                <section className="invoice-settings-section">
+                  <h3>Automatic Invoices</h3>
+                  <p>
+                    Automatically send all unbilled invoices to your students on a
+                    schedule. You'll receive a summary of what was sent and anything
+                    that failed due to missing student info.
+                  </p>
+
+                  <div className="input-block">
+                    <label>Automatic sending</label>
+                    <select
+                      value={autoInvoiceEnabled ? "yes" : "no"}
+                      onChange={(e) => setAutoInvoiceEnabled(e.target.value === "yes")}
+                    >
+                      <option value="no">Off</option>
+                      <option value="yes">On</option>
+                    </select>
+                  </div>
+
+                  {autoInvoiceEnabled && (
+                    <>
+                      <div className="input-block">
+                        <label>Frequency</label>
+                        <select
+                          value={autoInvoiceFrequency}
+                          onChange={(e) => setAutoInvoiceFrequency(e.target.value)}
+                        >
+                          <option value="weekly">Weekly</option>
+                          <option value="biweekly">Bi-weekly</option>
+                          <option value="monthly">Monthly</option>
+                        </select>
+                      </div>
+
+                      {autoInvoiceFrequency === "weekly" ? (
+                        <div className="input-block">
+                          <label>Day</label>
+                          <select
+                            value={autoInvoiceDay}
+                            onChange={(e) => setAutoInvoiceDay(e.target.value)}
+                          >
+                            <option value="0">Sunday</option>
+                            <option value="1">Monday</option>
+                            <option value="2">Tuesday</option>
+                            <option value="3">Wednesday</option>
+                            <option value="4">Thursday</option>
+                            <option value="5">Friday</option>
+                            <option value="6">Saturday</option>
+                          </select>
+                        </div>
+                      ) : (
+                        <div className="input-block">
+                          <label>
+                            Day of month
+                            {autoInvoiceFrequency === "biweekly" ? " (repeats 14 days later)" : ""}
+                          </label>
+                          <select
+                            value={autoInvoiceDayOfMonth}
+                            onChange={(e) => setAutoInvoiceDayOfMonth(e.target.value)}
+                          >
+                            {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                              <option key={d} value={String(d)}>{d}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      <div className="input-block">
+                        <label>Time</label>
+                        <input
+                          type="time"
+                          value={autoInvoiceTime}
+                          onChange={(e) => setAutoInvoiceTime(e.target.value)}
+                        />
+                      </div>
+                    </>
+                  )}
                 </section>
 
                 <section className="invoice-settings-section">

@@ -958,6 +958,10 @@
   width: 100%;
 }
 
+.invoice-settings-section .input-block {
+  margin-top: 5px;
+}
+
 .invoice-settings-section h3 {
   margin: 0 0 6px;
   color: var(--main-text);

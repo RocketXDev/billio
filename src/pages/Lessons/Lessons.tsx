@@ -55,7 +55,7 @@ function Lessons() {
   const [lessonsLoading, setLessonsLoading] = useState(false);
 
   // Lessons tutorial
-  const [showLessonsTutorial, setShowLessonsTutorial] = useState(true);
+  const [showLessonsTutorial, setShowLessonsTutorial] = useState(false);
   const [lessonTutorialStep, setLessonTutorialStep] = useState(0);
   const [lessonSpotlightRect, setLessonSpotlightRect] = useState<{
     top: number;

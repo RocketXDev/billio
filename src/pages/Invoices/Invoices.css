@@ -1023,16 +1023,17 @@
 .tutorial-spotlight {
   position: fixed;
   z-index: 601;
-  border-radius: 50%;
+  border-radius: 999px;
   pointer-events: none;
   box-shadow: 0 0 0 9999px rgba(10, 10, 20, 0.78);
   background: transparent;
 }
 
-/* Lifts the settings button above the overlay so it's visible and clickable */
+/* Lifts the highlighted button above the overlay while keeping it preview-only */
 .tutorial-highlighted {
   position: relative;
   z-index: 602;
+  pointer-events: none;
 }
 
 .tutorial-card {
@@ -1166,3 +1167,12 @@
   font-size: 16px;
 }
 .calendar-billing-label.paid     { color: #22c55e; }
+
+@media (max-height: 700px) {
+  .tutorial-card {
+    bottom: 80px;
+    max-height: 62vh;
+    overflow-y: auto;
+    padding: 20px 18px 16px;
+  }
+}

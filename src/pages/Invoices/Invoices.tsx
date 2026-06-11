@@ -93,15 +93,6 @@ function Invoices() {
     }
   }, [coachId, selectedStudentId, rangeStart, rangeEnd]);
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("sendAll") === "1" && coachId) {
-      // strip the param so a refresh doesn't re-trigger
-      window.history.replaceState({}, "", "/invoices");
-      handleSendAll();
-    }
-  }, [coachId]);
-
   async function loadInvoices() {
     setLoading(true);
 
@@ -800,20 +791,6 @@ function Invoices() {
     );
 
     setSendSuccessMethod(data.deliveryMethod || "email");
-  }
-
-  async function handleSendAll() {
-    if (!window.confirm("Send all unbilled invoices to your students now?")) return;
-    setSendingInvoiceId("all"); // reuses your sending overlay
-    const { data, error } = await supabase.functions.invoke("send-all-invoices", { body: {} });
-    setSendingInvoiceId(null);
-    if (error || data?.error) {
-      setSendError(data?.error || "Could not send invoices.");
-      return;
-    }
-    setSendSuccessMethod("");
-    setSendSuccessRecipient(`${data.sent} student${data.sent === 1 ? "" : "s"}${data.failed ? ` — ${data.failed} failed, check your summary` : ""}`);
-    loadInvoices();
   }
 
   function getWeekStart(dateString: string) {

@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import {
   FaBars,
@@ -79,6 +78,60 @@ function Dashboard() {
   const [showUpgradeToast, setShowUpgradeToast] = useState(false);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
 
+  // Dashboard tutorial - shows once for every user
+  const [showDashboardTutorial, setShowDashboardTutorial] = useState(false);
+  const [dashboardTutorialStep, setDashboardTutorialStep] = useState(0);
+  const addLessonCardRef = useRef<HTMLButtonElement>(null);
+  const [addLessonSpotlightRect, setAddLessonSpotlightRect] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  } | null>(null);
+
+  const dashboardTutorialSteps = [
+    {
+      icon: "👋",
+      title: "Welcome to your Dashboard",
+      text: "This is your home base in Billio. It gives you a quick snapshot of lessons, earnings, invoices, and anything that needs your attention.",
+      items: [
+        "Use this page when you want a fast overview",
+        "Jump into lessons, students, invoices, or settings",
+        "Check notifications from the bell icon",
+      ],
+    },
+    {
+      icon: "➕",
+      title: "Add lessons quickly",
+      text: "The Add Lesson card lets you log a lesson without going to another page. Billio uses those lessons to calculate earnings and prepare billing later.",
+      items: [
+        "Choose or create a student",
+        "Set date, time, duration, and rate",
+        "Save notes for your records",
+      ],
+    },
+    {
+      icon: "📊",
+      title: "Understand your stats",
+      text: "The Today and This Week cards summarize what is happening right now, so you do not have to manually count lessons or totals.",
+      items: [
+        "Today shows lessons, earned amount, and upcoming lessons",
+        "This Week shows earnings, lesson count, unbilled lessons, and pending invoices",
+        "Use View lessons when you need the full schedule",
+      ],
+    },
+    {
+      icon: "🧾",
+      title: "Track upcoming lessons and invoices",
+      text: "The lower sections show what is coming up today and your most recent invoices, so you can follow up faster.",
+      items: [
+        "Upcoming shows today’s remaining lessons",
+        "Tap the arrow to edit a dashboard lesson",
+        "Recent Invoices gives a quick billing preview",
+      ],
+    },
+  ];
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get("upgraded") === "1") {
@@ -87,6 +140,51 @@ function Dashboard() {
       window.history.replaceState({}, "", "/dashboard");
     }
   }, [location.search]);
+
+  useEffect(() => {
+    if (loading || showOnboarding) return;
+
+    const seen = localStorage.getItem("billio_dashboard_tutorial_seen");
+
+    if (!seen) {
+      const timer = setTimeout(() => {
+        setShowDashboardTutorial(true);
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [loading, showOnboarding]);
+
+  useEffect(() => {
+    if (showDashboardTutorial && dashboardTutorialStep === 1 && addLessonCardRef.current) {
+      const rect = addLessonCardRef.current.getBoundingClientRect();
+
+      setAddLessonSpotlightRect({
+        top: rect.top - 10,
+        left: rect.left - 10,
+        width: rect.width + 20,
+        height: rect.height + 20,
+      });
+    } else {
+      setAddLessonSpotlightRect(null);
+    }
+  }, [showDashboardTutorial, dashboardTutorialStep]);
+
+  function dismissDashboardTutorial() {
+    localStorage.setItem("billio_dashboard_tutorial_seen", "1");
+    setShowDashboardTutorial(false);
+    setDashboardTutorialStep(0);
+    setAddLessonSpotlightRect(null);
+  }
+
+  function advanceDashboardTutorial() {
+    if (dashboardTutorialStep < dashboardTutorialSteps.length - 1) {
+      setDashboardTutorialStep((prev) => prev + 1);
+      return;
+    }
+
+    dismissDashboardTutorial();
+  }
 
   useEffect(() => {
     async function loadDashboard() {
@@ -1025,7 +1123,15 @@ function Dashboard() {
             />
           )}
 
-          <button className="add-lesson-card" onClick={openAddLesson}>
+          <button
+            ref={addLessonCardRef}
+            className={`add-lesson-card ${
+              showDashboardTutorial && dashboardTutorialStep === 1
+                ? "dashboard-tutorial-highlighted"
+                : ""
+            }`}
+            onClick={openAddLesson}
+          >
             <div className="add-circle">
               <FaPlus />
             </div>
@@ -1906,6 +2012,78 @@ function Dashboard() {
               ))}
             </div>
           </div>
+      )}
+
+      {showDashboardTutorial && (
+        <>
+          <div
+            className="dashboard-tutorial-overlay"
+            style={dashboardTutorialStep === 1 ? { background: "transparent" } : undefined}
+          />
+
+          {dashboardTutorialStep === 1 && addLessonSpotlightRect && (
+            <div
+              className="dashboard-tutorial-spotlight"
+              style={{
+                top: addLessonSpotlightRect.top,
+                left: addLessonSpotlightRect.left,
+                width: addLessonSpotlightRect.width,
+                height: addLessonSpotlightRect.height,
+              }}
+            />
+          )}
+
+          <div className="dashboard-tutorial-card">
+            <div className="dashboard-tutorial-icon-wrap">
+              {dashboardTutorialSteps[dashboardTutorialStep].icon}
+            </div>
+
+            <h2 className="dashboard-tutorial-title">
+              {dashboardTutorialSteps[dashboardTutorialStep].title}
+            </h2>
+
+            <p className="dashboard-tutorial-text">
+              {dashboardTutorialSteps[dashboardTutorialStep].text}
+            </p>
+
+            <ul className="dashboard-tutorial-list">
+              {dashboardTutorialSteps[dashboardTutorialStep].items.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+
+            <div className="dashboard-tutorial-dots">
+              {dashboardTutorialSteps.map((_, index) => (
+                <span
+                  key={index}
+                  className={`dashboard-tutorial-dot ${
+                    index === dashboardTutorialStep
+                      ? "dashboard-tutorial-dot-active"
+                      : ""
+                  }`}
+                />
+              ))}
+            </div>
+
+            <button
+              type="button"
+              className="dashboard-tutorial-btn-primary"
+              onClick={advanceDashboardTutorial}
+            >
+              {dashboardTutorialStep === dashboardTutorialSteps.length - 1
+                ? "Finish"
+                : "Next →"}
+            </button>
+
+            <button
+              type="button"
+              className="dashboard-tutorial-btn-skip"
+              onClick={dismissDashboardTutorial}
+            >
+              Skip tutorial
+            </button>
+          </div>
+        </>
       )}
 
     </div>

@@ -1010,4 +1010,159 @@
 .calendar-billing-label { display: inline-flex; font-size: 13px; font-weight: 600; }
 .calendar-billing-label.unbilled { color: #f59e0b; }
 .calendar-billing-label.billed   { color: #3b82f6; }
+
+/* INVOICE TUTORIAL */
+
+.tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  background: rgba(10, 10, 20, 0.78);
+}
+
+.tutorial-spotlight {
+  position: fixed;
+  z-index: 601;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(10, 10, 20, 0.78);
+  background: transparent;
+}
+
+/* Lifts the settings button above the overlay so it's visible and clickable */
+.tutorial-highlighted {
+  position: relative;
+  z-index: 602;
+}
+
+.tutorial-card {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 36px);
+  max-width: 420px;
+  z-index: 603;
+  background: var(--card-bg);
+  border-radius: 26px;
+  padding: 26px 22px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  animation: tutorial-slide-up 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes tutorial-slide-up {
+  from { opacity: 0; transform: translateX(-50%) translateY(28px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.tutorial-icon-wrap {
+  font-size: 38px;
+  margin-bottom: 10px;
+  line-height: 1;
+}
+
+.tutorial-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--main-text);
+  margin: 0 0 10px;
+  letter-spacing: -0.3px;
+}
+
+.tutorial-text {
+  font-size: 15px;
+  color: var(--secondary-text);
+  line-height: 1.55;
+  margin: 0 0 14px;
+}
+
+.tutorial-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 14px;
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tutorial-list li {
+  font-size: 14px;
+  color: var(--secondary-text);
+  padding-left: 20px;
+  position: relative;
+  line-height: 1.4;
+}
+
+.tutorial-list li::before {
+  content: "•";
+  position: absolute;
+  left: 6px;
+  color: var(--primary-purple);
+  font-weight: 700;
+}
+
+.tutorial-dots {
+  display: flex;
+  gap: 7px;
+  margin-bottom: 18px;
+}
+
+.tutorial-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background 0.2s;
+}
+
+.tutorial-dot-active {
+  background: var(--primary-purple);
+  width: 20px;
+  border-radius: 4px;
+}
+
+.tutorial-btn-primary {
+  width: 100%;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--primary-purple);
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.tutorial-btn-skip {
+  background: none;
+  border: none;
+  color: var(--secondary-text);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 6px 12px;
+}
+
+.tutorial-arrow-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary-purple);
+  background: #eef2ff;
+  border-radius: 20px;
+  padding: 5px 12px;
+  margin-bottom: 14px;
+}
+
+.tutorial-arrow-up {
+  font-size: 16px;
+}
 .calendar-billing-label.paid     { color: #22c55e; }

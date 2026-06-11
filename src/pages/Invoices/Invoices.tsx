@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FaHome,
@@ -83,6 +83,12 @@ function Invoices() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
 
+  // Tutorial
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState(0);
+  const settingsBtnRef = useRef<HTMLButtonElement>(null);
+  const [spotlightRect, setSpotlightRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
+
   useEffect(() => {
     loadInvoices();
   }, []);
@@ -92,6 +98,45 @@ function Invoices() {
       loadInvoiceLessons();
     }
   }, [coachId, selectedStudentId, rangeStart, rangeEnd]);
+
+  useEffect(() => {
+    if (isPro && !loading) {
+      const seen = localStorage.getItem("billio_invoices_tutorial_seen");
+      if (!seen) {
+        setTimeout(() => setShowTutorial(true), 500);
+      }
+    }
+  }, [isPro, loading]);
+
+  useEffect(() => {
+    if (showTutorial && tutorialStep === 1 && settingsBtnRef.current) {
+      const rect = settingsBtnRef.current.getBoundingClientRect();
+      setSpotlightRect({
+        top: rect.top - 8,
+        left: rect.left - 8,
+        width: rect.width + 16,
+        height: rect.height + 16,
+      });
+    } else {
+      setSpotlightRect(null);
+    }
+  }, [showTutorial, tutorialStep]);
+
+  function dismissTutorial() {
+    localStorage.setItem("billio_invoices_tutorial_seen", "1");
+    setShowTutorial(false);
+    setTutorialStep(0);
+    setSpotlightRect(null);
+  }
+
+  function advanceTutorial() {
+    if (tutorialStep < 1) {
+      setTutorialStep(1);
+    } else {
+      dismissTutorial();
+      setShowInvoiceSettings(true);
+    }
+  }
 
   async function loadInvoices() {
     setLoading(true);
@@ -953,9 +998,13 @@ function Invoices() {
 
                      <div className="invoices-header-actions">
                       <button
+                        ref={settingsBtnRef}
                         type="button"
-                        className="invoices-settings-btn"
-                        onClick={() => setShowInvoiceSettings(true)}
+                        className={`invoices-settings-btn${showTutorial && tutorialStep === 1 ? " tutorial-highlighted" : ""}`}
+                        onClick={() => {
+                          if (showTutorial) dismissTutorial();
+                          setShowInvoiceSettings(true);
+                        }}
                       >
                         <FaCog />
                       </button>
@@ -1846,6 +1895,77 @@ function Invoices() {
               </form>
             </div>
           </div>
+        )}
+
+        {showTutorial && (
+          <>
+            {/* Step 0: solid dark overlay. Step 1: transparent so only spotlight's box-shadow creates darkness */}
+            <div
+              className="tutorial-overlay"
+              style={tutorialStep === 1 ? { background: "transparent" } : undefined}
+              onClick={tutorialStep === 0 ? undefined : dismissTutorial}
+            />
+
+            {tutorialStep === 1 && spotlightRect && (
+              <div
+                className="tutorial-spotlight"
+                style={{
+                  top: spotlightRect.top,
+                  left: spotlightRect.left,
+                  width: spotlightRect.width,
+                  height: spotlightRect.height,
+                }}
+              />
+            )}
+
+            <div className="tutorial-card">
+              {tutorialStep === 0 ? (
+                <>
+                  <div className="tutorial-icon-wrap">✨</div>
+                  <h2 className="tutorial-title">Welcome to Invoices</h2>
+                  <p className="tutorial-text">
+                    As a Pro member, you can automate your entire invoicing workflow — saving you time every billing cycle.
+                  </p>
+                  <div className="tutorial-dots">
+                    <span className="tutorial-dot tutorial-dot-active" />
+                    <span className="tutorial-dot" />
+                  </div>
+                  <button className="tutorial-btn-primary" onClick={advanceTutorial}>
+                    Show me how →
+                  </button>
+                  <button className="tutorial-btn-skip" onClick={dismissTutorial}>
+                    Skip tutorial
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="tutorial-arrow-label">
+                    <span className="tutorial-arrow-up">↗</span>
+                    <span>Tap this icon</span>
+                  </div>
+                  <h2 className="tutorial-title">Invoice Settings</h2>
+                  <p className="tutorial-text">
+                    The <strong>⚙️ Settings icon</strong> lets you configure your invoice automation:
+                  </p>
+                  <ul className="tutorial-list">
+                    <li>Auto-generate invoices on a schedule</li>
+                    <li>Get reminders before sending</li>
+                    <li>Enable automatic invoice delivery</li>
+                  </ul>
+                  <div className="tutorial-dots">
+                    <span className="tutorial-dot" />
+                    <span className="tutorial-dot tutorial-dot-active" />
+                  </div>
+                  <button className="tutorial-btn-primary" onClick={advanceTutorial}>
+                    Open Settings
+                  </button>
+                  <button className="tutorial-btn-skip" onClick={dismissTutorial}>
+                    Close
+                  </button>
+                </>
+              )}
+            </div>
+          </>
         )}
     </div>
   );

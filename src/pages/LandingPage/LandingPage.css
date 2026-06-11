@@ -96,7 +96,7 @@
 }
 
 .landing-hero-left h1 {
-  font-size: 40px;
+  font-size: 38px;
   line-height: 1.08;
   font-weight: 700;
   letter-spacing: -1.8px;
@@ -816,7 +816,7 @@
    ================================================================ */
 @media (min-width: 1400px) {
   .landing-hero-left h1 {
-    font-size: 76px;
+    font-size: 68px;
     letter-spacing: -3.5px;
   }
 

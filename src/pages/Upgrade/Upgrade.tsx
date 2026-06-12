@@ -22,6 +22,7 @@ import "./Upgrade.css"
 
 const STRIPE_PRICE_ID = "price_1TfMTxAuitLEKeV99TEkxqSp";
 const PRO_PRICE = "$9.99";
+const TRIAL_DAYS = 30;
 
 const PRO_FEATURES = [
   { icon: <FaInfinity />, text: "Unlimited active students" },
@@ -45,26 +46,44 @@ function Upgrade() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [coachName, setCoachName] = useState("");
+  const [trialEligible, setTrialEligible] = useState(false);
+  const [trialLoading, setTrialLoading] = useState(true);
 
   const [cancelLoading, setCancelLoading] = useState(false);
   const [cancelConfirm, setCancelConfirm] = useState(false);
   const [cancelSuccess, setCancelSuccess] = useState(false);
 
   useEffect(() => {
-    async function loadName() {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const user = sessionData.session?.user;
-      if (!user) return;
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("user_id", user.id)
-        .single();
-      if (profileData?.full_name) {
-        setCoachName(profileData.full_name.split(" ")[0]);
+    async function loadCoach() {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const user = sessionData.session?.user;
+        if (!user) return;
+
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .eq("user_id", user.id)
+          .single();
+
+        if (profileData?.full_name) {
+          setCoachName(profileData.full_name.split(" ")[0]);
+        }
+
+        if (profileData?.id) {
+          const { data: coachData } = await supabase
+            .from("coaches")
+            .select("trial_used")
+            .eq("profile_id", profileData.id)
+            .single();
+
+          setTrialEligible(coachData ? !coachData.trial_used : false);
+        }
+      } finally {
+        setTrialLoading(false);
       }
     }
-    loadName();
+    loadCoach();
   }, []);
 
   async function handleUpgrade() {
@@ -117,7 +136,7 @@ function Upgrade() {
     }
   }
 
-  if (planLoading) {
+  if (planLoading || trialLoading) {
     return (
       <div className="loading-screen">
         <div className="billio-loader">
@@ -144,6 +163,10 @@ function Upgrade() {
           <h1 className="up-title">
             {isPro
               ? "You're on Pro!"
+              : trialEligible
+              ? coachName
+                ? `Try Pro free for ${TRIAL_DAYS} days, ${coachName}`
+                : `Try Pro free for ${TRIAL_DAYS} days`
               : coachName
               ? `Upgrade your coaching, ${coachName}`
               : "Upgrade to Pro"}
@@ -193,6 +216,11 @@ function Upgrade() {
                 <strong className="up-pro-price-num">{PRO_PRICE}</strong>
                 <span className="up-pro-price-period">/ mo</span>
               </div>
+              {trialEligible && (
+                <div className="up-trial-note">
+                  First {TRIAL_DAYS} days free
+                </div>
+              )}
               <ul className="up-feature-list up-pro-list">
                 {PRO_FEATURES.map((f) => (
                   <li key={f.text}>
@@ -220,6 +248,11 @@ function Upgrade() {
                 <span className="up-btn-loading">
                   <span className="up-spinner" /> Connecting to Stripe...
                 </span>
+              ) : trialEligible ? (
+                <>
+                  <FaCrown style={{ fontSize: 13, marginRight: 8 }} />
+                  Start {TRIAL_DAYS}-day free trial
+                </>
               ) : (
                 <>
                   <FaCrown style={{ fontSize: 13, marginRight: 8 }} />
@@ -231,15 +264,28 @@ function Upgrade() {
             <div className="up-trust">
               <span>🔒 Secured by Stripe</span>
               <span>·</span>
+              {trialEligible ? (
+                <>
+                  <span>{TRIAL_DAYS} days free</span>
+                  <span>·</span>
+                </>
+              ) : null}
               <span>Cancel anytime</span>
               <span>·</span>
               <span>No hidden fees</span>
             </div>
 
             <p className="up-disclaimer">
+              {trialEligible ? (
+                <>
+                  Free for {TRIAL_DAYS} days, then {PRO_PRICE}/mo. Cancel anytime
+                  before the trial ends and you won't be charged.{" "}
+                </>
+              ) : (
+                <>Subscription renews monthly. </>
+              )}
               By upgrading you agree to our{" "}
               <a href="/terms" target="_blank" rel="noreferrer">Terms</a>.
-              Subscription renews monthly.
             </p>
           </div>
         )}
@@ -291,7 +337,7 @@ function Upgrade() {
         <div className="nav-item" onClick={() => navigate("/lessons")}><FaCalendarAlt /><span>Lessons</span></div>
         <div className="nav-item" onClick={() => navigate("/students")}><FaUsers /><span>Students</span></div>
         <div className="nav-item" onClick={() => navigate("/invoices")}><FaFileInvoiceDollar /><span>Invoices</span></div>
-        <div className="nav-item active" onClick={() => navigate("/more")}><FaEllipsisH /><span>More</span></div>
+        <div className="nav-item" onClick={() => navigate("/more")}><FaEllipsisH /><span>More</span></div>
       </nav>
     </div>
   );

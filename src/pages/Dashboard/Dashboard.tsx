@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
 import {
   FaBars,
@@ -42,8 +43,6 @@ function Dashboard() {
   const [preferredInvoiceDelivery, setPreferredInvoiceDelivery] = useState("email");
 
   //Lessons and other functions
-  const [lessons, setLessons] = useState<any[]>([]);
-  const [coachStudents, setCoachStudents] = useState<any[]>([]);
   const [showAddLesson, setShowAddLesson] = useState(false);
   const [studentName, setStudentName] = useState("");
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
@@ -53,9 +52,6 @@ function Dashboard() {
   const [lessonType, setLessonType] = useState("");
   const [hourlyRate, setHourlyRate] = useState("");
   const [notes, setNotes] = useState("");
-  const [rateOptions, setRateOptions] = useState<any[]>([]);
-  const visibleRates = rateOptions.slice(0, 3);
-  const hiddenRates = rateOptions.slice(3);
   const [showRateSheet, setShowRateSheet] = useState(false);
   const [showEditLesson, setShowEditLesson] = useState(false);
   const [editingLesson, setEditingLesson] = useState<any>(null);
@@ -64,7 +60,6 @@ function Dashboard() {
   const [coachSmsConsent, setCoachSmsConsent] = useState(false);
 
   // Invoices
-  const [invoices, setInvoices] = useState<any[]>([]);
   const [editingInvoiceStatusId, setEditingInvoiceStatusId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false); 
   const [isDeleting, setIsDeleting] = useState(false);
@@ -77,6 +72,74 @@ function Dashboard() {
   const { shouldShow, remindLater } = useInstallPrompt();
   const [showUpgradeToast, setShowUpgradeToast] = useState(false);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
+
+  const queryClient = useQueryClient();
+
+  const { data: lessons = [] } = useQuery({
+    queryKey: ["lessons", coachId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lessons")
+        .select("*, students(student_name)")
+        .eq("coach_id", coachId)
+        .order("lesson_date", { ascending: true })
+        .order("start_time", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!coachId,
+  });
+
+  const { data: coachStudents = [] } = useQuery({
+    queryKey: ["coach-students", coachId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("coach_students")
+        .select("student_id, students(id, student_name)")
+        .eq("coach_id", coachId);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!coachId,
+  });
+
+  const { data: invoices = [] } = useQuery({
+    queryKey: ["invoices", coachId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("invoices")
+        .select("*, students(student_name)")
+        .eq("coach_id", coachId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!coachId,
+  });
+
+  const { data: coachRatesData } = useQuery({
+    queryKey: ["coach-rates", coachId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("coaches")
+        .select("default_hourly_rate, custom_rates")
+        .eq("id", coachId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!coachId,
+  });
+
+  const rateOptions: any[] = [];
+  if (coachRatesData?.default_hourly_rate) {
+    rateOptions.push({ name: "Default", amount: Number(coachRatesData.default_hourly_rate) });
+  }
+  if (Array.isArray(coachRatesData?.custom_rates)) {
+    rateOptions.push(...coachRatesData.custom_rates);
+  }
+  const visibleRates = rateOptions.slice(0, 3);
+  const hiddenRates = rateOptions.slice(3);
 
   // Dashboard tutorial - shows once for every user
   const [showDashboardTutorial, setShowDashboardTutorial] = useState(false);
@@ -301,16 +364,10 @@ function Dashboard() {
           setCoachId(newCoach.id);
           setShowOnboarding(true);
           setAvatarUrl("");
-          await loadDashboardLessons(newCoach.id);
-          await loadCoachStudents(newCoach.id);
-          await loadDashboardInvoices(coachData.id);
         }
         } else {
           setCoachId(coachData.id);
           setAvatarUrl(coachData.avatar_url || "");
-          await loadDashboardLessons(coachData.id);
-          await loadCoachStudents(coachData.id);
-          await loadDashboardInvoices(coachData.id);
 
           if (!coachData.setup_completed) {
             setShowOnboarding(true);
@@ -459,6 +516,7 @@ function Dashboard() {
       )
     );
 
+    queryClient.invalidateQueries({ queryKey: ["coach-rates", coachId] });
     setShowOnboarding(false);
   }
 
@@ -466,87 +524,10 @@ function Dashboard() {
     setShowOnboarding(false);
   }
 
-  async function loadDashboardLessons(currentCoachId: string) {
-    const { data, error } = await supabase
-      .from("lessons")
-      .select(`
-        *,
-        students (
-          student_name
-        )
-      `)
-      .eq("coach_id", currentCoachId)
-      .order("lesson_date", { ascending: true })
-      .order("start_time", { ascending: true });
-
-    if (error) {
-      console.log("Dashboard lessons error:", error);
-      return;
+  function openAddLesson() {
+    if (coachRatesData?.default_hourly_rate) {
+      setHourlyRate(String(coachRatesData.default_hourly_rate));
     }
-
-    setLessons(data || []);
-  }
-
-  async function loadCoachStudents(currentCoachId: string) {
-    const { data, error } = await supabase
-      .from("coach_students")
-      .select(`
-        student_id,
-        students (
-          id,
-          student_name
-        )
-      `)
-      .eq("coach_id", currentCoachId);
-
-    if (error) {
-      console.log("Dashboard students error:", error);
-      return;
-    }
-
-    setCoachStudents(data || []);
-  }
-
-  async function pullDefaultRate() {
-    if (!coachId) return;
-
-    const { data, error } = await supabase
-      .from("coaches")
-      .select("default_hourly_rate, custom_rates")
-      .eq("id", coachId)
-      .single();
-
-    if (error) {
-      console.log("Default rate fetch error:", error);
-      setHourlyRate("");
-      return;
-    }
-
-    const defaultRate = data?.default_hourly_rate
-      ? String(data.default_hourly_rate)
-      : "";
-
-    setHourlyRate(defaultRate);
-    const options = [];
-
-    if (data?.default_hourly_rate) {
-      options.push({
-        name: "Default",
-        amount: Number(data.default_hourly_rate),
-      });
-    }
-
-    if (Array.isArray(data?.custom_rates)) {
-      options.push(...data.custom_rates);
-    }
-
-    setRateOptions(options);
-
-  }
-
-  async function openAddLesson() {
-    await pullDefaultRate();
-    await loadCoachStudents(coachId);
     setShowAddLesson(true);
   }
 
@@ -666,7 +647,8 @@ function Dashboard() {
         return;
       }
 
-      await loadDashboardLessons(coachId);
+      queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
+      queryClient.invalidateQueries({ queryKey: ["coach-students", coachId] });
 
       setStudentName("");
       setSelectedStudentId(null);
@@ -724,7 +706,7 @@ function Dashboard() {
       const calculatedRate =
         Number(hourlyRate) * (Number(durationMinutes) / 60);
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("lessons")
         .update({
           lesson_date: lessonDate,
@@ -736,26 +718,14 @@ function Dashboard() {
           notes: notes || null,
         })
         .eq("id", editingLesson.id)
-        .eq("coach_id", coachId)
-        .select(`
-          *,
-          students (
-            student_name
-          )
-        `)
-        .single();
+        .eq("coach_id", coachId);
 
       if (error) {
         console.log("Update dashboard lesson error:", error);
         return;
       }
 
-      setLessons((prev) =>
-        prev.map((lesson) =>
-          lesson.id === editingLesson.id ? data : lesson
-        )
-      );
-
+      queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
       closeEditLesson();
 
     } finally {
@@ -784,10 +754,8 @@ function Dashboard() {
         return;
       }
 
-      setLessons((prev) =>
-        prev.filter((lesson) => lesson.id !== lessonId)
-      );
-
+      queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
+      queryClient.invalidateQueries({ queryKey: ["invoices", coachId] });
       closeEditLesson();
 
     } finally {
@@ -1038,26 +1006,6 @@ function Dashboard() {
   function closeAddLesson() {
     setShowAddLesson(false);
     resetLessonForm();
-  }
-
-  async function loadDashboardInvoices(currentCoachId: string) {
-    const { data, error } = await supabase
-      .from("invoices")
-      .select(`
-        *,
-        students (
-          student_name
-        )
-      `)
-      .eq("coach_id", currentCoachId)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.log("Dashboard invoices error:", error);
-      return;
-    }
-
-    setInvoices(data || []);
   }
 
   function formatUSPhoneInput(value: string) {

@@ -1,23 +1,23 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
 import "./CoachingTimer.css";
 import {
   FaArrowLeft
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 
 const MAX_TIMER_HOURS = 4;
 const MAX_TIMER_MS = MAX_TIMER_HOURS * 60 * 60 * 1000;
 
 export default function CoachingTimer() {
-  const [coachId, setCoachId] = useState<string | null>(null);
-  const [defaultRate, setDefaultRate] = useState<number | null>(null);
+  const { coachId, identityLoading } = useCoachIdentity();
+  const queryClient = useQueryClient();
+
   const [hourlyRate, setHourlyRate] = useState<string>("");
-  const [rateOptions, setRateOptions] = useState<any[]>([]);
   const [showRateSheet, setShowRateSheet] = useState(false);
 
-  // Same pattern as Lessons.tsx
-  const [coachStudents, setCoachStudents] = useState<any[]>([]);
   const [studentName, setStudentName] = useState("");
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
@@ -27,22 +27,63 @@ export default function CoachingTimer() {
   const [message, setMessage] = useState("");
   const [showSavePrompt, setShowSavePrompt] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [timerRestoring, setTimerRestoring] = useState(true);
+  const [timerRestored, setTimerRestored] = useState(false);
 
   const navigate = useNavigate();
 
   const today = new Date().toLocaleDateString("en-CA");
 
-  useEffect(() => {
-    loadCoach();
-  }, []);
+  const { data: coachRatesData } = useQuery({
+    queryKey: ["coach-rates", coachId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("coaches")
+        .select("default_hourly_rate, custom_rates")
+        .eq("id", coachId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!coachId,
+  });
+
+  const { data: coachStudents = [] } = useQuery({
+    queryKey: ["coach-students", coachId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("coach_students")
+        .select(`student_id, students(id, student_name)`)
+        .eq("coach_id", coachId);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!coachId,
+  });
+
+  const rateOptions: any[] = [];
+  if (coachRatesData?.default_hourly_rate) {
+    rateOptions.push({ name: "Default", amount: Number(coachRatesData.default_hourly_rate) });
+  }
+  if (Array.isArray(coachRatesData?.custom_rates)) {
+    rateOptions.push(...coachRatesData.custom_rates);
+  }
+
+  const defaultRate = coachRatesData?.default_hourly_rate ?? null;
 
   useEffect(() => {
-    if (coachId) {
-      loadCoachStudents();
+    if (coachRatesData && !hourlyRate && coachRatesData.default_hourly_rate) {
+      setHourlyRate(String(coachRatesData.default_hourly_rate));
+    }
+  }, [coachRatesData]);
+
+  useEffect(() => {
+    if (coachId && !timerRestored) {
       restoreTimer();
+      setTimerRestored(true);
     }
   }, [coachId]);
+
+  const timerRestoring = identityLoading || (!!coachId && !timerRestored);
 
   useEffect(() => {
     let interval: any;
@@ -59,59 +100,6 @@ export default function CoachingTimer() {
     }
     return () => clearInterval(interval);
   }, [timerRunning, startTime]);
-
-  async function loadCoach() {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) { setTimerRestoring(false); return; }
-
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("user_id", user.id)
-      .single();
-    if (!profileData) { setTimerRestoring(false); return; }
-
-    const { data: coachData } = await supabase
-      .from("coaches")
-      .select("id, default_hourly_rate, custom_rates")
-      .eq("profile_id", profileData.id)
-      .single();
-    if (!coachData) { setTimerRestoring(false); return; }
-
-    setCoachId(coachData.id);
-    setDefaultRate(coachData.default_hourly_rate ?? null);
-
-    const options: any[] = [];
-    if (coachData.default_hourly_rate) {
-      options.push({ name: "Default", amount: Number(coachData.default_hourly_rate) });
-    }
-    if (Array.isArray(coachData.custom_rates)) {
-      options.push(...coachData.custom_rates);
-    }
-    setRateOptions(options);
-    if (coachData.default_hourly_rate) {
-      setHourlyRate(String(coachData.default_hourly_rate));
-    }
-    setTimerRestoring(false);
-  }
-
-  async function loadCoachStudents() {
-    if (!coachId) return;
-
-    const { data, error } = await supabase
-      .from("coach_students")
-      .select(`
-        student_id,
-        students (
-          id,
-          student_name
-        )
-      `)
-      .eq("coach_id", coachId);
-
-    if (error) { console.log("Load students error:", error); return; }
-    setCoachStudents(data || []);
-  }
 
   function restoreTimer() {
     const saved = localStorage.getItem("billio_active_timer");
@@ -197,7 +185,7 @@ export default function CoachingTimer() {
       return null;
     }
 
-    await loadCoachStudents();
+    queryClient.invalidateQueries({ queryKey: ["coach-students", coachId] });
     return newStudent.id;
   }
 
@@ -233,6 +221,7 @@ export default function CoachingTimer() {
       return;
     }
 
+    queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
     setMessage("Lesson saved successfully.");
     clearTimer();
   }
@@ -369,9 +358,9 @@ export default function CoachingTimer() {
             type="button"
             className="timer-start-btn"
             onClick={startTimer}
-            disabled={!coachId}
+            disabled={identityLoading || !coachId}
           >
-            {coachId ? "Start Lesson" : "Loading..."}
+            {identityLoading || !coachId ? "Loading..." : "Start Lesson"}
           </button>
         ) : (
           <button type="button" className="timer-stop-btn" onClick={stopTimer}>

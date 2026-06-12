@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
   FaArrowLeft,
@@ -12,6 +13,7 @@ import {
   FaChevronRight,
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
+import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import "./Settings.css";
 
 const DURATION_OPTIONS = [15, 30, 45, 60, 90, 120];
@@ -24,9 +26,9 @@ const DUE_DATE_OPTIONS = [
 
 export default function Settings() {
   const navigate = useNavigate();
+  const { coachId, identityLoading } = useCoachIdentity();
+  const queryClient = useQueryClient();
 
-  const [coachId, setCoachId] = useState("");
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -49,34 +51,34 @@ export default function Settings() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
 
+  const { data: settingsData, isLoading: settingsLoading } = useQuery({
+    queryKey: ["coach-settings", coachId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("coaches")
+        .select("id, default_lesson_duration, default_due_date_days, invoice_prefix, time_format")
+        .eq("id", coachId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!coachId,
+  });
+
+  const loading = identityLoading || settingsLoading;
+
   useEffect(() => {
-    loadSettings();
-  }, []);
+    if (!coachId && !identityLoading) navigate("/login");
+  }, [coachId, identityLoading]);
 
-  async function loadSettings() {
-    setLoading(true);
-    const { data: sessionData } = await supabase.auth.getSession();
-    const user = sessionData.session?.user;
-    if (!user) { navigate("/login"); return; }
-
-    const { data: profileData } = await supabase
-      .from("profiles").select("id").eq("user_id", user.id).single();
-    if (!profileData) { setLoading(false); return; }
-
-    const { data: coachData } = await supabase
-      .from("coaches")
-      .select("id, default_lesson_duration, default_due_date_days, invoice_prefix, time_format")
-      .eq("profile_id", profileData.id)
-      .single();
-    if (!coachData) { setLoading(false); return; }
-
-    setCoachId(coachData.id);
-    setDefaultDuration(coachData.default_lesson_duration ?? 60);
-    setDefaultDueDate(coachData.default_due_date_days ?? 7);
-    setInvoicePrefix(coachData.invoice_prefix ?? "INV");
-    setTimeFormat(coachData.time_format ?? "12h");
-    setLoading(false);
-  }
+  useEffect(() => {
+    if (settingsData) {
+      setDefaultDuration(settingsData.default_lesson_duration ?? 60);
+      setDefaultDueDate(settingsData.default_due_date_days ?? 7);
+      setInvoicePrefix(settingsData.invoice_prefix ?? "INV");
+      setTimeFormat(settingsData.time_format ?? "12h");
+    }
+  }, [settingsData]);
 
   async function handleSave() {
     if (!coachId || saving) return;
@@ -96,6 +98,7 @@ export default function Settings() {
     if (!error) {
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
+      queryClient.invalidateQueries({ queryKey: ["coach-settings", coachId] });
     }
   }
 

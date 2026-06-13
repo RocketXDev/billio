@@ -61,6 +61,9 @@ function Invoices() {
   const [editSelectedLessonIds, setEditSelectedLessonIds] = useState<string[]>([]);
   const [originalInvoiceStatus, setOriginalInvoiceStatus] = useState("unbilled");
   const [sendingInvoiceId, setSendingInvoiceId] = useState<string | null>(null);
+  const [invoiceDetailView, setInvoiceDetailView] = useState<any>(null);
+  const [invoiceDetailViewLessons, setInvoiceDetailViewLessons] = useState<any[]>([]);
+  const [invoiceDetailViewLoading, setInvoiceDetailViewLoading] = useState(false);
   const [openMonths, setOpenMonths] = useState<any>({});
   const [openWeeks, setOpenWeeks] = useState<any>({});
 
@@ -758,6 +761,53 @@ function Invoices() {
 
     return "billed";
   }
+  async function openInvoiceDetailView(invoice: any) {
+    setInvoiceDetailView(invoice);
+    setInvoiceDetailViewLoading(true);
+    setInvoiceDetailViewLessons([]);
+
+    const { data, error } = await supabase
+      .from("invoice_lessons")
+      .select("lessons(*)")
+      .eq("invoice_id", invoice.id);
+
+    if (!error && data) {
+      const lessons = data
+        .map((row: any) => row.lessons)
+        .filter(Boolean)
+        .sort((a: any, b: any) =>
+          a.lesson_date.localeCompare(b.lesson_date) ||
+          (a.start_time || "").localeCompare(b.start_time || "")
+        );
+      setInvoiceDetailViewLessons(lessons);
+    }
+
+    setInvoiceDetailViewLoading(false);
+  }
+
+  function getInvoiceWeekLabel(lessons: any[]) {
+    const dates = lessons.map((l: any) => l.lesson_date).filter(Boolean).sort();
+    if (dates.length === 0) return "";
+    const date = new Date(`${dates[0]}T00:00:00`);
+    const day = date.getDate();
+    const year = date.getFullYear();
+    const month = date.getMonth();
+
+    let bucketStart: number;
+    if (day <= 7) bucketStart = 1;
+    else if (day <= 14) bucketStart = 8;
+    else if (day <= 21) bucketStart = 15;
+    else bucketStart = 22;
+
+    const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+    const bucketEnd = bucketStart === 22 ? lastDayOfMonth : bucketStart + 6;
+
+    const start = new Date(year, month, bucketStart);
+    const end = new Date(year, month, bucketEnd);
+
+    return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+  }
+
   const currentInvoices = invoices.filter(
     (invoice) => (invoice.status || "unbilled") === "unbilled"
   );
@@ -1005,7 +1055,7 @@ function Invoices() {
                 ) : (
                   <div className="invoices-group-card">
                     {currentInvoices.map((invoice) => (
-                      <div key={invoice.id} className="invoices-row">
+                      <div key={invoice.id} className="invoices-row" style={{ cursor: "pointer" }} onClick={() => openInvoiceDetailView(invoice)}>
                         <div className="invoices-avatar">
                           {invoice.students?.student_name ? invoice.students.student_name.charAt(0).toUpperCase() : "I"}
                         </div>
@@ -1046,7 +1096,7 @@ function Invoices() {
                 ) : (
                   <div className="invoices-group-card">
                     {billedInvoices.map((invoice) => (
-                      <div key={invoice.id} className="invoices-row">
+                      <div key={invoice.id} className="invoices-row" style={{ cursor: "pointer" }} onClick={() => openInvoiceDetailView(invoice)}>
                         <div className="invoices-avatar" style={{ background: "#dbeafe", color: "#2563eb" }}>
                           {invoice.students?.student_name ? invoice.students.student_name.charAt(0).toUpperCase() : "I"}
                         </div>
@@ -1153,7 +1203,7 @@ function Invoices() {
                                   {openWeeks[weekKey] && (
                                     <div className="invoices-group-card">
                                       {week.invoices.map((invoice: any) => (
-                                        <div key={invoice.id} className="invoices-row past-invoice-row">
+                                        <div key={invoice.id} className="invoices-row past-invoice-row" style={{ cursor: "pointer" }} onClick={() => openInvoiceDetailView(invoice)}>
                                           <div className="invoices-avatar">
                                             {invoice.students?.student_name ? invoice.students.student_name.charAt(0).toUpperCase() : "I"}
                                           </div>
@@ -1618,6 +1668,76 @@ function Invoices() {
             </div>
           </div>
         )}
+        {invoiceDetailView && (
+          <div
+            className="invoices-add-overlay"
+            style={{ zIndex: 400 }}
+            onClick={() => setInvoiceDetailView(null)}
+          >
+            <div
+              className="invoices-add-sheet"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="invoices-add-header">
+                <div>
+                  <h2>{invoiceDetailView.invoice_number || "Invoice"}</h2>
+                  {!invoiceDetailViewLoading && invoiceDetailViewLessons.length > 0 && (
+                    <span style={{ fontSize: 13, color: "var(--secondary-text)", fontWeight: 500 }}>
+                      {getInvoiceWeekLabel(invoiceDetailViewLessons)}
+                    </span>
+                  )}
+                </div>
+                <button type="button" onClick={() => setInvoiceDetailView(null)}>×</button>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 16px 16px" }}>
+                <button
+                  type="button"
+                  className={`invoice-status-pill ${invoiceDetailView.status || "unbilled"}`}
+                  onClick={(e) => { e.stopPropagation(); quickUpdateInvoiceStatus(invoiceDetailView); setInvoiceDetailView(null); }}
+                  disabled={statusUpdatingId === invoiceDetailView.id}
+                >
+                  {statusUpdatingId === invoiceDetailView.id ? "..." : (invoiceDetailView.status || "unbilled").charAt(0).toUpperCase() + (invoiceDetailView.status || "unbilled").slice(1)}
+                </button>
+                <strong style={{ marginLeft: "auto", fontSize: 16 }}>
+                  {formatMoney(invoiceDetailView.total)}
+                </strong>
+              </div>
+
+              {invoiceDetailViewLoading ? (
+                <div style={{ display: "flex", justifyContent: "center", padding: "32px 0" }}>
+                  <div className="billio-mini-spinner" />
+                </div>
+              ) : invoiceDetailViewLessons.length === 0 ? (
+                <p className="invoices-empty" style={{ padding: "0 16px 24px" }}>No lessons attached to this invoice.</p>
+              ) : (
+                <div className="invoices-group-card" style={{ margin: "0 16px 24px" }}>
+                  {invoiceDetailViewLessons.map((lesson: any) => (
+                    <div key={lesson.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", borderBottom: "1px solid var(--border)" }}>
+                      <div>
+                        <strong style={{ fontSize: 14, display: "block" }}>{formatDate(lesson.lesson_date)}</strong>
+                        <span style={{ fontSize: 13, color: "var(--secondary-text)" }}>{lesson.start_time?.slice(0, 5)} • {lesson.duration_minutes} min</span>
+                      </div>
+                      <strong style={{ fontSize: 15, whiteSpace: "nowrap" }}>{formatMoney(lesson.rate)}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 10, padding: "0 16px 16px" }}>
+                <button
+                  type="button"
+                  className="invoices-save-btn"
+                  style={{ flex: 1 }}
+                  onClick={(e) => { e.stopPropagation(); setInvoiceDetailView(null); openEditInvoice(invoiceDetailView); }}
+                >
+                  Edit Invoice
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {showInvoiceSettings && (
           <div
             className="invoice-settings-overlay"

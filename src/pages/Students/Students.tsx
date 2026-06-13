@@ -2090,14 +2090,14 @@ function Students() {
             ) : (
               <div className="students-detail-card" style={{ margin: "0 16px 24px" }}>
                 {invoiceDetailLessons.map((lesson: any) => (
-                  <div key={lesson.id} className="students-detail-row">
+                  <div key={lesson.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", borderBottom: "1px solid var(--border)" }}>
                     <div>
-                      <strong>{lesson.lesson_date}</strong>
-                      <span>
-                        {lesson.start_time?.slice(0, 5)} • {lesson.duration_minutes} min
-                      </span>
+                      <strong style={{ fontSize: 14, display: "block" }}>
+                        {new Date(`${lesson.lesson_date}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      </strong>
+                      <span style={{ fontSize: 13, color: "var(--secondary-text)" }}>{lesson.start_time?.slice(0, 5)} • {lesson.duration_minutes} min</span>
                     </div>
-                    <strong>${Number(lesson.rate || 0).toFixed(2)}</strong>
+                    <strong style={{ fontSize: 15, whiteSpace: "nowrap" }}>${Number(lesson.rate || 0).toFixed(2)}</strong>
                   </div>
                 ))}
               </div>

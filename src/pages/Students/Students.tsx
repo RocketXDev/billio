@@ -1648,7 +1648,7 @@ function Students() {
                     ) : (
                       <>
                         <div>
-                          <strong>{lesson.lesson_date}</strong>
+                          <strong>{new Date(`${lesson.lesson_date}T00:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</strong>
                           <span>
                             {lesson.start_time?.slice(0, 5)} • {lesson.duration_minutes} min •{" "}
                             <div className={`sd-status-badge sd-status-${lesson.billing_status || "unbilled"}`}>
@@ -1724,7 +1724,7 @@ function Students() {
                             color: invoice.status !== "paid" && new Date(invoice.due_date + "T00:00:00") < new Date() ? "#ef4444" : "var(--secondary-text)",
                             marginTop: 2, display: "block"
                           }}>
-                            Due {new Date(invoice.due_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                            Due {new Date(invoice.due_date + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
                           </span>
                         )}
                       </div>
@@ -2093,7 +2093,7 @@ function Students() {
                   <div key={lesson.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", borderBottom: "1px solid var(--border)" }}>
                     <div>
                       <strong style={{ fontSize: 14, display: "block" }}>
-                        {new Date(`${lesson.lesson_date}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        {new Date(`${lesson.lesson_date}T00:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
                       </strong>
                       <span style={{ fontSize: 13, color: "var(--secondary-text)" }}>{lesson.start_time?.slice(0, 5)} • {lesson.duration_minutes} min</span>
                     </div>

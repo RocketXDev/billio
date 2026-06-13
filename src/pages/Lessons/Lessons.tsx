@@ -1178,7 +1178,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                                   <div key={lesson.id} className="lesson-page-row" style={{ cursor: "pointer" }} onClick={() => setViewingLesson(lesson)}>
                                     <div className="lesson-page-time">
                                       <strong>{formatTime(lesson.start_time)}</strong>
-                                      <span>{lesson.lesson_date}</span>
+                                      <span>{new Date(`${lesson.lesson_date}T00:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</span>
                                     </div>
 
                                     <div className="lesson-page-info">

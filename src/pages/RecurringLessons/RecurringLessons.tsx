@@ -368,7 +368,7 @@ export default function RecurringLessons() {
   function formatDate(date: string) {
     if (!date) return "";
     return new Date(date + "T00:00:00").toLocaleDateString("en-US", {
-      month: "short", day: "numeric", year: "numeric",
+      month: "long", day: "numeric", year: "numeric",
     });
   }
 

@@ -216,7 +216,7 @@ function Invoices() {
     if (!date) return "Not set";
 
     return new Date(`${date}T00:00:00`).toLocaleDateString("en-US", {
-      month: "short",
+      month: "long",
       day: "numeric",
       year: "numeric",
     });
@@ -1438,7 +1438,7 @@ function Invoices() {
                               >
                                 <div>
                                   <strong>
-                                    {lesson.lesson_date} • {lesson.duration_minutes} min
+                                    {formatDate(lesson.lesson_date)} • {lesson.duration_minutes} min
                                   </strong>
 
                                   <span>
@@ -1552,7 +1552,7 @@ function Invoices() {
                           >
                             <div>
                               <strong>
-                                {lesson.lesson_date} • {lesson.duration_minutes} min
+                                {formatDate(lesson.lesson_date)} • {lesson.duration_minutes} min
                               </strong>
 
                               <span>

@@ -719,9 +719,9 @@
   display: inline;
 }
 
-.sd-status-unbilled { color: #dc2626; }
-.sd-status-billed   { color: #2563eb; }
-.sd-status-paid     { color: #16a34a; }
+.sd-status-unbilled { color: #f59e0b; }
+.sd-status-billed   { color: #3b82f6; }
+.sd-status-paid     { color: #22c55e; }
 
 .students-detail-header {
   grid-template-columns: 1fr 42px;

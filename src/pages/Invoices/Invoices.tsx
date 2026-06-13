@@ -30,7 +30,6 @@ function Invoices() {
   const { coachId, identityLoading } = useCoachIdentity();
   const queryClient = useQueryClient();
 
-  const [invoices, setInvoices] = useState<any[]>([]);
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [sendSuccessRecipient, setSendSuccessRecipient] = useState("");
@@ -124,7 +123,7 @@ function Invoices() {
     enabled: !!coachId,
   });
 
-  useEffect(() => { if (invoicesData) setInvoices(invoicesData); }, [invoicesData]);
+  const invoices: any[] = invoicesData ?? [];
 
   useEffect(() => {
     if (!invoiceSettingsData) return;
@@ -398,7 +397,7 @@ function Invoices() {
         })
         .in("id", selectedLessonIds);
 
-      setInvoices((prev) => [invoiceData, ...prev]);
+      queryClient.setQueryData<any[]>(["invoices", coachId], (prev) => [invoiceData, ...(prev ?? [])]);
 
     } finally {
       setIsSaving(false);
@@ -582,9 +581,7 @@ function Invoices() {
           .eq("coach_id", coachId);
       }
 
-      setInvoices((prev) =>
-        prev.filter((invoice) => invoice.id !== editingInvoice.id)
-      );
+      queryClient.setQueryData<any[]>(["invoices", coachId], (prev) => (prev ?? []).filter((inv) => inv.id !== editingInvoice.id));
 
       setEditInvoiceLessons(selectedLessons);
       closeEditInvoice();
@@ -682,11 +679,7 @@ function Invoices() {
       return;
     }
 
-    setInvoices((prev) =>
-      prev.map((invoice) =>
-        invoice.id === editingInvoice.id ? updatedInvoice : invoice
-      )
-    );
+    queryClient.setQueryData<any[]>(["invoices", coachId], (prev) => (prev ?? []).map((inv) => inv.id === editingInvoice.id ? updatedInvoice : inv));
 
     closeEditInvoice();
   }
@@ -706,9 +699,7 @@ function Invoices() {
       return;
     }
 
-    setInvoices((prev) =>
-      prev.filter((invoice) => invoice.id !== invoiceId)
-    );
+    queryClient.setQueryData<any[]>(["invoices", coachId], (prev) => (prev ?? []).filter((inv) => inv.id !== invoiceId));
 
     closeEditInvoice();
   }
@@ -737,13 +728,15 @@ function Invoices() {
       .select("*, students(student_name, email, phone_number, parent_name, parent_phone)")
       .single();
     if (!error && data) {
-      setInvoices((prev) => prev.map((inv) => inv.id === invoice.id ? data : inv));
+      queryClient.setQueryData<any[]>(["invoices", coachId], (prev) => (prev ?? []).map((inv) => inv.id === invoice.id ? data : inv));
       const { data: lessonLinks } = await supabase
         .from("invoice_lessons").select("lesson_id").eq("invoice_id", invoice.id);
       const lessonIds = (lessonLinks || []).map((l: any) => l.lesson_id);
       if (lessonIds.length > 0) {
         await supabase.from("lessons").update({ billing_status: next }).in("id", lessonIds);
       }
+      queryClient.invalidateQueries({ queryKey: ["invoices", coachId] });
+      queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
     }
     setStatusUpdatingId(null);
   }
@@ -819,19 +812,11 @@ function Invoices() {
       return;
     }
 
-    setInvoices((prev) =>
-      prev.map((invoice) =>
-        invoice.id === invoiceId
-          ? {
-              ...invoice,
-              status: "billed",
-              sent_at: new Date().toISOString(),
-              delivery_method: data.deliveryMethod || "email",
-              recipient_email: data.recipientEmail,
-            }
-          : invoice
-      )
-    );
+    queryClient.setQueryData<any[]>(["invoices", coachId], (prev) => (prev ?? []).map((inv) =>
+      inv.id === invoiceId
+        ? { ...inv, status: "billed", sent_at: new Date().toISOString(), delivery_method: data.deliveryMethod || "email", recipient_email: data.recipientEmail }
+        : inv
+    ));
 
     setSendSuccessRecipient(
       data.recipientPhone || data.recipientEmail || "recipient"
@@ -1045,8 +1030,7 @@ function Invoices() {
                 ) : (
                   <div className="invoices-group-card">
                     {currentInvoices.map((invoice) => (
-                      <div key={invoice.id} className="invoices-row" style={{ cursor: "pointer" }}
-                        onClick={() => quickUpdateInvoiceStatus(invoice)}>
+                      <div key={invoice.id} className="invoices-row">
                         <div className="invoices-avatar">
                           {invoice.students?.student_name ? invoice.students.student_name.charAt(0).toUpperCase() : "I"}
                         </div>
@@ -1087,8 +1071,7 @@ function Invoices() {
                 ) : (
                   <div className="invoices-group-card">
                     {billedInvoices.map((invoice) => (
-                      <div key={invoice.id} className="invoices-row" style={{ cursor: "pointer" }}
-                        onClick={() => quickUpdateInvoiceStatus(invoice)}>
+                      <div key={invoice.id} className="invoices-row">
                         <div className="invoices-avatar" style={{ background: "#dbeafe", color: "#2563eb" }}>
                           {invoice.students?.student_name ? invoice.students.student_name.charAt(0).toUpperCase() : "I"}
                         </div>
@@ -1195,8 +1178,7 @@ function Invoices() {
                                   {openWeeks[weekKey] && (
                                     <div className="invoices-group-card">
                                       {week.invoices.map((invoice: any) => (
-                                        <div key={invoice.id} className="invoices-row past-invoice-row"
-                                          style={{ cursor: "pointer" }} onClick={() => quickUpdateInvoiceStatus(invoice)}>
+                                        <div key={invoice.id} className="invoices-row past-invoice-row">
                                           <div className="invoices-avatar">
                                             {invoice.students?.student_name ? invoice.students.student_name.charAt(0).toUpperCase() : "I"}
                                           </div>

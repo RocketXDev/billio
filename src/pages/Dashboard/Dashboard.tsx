@@ -528,6 +528,7 @@ function Dashboard() {
     if (coachRatesData?.default_hourly_rate) {
       setHourlyRate(String(coachRatesData.default_hourly_rate));
     }
+    setDurationMinutes(String(settings.defaultLessonDuration));
     setShowAddLesson(true);
   }
 
@@ -654,7 +655,7 @@ function Dashboard() {
       setSelectedStudentId(null);
       setLessonDate("");
       setStartTime("");
-      setDurationMinutes("30");
+      setDurationMinutes(String(settings.defaultLessonDuration));
       setLessonType("");
       setHourlyRate("");
       setNotes("");
@@ -687,7 +688,7 @@ function Dashboard() {
     setSelectedStudentId(null);
     setLessonDate("");
     setStartTime("");
-    setDurationMinutes("30");
+    setDurationMinutes(String(settings.defaultLessonDuration));
     setLessonType("");
     setHourlyRate("");
     setNotes("");
@@ -996,7 +997,7 @@ function Dashboard() {
     setSelectedStudentId(null);
     setLessonDate("");
     setStartTime("");
-    setDurationMinutes("30");
+    setDurationMinutes(String(settings.defaultLessonDuration));
     setLessonType("");
     setHourlyRate("");
     setNotes("");

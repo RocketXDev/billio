@@ -16,7 +16,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import "./Settings.css";
 
-const DURATION_OPTIONS = [15, 30, 45, 60, 90, 120];
+const DURATION_OPTIONS = [30, 45, 60, 90, 120];
 const DUE_DATE_OPTIONS = [
   { label: "Due on receipt", value: 0 },
   { label: "7 days", value: 7 },
@@ -34,6 +34,8 @@ export default function Settings() {
 
   // Settings state
   const [defaultDuration, setDefaultDuration] = useState(60);
+  const [useCustomDuration, setUseCustomDuration] = useState(false);
+  const [customDuration, setCustomDuration] = useState("");
   const [defaultDueDate, setDefaultDueDate] = useState(7);
   const [invoicePrefix, setInvoicePrefix] = useState("INV");
   const [timeFormat, setTimeFormat] = useState<"12h" | "24h">("12h");
@@ -73,7 +75,12 @@ export default function Settings() {
 
   useEffect(() => {
     if (settingsData) {
-      setDefaultDuration(settingsData.default_lesson_duration ?? 60);
+      const dur = settingsData.default_lesson_duration ?? 60;
+      setDefaultDuration(dur);
+      if (!DURATION_OPTIONS.includes(dur)) {
+        setUseCustomDuration(true);
+        setCustomDuration(String(dur));
+      }
       setDefaultDueDate(settingsData.default_due_date_days ?? 7);
       setInvoicePrefix(settingsData.invoice_prefix ?? "INV");
       setTimeFormat(settingsData.time_format ?? "12h");
@@ -180,13 +187,45 @@ export default function Settings() {
                 <button
                   key={d}
                   type="button"
-                  className={`settings-chip${defaultDuration === d ? " active" : ""}`}
-                  onClick={() => setDefaultDuration(d)}
+                  className={`settings-chip${!useCustomDuration && defaultDuration === d ? " active" : ""}`}
+                  onClick={() => { setDefaultDuration(d); setUseCustomDuration(false); setCustomDuration(""); }}
                 >
                   {d} min
                 </button>
               ))}
+              <button
+                type="button"
+                className={`settings-chip${useCustomDuration ? " active" : ""}`}
+                onClick={() => {
+                  if (!useCustomDuration) {
+                    setUseCustomDuration(true);
+                    const val = parseInt(customDuration, 10);
+                    if (val > 0) setDefaultDuration(val);
+                  }
+                }}
+              >
+                Custom
+              </button>
             </div>
+            {useCustomDuration && (
+              <div className="settings-custom-duration-row">
+                <input
+                  type="number"
+                  min={1}
+                  max={480}
+                  className="settings-prefix-input"
+                  style={{ width: 80 }}
+                  value={customDuration}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/\D/g, "");
+                    setCustomDuration(raw);
+                    const val = parseInt(raw, 10);
+                    if (val > 0) setDefaultDuration(val);
+                  }}
+                />
+                <span className="settings-prefix-preview">minutes</span>
+              </div>
+            )}
           </div>
         </section>
 

@@ -19,11 +19,13 @@ import { supabase } from "../../lib/supabaseClient";
 import { useNavigate } from "react-router-dom";
 import { usePlan } from "../../hooks/usePlan";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
+import { useSettings } from "../../hooks/useSettings";
 import "./Lessons.css"
 
 function Lessons() {
   const { isPro } = usePlan();
   const { coachId, identityLoading } = useCoachIdentity();
+  const { settings } = useSettings();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [showAddLesson, setShowAddLesson] = useState(false);
@@ -309,7 +311,7 @@ function Lessons() {
       setSelectedStudentId(null);
       setLessonDate("");
       setStartTime("");
-      setDurationMinutes("30");
+      setDurationMinutes(String(settings.defaultLessonDuration));
       setLessonType("");
       setHourlyRate("");
       setNotes("");
@@ -374,7 +376,7 @@ function Lessons() {
     setStudentName("");
     setLessonDate("");
     setStartTime("");
-    setDurationMinutes("30");
+    setDurationMinutes(String(settings.defaultLessonDuration));
     setLessonType("");
     setHourlyRate("");
     setNotes("");
@@ -552,6 +554,7 @@ function Lessons() {
 
     setRateOptions(options);
 
+    setDurationMinutes(String(settings.defaultLessonDuration));
     setShowAddLesson(true);
   }
 
@@ -777,7 +780,7 @@ function Lessons() {
     setSelectedStudentId(null);
     setLessonDate("");
     setStartTime("");
-    setDurationMinutes("30");
+    setDurationMinutes(String(settings.defaultLessonDuration));
     setLessonType("");
     setHourlyRate("");
     setNotes("");

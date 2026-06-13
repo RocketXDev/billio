@@ -94,6 +94,11 @@ function Students() {
   const [invoiceFilterSort, setInvoiceFilterSort] = useState<string>("newest");
   const [showInvoiceFilterSheet, setShowInvoiceFilterSheet] = useState(false);
 
+  // Invoice detail popup
+  const [selectedStudentInvoice, setSelectedStudentInvoice] = useState<any>(null);
+  const [invoiceDetailLessons, setInvoiceDetailLessons] = useState<any[]>([]);
+  const [invoiceDetailLoading, setInvoiceDetailLoading] = useState(false);
+
   const { data: studentsData, isLoading: studentsLoading } = useQuery({
     queryKey: ["students", coachId],
     queryFn: async () => {
@@ -535,7 +540,7 @@ function Students() {
         .eq("coach_id", coachId).eq("student_id", student.id)
         .order("lesson_date", { ascending: false })
         .order("start_time", { ascending: false }),
-      supabase.from("invoices").select("*")
+      supabase.from("invoices").select("*, invoice_lessons(lessons(lesson_date))")
         .eq("coach_id", coachId).eq("student_id", student.id)
         .order("created_at", { ascending: false }),
     ]);
@@ -547,6 +552,53 @@ function Students() {
     else setStudentInvoices(invoicesResult.data || []);
 
     setDetailLoading(false);
+  }
+
+  async function openInvoiceDetail(invoice: any) {
+    setSelectedStudentInvoice(invoice);
+    setInvoiceDetailLoading(true);
+    setInvoiceDetailLessons([]);
+
+    const { data, error } = await supabase
+      .from("invoice_lessons")
+      .select("lessons(*)")
+      .eq("invoice_id", invoice.id);
+
+    if (!error && data) {
+      const lessons = data
+        .map((row: any) => row.lessons)
+        .filter(Boolean)
+        .sort((a: any, b: any) =>
+          a.lesson_date.localeCompare(b.lesson_date) ||
+          (a.start_time || "").localeCompare(b.start_time || "")
+        );
+      setInvoiceDetailLessons(lessons);
+    }
+
+    setInvoiceDetailLoading(false);
+  }
+
+  function getInvoiceWeekLabel(lessons: any[]) {
+    const dates = lessons.map((l: any) => l.lesson_date).filter(Boolean).sort();
+    if (dates.length === 0) return "";
+    const date = new Date(`${dates[0]}T00:00:00`);
+    const day = date.getDate();
+    const year = date.getFullYear();
+    const month = date.getMonth();
+
+    let bucketStart: number;
+    if (day <= 7) bucketStart = 1;
+    else if (day <= 14) bucketStart = 8;
+    else if (day <= 21) bucketStart = 15;
+    else bucketStart = 22;
+
+    const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+    const bucketEnd = bucketStart === 22 ? lastDayOfMonth : bucketStart + 6;
+
+    const start = new Date(year, month, bucketStart);
+    const end = new Date(year, month, bucketEnd);
+
+    return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
   }
 
   function formatUSPhoneInput(value: string) {
@@ -1650,10 +1702,19 @@ function Students() {
                 </p>
               ) : (
                 <div className="students-detail-card">
-                  {filteredStudentInvoices.map((invoice) => (
-                    <div key={invoice.id} className="students-detail-row">
+                  {filteredStudentInvoices.map((invoice) => {
+                    const invoiceLessonDates = (invoice.invoice_lessons || [])
+                      .map((il: any) => il.lessons).filter(Boolean);
+                    const weekLabel = getInvoiceWeekLabel(invoiceLessonDates);
+                    return (
+                    <div key={invoice.id} className="students-detail-row" style={{ cursor: "pointer" }} onClick={() => openInvoiceDetail(invoice)}>
                       <div>
                         <strong>{invoice.invoice_number || "Invoice"}</strong>
+                        {weekLabel && (
+                          <span style={{ fontSize: 12, color: "var(--secondary-text)", fontWeight: 500, display: "block", marginTop: 2 }}>
+                            {weekLabel}
+                          </span>
+                        )}
                         <div className={`sd-status-badge sd-status-${invoice.status || "unbilled"}`} style={{ marginTop: 4, display: "block" }}>
                           {(invoice.status || "unbilled").charAt(0).toUpperCase() + (invoice.status || "unbilled").slice(1)}
                         </div>
@@ -1669,7 +1730,7 @@ function Students() {
                       </div>
                       <strong>${Number(invoice.total || 0).toFixed(2)}</strong>
                     </div>
-                  ))}
+                  ); })}
                 </div>
               )}
             </section>
@@ -1984,6 +2045,62 @@ function Students() {
               >
                 Clear filters
               </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {selectedStudentInvoice && (
+        <div
+          className="students-add-overlay"
+          style={{ zIndex: 400 }}
+          onClick={() => setSelectedStudentInvoice(null)}
+        >
+          <div
+            className="students-add-sheet"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="students-add-header">
+              <div>
+                <h2>{selectedStudentInvoice.invoice_number || "Invoice"}</h2>
+                {!invoiceDetailLoading && invoiceDetailLessons.length > 0 && (
+                  <span style={{ fontSize: 13, color: "var(--secondary-text)", fontWeight: 500 }}>
+                    {getInvoiceWeekLabel(invoiceDetailLessons)}
+                  </span>
+                )}
+              </div>
+              <button type="button" onClick={() => setSelectedStudentInvoice(null)}>×</button>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 16px 16px" }}>
+              <span className={`sd-status-badge sd-status-${selectedStudentInvoice.status || "unbilled"}`}>
+                {(selectedStudentInvoice.status || "unbilled").charAt(0).toUpperCase() + (selectedStudentInvoice.status || "unbilled").slice(1)}
+              </span>
+              <strong style={{ marginLeft: "auto", fontSize: 16 }}>
+                ${Number(selectedStudentInvoice.total || 0).toFixed(2)}
+              </strong>
+            </div>
+
+            {invoiceDetailLoading ? (
+              <div style={{ display: "flex", justifyContent: "center", padding: "32px 0" }}>
+                <div className="billio-mini-spinner" />
+              </div>
+            ) : invoiceDetailLessons.length === 0 ? (
+              <p className="students-empty" style={{ padding: "0 16px 24px" }}>No lessons attached to this invoice.</p>
+            ) : (
+              <div className="students-detail-card" style={{ margin: "0 16px 24px" }}>
+                {invoiceDetailLessons.map((lesson: any) => (
+                  <div key={lesson.id} className="students-detail-row">
+                    <div>
+                      <strong>{lesson.lesson_date}</strong>
+                      <span>
+                        {lesson.start_time?.slice(0, 5)} • {lesson.duration_minutes} min
+                      </span>
+                    </div>
+                    <strong>${Number(lesson.rate || 0).toFixed(2)}</strong>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>

@@ -98,7 +98,7 @@ function Invoices() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("invoices")
-        .select(`*, students(student_name, email, phone_number, parent_name, parent_phone)`)
+        .select(`*, students(student_name, email, phone_number, parent_name, parent_phone), invoice_lessons(lessons(lesson_date))`)
         .eq("coach_id", coachId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -825,73 +825,48 @@ function Invoices() {
     setSendSuccessMethod(data.deliveryMethod || "email");
   }
 
-  function getWeekStart(dateString: string) {
-    const date = new Date(`${dateString}T00:00:00`);
-    const day = date.getDay();
-    const diff = date.getDate() - day + 1;
+  function getMonthWeekBucket(dateStr: string) {
+    const date = new Date(`${dateStr}T00:00:00`);
+    const day = date.getDate();
+    const year = date.getFullYear();
+    const month = date.getMonth();
 
-    if (day === 0) {
-      date.setDate(date.getDate() - 6);
-    } else {
-      date.setDate(diff);
-    }
+    let bucketStart: number;
+    if (day <= 7) bucketStart = 1;
+    else if (day <= 14) bucketStart = 8;
+    else if (day <= 21) bucketStart = 15;
+    else bucketStart = 22;
 
-    return date;
-  }
+    const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+    const bucketEnd = bucketStart === 22 ? lastDayOfMonth : bucketStart + 6;
 
-  function getWeekEnd(weekStart: Date) {
-    const end = new Date(weekStart);
-    end.setDate(weekStart.getDate() + 6);
-    return end;
-  }
+    const start = new Date(year, month, bucketStart);
+    const end = new Date(year, month, bucketEnd);
 
-  function formatMonthYear(date: Date) {
-    return date.toLocaleDateString("en-US", {
-      month: "long",
-      year: "numeric",
-    });
-  }
-
-  function formatWeekRange(start: Date, end: Date) {
-    const startText = start.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-
-    const endText = end.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-
-    return `${startText} – ${endText}`;
+    return {
+      monthLabel: start.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+      weekKey: `${year}-${String(month + 1).padStart(2, "0")}-${String(bucketStart).padStart(2, "0")}`,
+      weekLabel: `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+    };
   }
 
   const groupedPastInvoices = pastInvoices.reduce((groups: any, invoice: any) => {
-    const dateSource =
-      invoice.period_start ||
-      invoice.issue_date ||
-      invoice.created_at;
+    const lessonDates = (invoice.invoice_lessons || [])
+      .map((il: any) => il.lessons?.lesson_date)
+      .filter(Boolean)
+      .sort();
 
-    const weekStart = getWeekStart(dateSource);
-    const weekEnd = getWeekEnd(weekStart);
+    const firstDate = lessonDates[0];
+    const anchorRaw = firstDate || invoice.period_start || invoice.issue_date || invoice.created_at;
+    const anchorDate = (anchorRaw || "").slice(0, 10);
 
-    const monthKey = formatMonthYear(weekStart);
-    const weekKey = `${weekStart.toISOString().slice(0, 10)}_${weekEnd
-      .toISOString()
-      .slice(0, 10)}`;
+    const { monthLabel, weekKey, weekLabel } = getMonthWeekBucket(anchorDate);
 
-    if (!groups[monthKey]) {
-      groups[monthKey] = {};
+    if (!groups[monthLabel]) groups[monthLabel] = {};
+    if (!groups[monthLabel][weekKey]) {
+      groups[monthLabel][weekKey] = { label: weekLabel, invoices: [] };
     }
-
-    if (!groups[monthKey][weekKey]) {
-      groups[monthKey][weekKey] = {
-        label: formatWeekRange(weekStart, weekEnd),
-        invoices: [],
-      };
-    }
-
-    groups[monthKey][weekKey].invoices.push(invoice);
+    groups[monthLabel][weekKey].invoices.push(invoice);
 
     return groups;
   }, {});

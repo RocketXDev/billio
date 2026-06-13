@@ -1718,7 +1718,7 @@ function Invoices() {
                         <strong style={{ fontSize: 14, display: "block" }}>{formatDate(lesson.lesson_date)}</strong>
                         <span style={{ fontSize: 13, color: "var(--secondary-text)" }}>{lesson.start_time?.slice(0, 5)} • {lesson.duration_minutes} min</span>
                       </div>
-                      <strong style={{ fontSize: 15, whiteSpace: "nowrap" }}>{formatMoney(lesson.rate)}</strong>
+                      <strong style={{ fontSize: 14, whiteSpace: "nowrap" }}>{formatMoney(lesson.rate)}</strong>
                     </div>
                   ))}
                 </div>

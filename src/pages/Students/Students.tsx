@@ -2097,7 +2097,7 @@ function Students() {
                       </strong>
                       <span style={{ fontSize: 13, color: "var(--secondary-text)" }}>{lesson.start_time?.slice(0, 5)} • {lesson.duration_minutes} min</span>
                     </div>
-                    <strong style={{ fontSize: 15, whiteSpace: "nowrap" }}>${Number(lesson.rate || 0).toFixed(2)}</strong>
+                    <strong style={{ fontSize: 14, whiteSpace: "nowrap" }}>${Number(lesson.rate || 0).toFixed(2)}</strong>
                   </div>
                 ))}
               </div>

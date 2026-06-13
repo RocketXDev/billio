@@ -51,7 +51,9 @@ function Lessons() {
   const hiddenRates = rateOptions.slice(3);
   const [showRateSheet, setShowRateSheet] = useState(false);
 
-  const [isSaving, setIsSaving] = useState(false); 
+  const [viewingLesson, setViewingLesson] = useState<any>(null);
+
+  const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
   const [lessonsLoading, setLessonsLoading] = useState(false);
@@ -1100,7 +1102,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                       <p className="empty-lessons">No lessons for this day.</p>
                     ) : (
                       selectedCalendarLessons.map((lesson) => (
-                        <div onClick={(e) => { e.stopPropagation(); quickUpdateStatus(lesson); }} key={lesson.id} className="calendar-detail-row">
+                        <div key={lesson.id} className="calendar-detail-row" style={{ cursor: "pointer" }} onClick={() => setViewingLesson(lesson)}>
                           <div
                             className={`calendar-time-icon ${
                               lesson.billing_status || "unbilled"
@@ -1120,22 +1122,23 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                                 ? ` • ${lesson.lesson_type}`
                                 : ""}
                               {" • $"}
-                              {formatMoney(lesson.rate)} 
+                              {formatMoney(lesson.rate)}
                               {" • "}
                               <button
-                              type="button"
-                              className={`calendar-billing-label clickable-status ${lesson.billing_status || "unbilled"}`}
-                              disabled={statusUpdatingId === lesson.id}
-                            >
-                              {statusUpdatingId === lesson.id ? "..." : (lesson.billing_status || "unbilled").charAt(0).toUpperCase() + (lesson.billing_status || "unbilled").slice(1)}
-                            </button>
+                                type="button"
+                                className={`calendar-billing-label clickable-status ${lesson.billing_status || "unbilled"}`}
+                                disabled={statusUpdatingId === lesson.id}
+                                onClick={(e) => { e.stopPropagation(); quickUpdateStatus(lesson); }}
+                              >
+                                {statusUpdatingId === lesson.id ? "..." : (lesson.billing_status || "unbilled").charAt(0).toUpperCase() + (lesson.billing_status || "unbilled").slice(1)}
+                              </button>
                             </span>
                           </div>
 
                           <button
                             type="button"
                             className="lesson-edit-btn"
-                            onClick={() => openEditLesson(lesson)}
+                            onClick={(e) => { e.stopPropagation(); openEditLesson(lesson); }}
                           >
                             <FaEdit />
                           </button>
@@ -1172,7 +1175,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
                               <div className="lesson-group-card">
                                 {group.items.map((lesson) => (
-                                  <div key={lesson.id} className="lesson-page-row">
+                                  <div key={lesson.id} className="lesson-page-row" style={{ cursor: "pointer" }} onClick={() => setViewingLesson(lesson)}>
                                     <div className="lesson-page-time">
                                       <strong>{formatTime(lesson.start_time)}</strong>
                                       <span>{lesson.lesson_date}</span>
@@ -1191,7 +1194,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                                     <button
                                       type="button"
                                       className={`lesson-billing-pill ${lesson.billing_status || "unbilled"}`}
-                                      onClick={() => quickUpdateStatus(lesson)}
+                                      onClick={(e) => { e.stopPropagation(); quickUpdateStatus(lesson); }}
                                       disabled={statusUpdatingId === lesson.id}
                                     >
                                       {statusUpdatingId === lesson.id ? "..." : (lesson.billing_status || "unbilled").charAt(0).toUpperCase() + (lesson.billing_status || "unbilled").slice(1)}
@@ -1200,7 +1203,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                                     <button
                                       type="button"
                                       className="lesson-edit-btn"
-                                      onClick={() => openEditLesson(lesson)}
+                                      onClick={(e) => { e.stopPropagation(); openEditLesson(lesson); }}
                                     >
                                       <FaEdit />
                                     </button>
@@ -1552,6 +1555,72 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
           </div>
         </div>
       )}
+      {viewingLesson && (
+        <div className="add-lesson-overlay" onClick={() => setViewingLesson(null)}>
+          <div className="add-lesson-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="add-lesson-header">
+              <div>
+                <h2>{viewingLesson.students?.student_name || "Lesson"}</h2>
+                <span className="lesson-view-date">
+                  {new Date(`${viewingLesson.lesson_date}T00:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                </span>
+              </div>
+              <button type="button" onClick={() => setViewingLesson(null)}>×</button>
+            </div>
+
+            <div className="lesson-view-body">
+              <div className="lesson-view-card">
+                <div className="lesson-view-row">
+                  <span>Time</span>
+                  <strong>{formatTime(viewingLesson.start_time)}</strong>
+                </div>
+                <div className="lesson-view-row">
+                  <span>Duration</span>
+                  <strong>{viewingLesson.duration_minutes} min</strong>
+                </div>
+                {viewingLesson.lesson_type && (
+                  <div className="lesson-view-row">
+                    <span>Type</span>
+                    <strong>{viewingLesson.lesson_type}</strong>
+                  </div>
+                )}
+                <div className="lesson-view-row">
+                  <span>Rate</span>
+                  <strong>${formatMoney(viewingLesson.rate)}</strong>
+                </div>
+                <div className="lesson-view-row">
+                  <span>Status</span>
+                  <button
+                    type="button"
+                    className={`lesson-billing-pill ${viewingLesson.billing_status || "unbilled"}`}
+                    disabled={statusUpdatingId === viewingLesson.id}
+                    onClick={() => { quickUpdateStatus(viewingLesson); setViewingLesson(null); }}
+                  >
+                    {statusUpdatingId === viewingLesson.id ? "..." : (viewingLesson.billing_status || "unbilled").charAt(0).toUpperCase() + (viewingLesson.billing_status || "unbilled").slice(1)}
+                  </button>
+                </div>
+              </div>
+              {viewingLesson.notes && (
+                <div className="lesson-view-notes">
+                  <span>Notes</span>
+                  <span>{viewingLesson.notes}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="lesson-view-actions">
+              <button
+                type="button"
+                className="save-lesson-btn"
+                onClick={() => { setViewingLesson(null); openEditLesson(viewingLesson); }}
+              >
+                Edit Lesson
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showRateSheet && (
           <div
             className="rate-sheet-overlay"

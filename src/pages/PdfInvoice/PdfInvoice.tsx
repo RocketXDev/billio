@@ -12,6 +12,8 @@ import {
   FaMapMarkerAlt,
   FaUpload,
   FaPlane,
+  FaFileInvoice,
+  FaChevronDown,
 } from "react-icons/fa";
 
 const COLOR_PRESETS = [
@@ -96,7 +98,7 @@ function PdfInvoice() {
   const [generating, setGenerating] = useState(false);
 
   // ── Invoice meta ──
-  const [invoiceNumber] = useState(genInvoiceNumber());
+  const [invoiceNumber, setInvoiceNumber] = useState(genInvoiceNumber());
   const [eventName, setEventName] = useState("");
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
@@ -139,6 +141,12 @@ function PdfInvoice() {
   const [logoUrl, setLogoUrl] = useState("");
   const [brandSaving, setBrandSaving] = useState(false);
 
+  // ── Drafts ──
+  const [drafts, setDrafts] = useState<any[]>([]);
+  const [showDrafts, setShowDrafts] = useState(false);
+  const [draftsLoading, setDraftsLoading] = useState(false);
+  const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
+
   /* ---------------------------------------------------------------- */
   /*  Load user + brand settings                                       */
   /* ---------------------------------------------------------------- */
@@ -168,10 +176,100 @@ function PdfInvoice() {
         setLogoUrl(brand.logo_url ?? "");
         if (brand.mileage_rate) setMileageRate(String(brand.mileage_rate));
       }
+
+      await loadDrafts(user.id);
       setLoading(false);
     }
     load();
   }, [navigate]);
+
+  /* ---------------------------------------------------------------- */
+  /*  Drafts                                                           */
+  /* ---------------------------------------------------------------- */
+  async function loadDrafts(uid: string) {
+    setDraftsLoading(true);
+    const { data } = await supabase
+      .from("event_invoices")
+      .select(
+        "id, invoice_number, event_name, client_name, total, status, created_at"
+      )
+      .eq("user_id", uid)
+      .order("created_at", { ascending: false })
+      .limit(30);
+    setDrafts(data || []);
+    setDraftsLoading(false);
+  }
+
+  async function loadDraft(id: string) {
+    const { data, error } = await supabase
+      .from("event_invoices")
+      .select("*")
+      .eq("id", id)
+      .single();
+    if (error || !data) {
+      alert("Couldn't load draft.");
+      return;
+    }
+
+    setInvoiceNumber(data.invoice_number ?? genInvoiceNumber());
+    setEventName(data.event_name ?? "");
+    setClientName(data.client_name ?? "");
+    setClientEmail(data.client_email ?? "");
+    setEventDate(data.event_date ?? "");
+    setNotes(data.notes ?? "");
+    setItems(
+      data.line_items?.length
+        ? data.line_items
+        : [{ id: uid(), category: "service", label: "", qty: 1, unit_amount: 0 }]
+    );
+    setTravelItems(data.travel_line_items ?? []);
+
+    const m = data.mileage ?? {};
+    setFromAddress(m.from_address ?? "");
+    setToAddress(m.to_address ?? "");
+    setFromCoords(m.from_coords ?? null);
+    setToCoords(m.to_coords ?? null);
+    setDistanceMiles(m.distance_miles ? String(m.distance_miles) : "");
+    setMileageRate(m.rate ? String(m.rate) : String(NATIONAL_MILEAGE_RATE));
+    setRoundTrip(m.round_trip ?? true);
+
+    setCurrentDraftId(id);
+    setShowDrafts(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function startNewInvoice() {
+    setInvoiceNumber(genInvoiceNumber());
+    setEventName("");
+    setClientName("");
+    setClientEmail("");
+    setEventDate("");
+    setNotes("");
+    setItems([{ id: uid(), category: "service", label: "", qty: 1, unit_amount: 0 }]);
+    setTravelItems([]);
+    setFromAddress("");
+    setToAddress("");
+    setFromCoords(null);
+    setToCoords(null);
+    setDistanceMiles("");
+    setMileageRate(String(NATIONAL_MILEAGE_RATE));
+    setRoundTrip(true);
+    setCurrentDraftId(null);
+    setShowDrafts(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function deleteDraft(id: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!confirm("Delete this saved invoice?")) return;
+    const { error } = await supabase.from("event_invoices").delete().eq("id", id);
+    if (error) {
+      alert("Couldn't delete: " + error.message);
+      return;
+    }
+    if (currentDraftId === id) startNewInvoice();
+    if (userId) await loadDrafts(userId);
+  }
 
   /* ---------------------------------------------------------------- */
   /*  Address autocomplete (Nominatim, free)                           */
@@ -391,7 +489,7 @@ function PdfInvoice() {
   async function saveInvoice() {
     if (!userId) return;
     setSaving(true);
-    const { error } = await supabase.from("event_invoices").insert({
+    const payload = {
       user_id: userId,
       invoice_number: invoiceNumber,
       event_name: eventName,
@@ -413,12 +511,30 @@ function PdfInvoice() {
       subtotal,
       total,
       status: "unbilled",
-    });
+    };
+
+    let error;
+    if (currentDraftId) {
+      ({ error } = await supabase
+        .from("event_invoices")
+        .update(payload)
+        .eq("id", currentDraftId));
+    } else {
+      const { data: inserted, error: insertErr } = await supabase
+        .from("event_invoices")
+        .insert(payload)
+        .select("id")
+        .single();
+      error = insertErr;
+      if (inserted) setCurrentDraftId(inserted.id);
+    }
+
     setSaving(false);
     if (error) {
       alert("Couldn't save invoice: " + error.message);
       return;
     }
+    await loadDrafts(userId);
     return true;
   }
 
@@ -630,7 +746,79 @@ function PdfInvoice() {
             </button>
           </div>
           <h1 className="pdfinv-title">PDF Invoice</h1>
-          <p className="pdfinv-subtitle">{invoiceNumber}</p>
+          <p className="pdfinv-subtitle">
+            {invoiceNumber}
+            {currentDraftId && <span className="pdfinv-editing-tag">Editing saved</span>}
+          </p>
+        </div>
+
+        {/* ── Saved drafts drawer ── */}
+        <div className="pdfinv-drafts-wrap">
+          <button
+            className="pdfinv-drafts-toggle"
+            onClick={() => setShowDrafts((s) => !s)}
+          >
+            <span className="pdfinv-drafts-toggle-left">
+              <FaFileInvoice />
+              Saved invoices
+              {drafts.length > 0 && (
+                <span className="pdfinv-drafts-count">{drafts.length}</span>
+              )}
+            </span>
+            <FaChevronDown
+              className={`pdfinv-drafts-chevron${showDrafts ? " open" : ""}`}
+            />
+          </button>
+
+          {showDrafts && (
+            <div className="pdfinv-drafts-list">
+              {currentDraftId && (
+                <button className="pdfinv-draft-new" onClick={startNewInvoice}>
+                  <FaPlus /> Start new invoice
+                </button>
+              )}
+              {draftsLoading && (
+                <p className="pdfinv-drafts-empty">
+                  <FaSpinner className="spin" /> Loading…
+                </p>
+              )}
+              {!draftsLoading && drafts.length === 0 && (
+                <p className="pdfinv-drafts-empty">No saved invoices yet.</p>
+              )}
+              {drafts.map((d) => (
+                <button
+                  key={d.id}
+                  className={`pdfinv-draft-row${
+                    currentDraftId === d.id ? " active" : ""
+                  }`}
+                  onClick={() => loadDraft(d.id)}
+                >
+                  <div className="pdfinv-draft-info">
+                    <span className="pdfinv-draft-num">{d.invoice_number}</span>
+                    <span className="pdfinv-draft-name">
+                      {d.event_name || d.client_name || "Untitled"}
+                    </span>
+                  </div>
+                  <div className="pdfinv-draft-right">
+                    <span className="pdfinv-draft-total">{money(d.total)}</span>
+                    <span className="pdfinv-draft-date">
+                      {new Date(d.created_at).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
+                  </div>
+                  <span
+                    className="pdfinv-draft-del"
+                    onClick={(e) => deleteDraft(d.id, e)}
+                    aria-label="Delete invoice"
+                  >
+                    <FaTrash />
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="pdfinv-body">

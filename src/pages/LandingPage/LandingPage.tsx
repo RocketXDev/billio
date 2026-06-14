@@ -8,16 +8,12 @@ import {
   FaArrowRight,
   FaPlus,
   FaCrown,
-  FaInfinity,
-  FaMobile,
 } from "react-icons/fa";
 import "./LandingPage.css";
 
 export default function LandingPage() {
   return (
     <main className="landing-page">
-
-      {/* ── Nav ── */}
       <nav className="landing-nav-bar">
         <div className="landing-nav-inner">
           <div className="landing-logo">
@@ -30,7 +26,6 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* ── Hero ── */}
       <section className="landing-hero">
         <div className="landing-hero-left">
           <p className="landing-badge">Built for private coaches, tutors & instructors</p>
@@ -47,9 +42,10 @@ export default function LandingPage() {
           </Link>
 
           <div className="landing-mini-checks">
-            <span><FaCheckCircle /> Know what needs to be billed</span>
-            <span><FaCheckCircle /> Track every student and lesson</span>
+            <span><FaCheckCircle /> Free plan available</span>
+            <span><FaCheckCircle /> 30-day Pro trial</span>
             <span><FaCheckCircle /> Send invoices in seconds</span>
+            <span><FaCheckCircle /> Trusted by coaches and instructors</span>
           </div>
         </div>
 
@@ -58,7 +54,7 @@ export default function LandingPage() {
             <div className="preview-top">
               <div>
                 <p>Today's Schedule</p>
-                <h3>2 Lessons</h3>
+                <h3>3 Lessons</h3>
               </div>
               <button><FaPlus /></button>
             </div>
@@ -105,7 +101,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Features ── */}
       <section className="landing-section">
         <p className="section-label">Why Billio?</p>
         <h2>Made for the work coaches do every day.</h2>
@@ -137,7 +132,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Steps ── */}
       <section className="landing-steps-section">
         <p className="section-label">Simple workflow</p>
         <h2>From lesson to invoice.</h2>
@@ -161,16 +155,14 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Pricing ── */}
       <section className="pricing-section" id="pricing">
         <p className="section-badge">Simple pricing</p>
-        <h2>Start free. Upgrade when you're ready.</h2>
+        <h2>Start free. Try Pro when you're ready.</h2>
         <p className="pricing-subtitle">
-          New coaches can start organizing right away. Growing coaches can unlock automation and SMS.
+          Use Billio for free, or start a 30-day Pro trial to unlock automation, SMS, and more pro features.
         </p>
 
         <div className="pricing-grid">
-          {/* Free */}
           <div className="pricing-card">
             <h3>Free</h3>
             <p className="price">$0</p>
@@ -178,43 +170,44 @@ export default function LandingPage() {
             <ul>
               <li>Up to 5 active students</li>
               <li>Manual lesson tracking</li>
-              <li>Basic student profiles</li>
+              <li>Manual invoice generation</li>
               <li>Email invoice sending</li>
-              <li>Manual invoice creation</li>
-              <li>Current month calendar</li>
+              <li>Current month day-to-day calendar</li>
+              <li>Live lesson timer</li>
             </ul>
             <Link to="/signup" className="pricing-btn secondary-pricing">Start Free</Link>
           </div>
 
-          {/* Pro */}
           <div className="pricing-card pro-card">
             <div className="popular-badge">
-              <FaCrown style={{ fontSize: 10, marginRight: 5 }} /> Best value
+              <FaCrown style={{ fontSize: 10, marginRight: 5 }} /> 30-Day Trial
             </div>
             <h3>Pro</h3>
             <p className="price">$9.99<span>/month</span></p>
-            <p className="price-note">For active coaches who want to scale</p>
+            <p className="price-note">30-day free trial</p>
             <ul>
               <li>Unlimited active students</li>
               <li>Full lesson scheduling</li>
-              <li>Full parent contact profiles</li>
-              <li>Automated invoice creation</li>
+              <li>Automated invoice generation</li>
+              <li>Automated invoice sending and review</li>
               <li>Email & SMS invoice sending</li>
               <li>Text message reminders</li>
               <li>Weekly billing workflow</li>
               <li>Unlimited calendar navigation</li>
+              <li>Recurring lesson scheduling</li>
+              <li>Earnings dashboard</li>
+              <li>Custom PDF invoice generator</li>
             </ul>
-            <Link to="/signup" className="pricing-btn primary-pricing">Upgrade to Pro</Link>
+            <Link to="/signup" className="pricing-btn primary-pricing">Start Pro Trial</Link>
           </div>
         </div>
       </section>
 
       <div className="landing-divider" />
 
-      {/* ── CTA ── */}
       <section className="landing-final-cta">
         <h2>Ready to stop chasing lesson records?</h2>
-        <p>Start using Billio to keep your coaching business organized from day one.</p>
+        <p>Start with the free plan or try Pro free for 30 days</p>
         <Link to="/signup" className="landing-main-btn">
           Create Your Account <FaArrowRight className="landing-arrow" />
         </Link>
@@ -222,7 +215,6 @@ export default function LandingPage() {
 
       <div className="landing-divider" />
 
-      {/* ── Footer ── */}
       <footer className="landing-footer">
         <img src="./logo.png" alt="Billio" className="landing-footer-logo" />
         <div className="landing-footer-links">
@@ -232,7 +224,6 @@ export default function LandingPage() {
         </div>
         <p>© {new Date().getFullYear()} Billio LLC. All rights reserved.</p>
       </footer>
-
     </main>
   );
 }

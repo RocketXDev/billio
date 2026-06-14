@@ -544,6 +544,11 @@ function PdfInvoice() {
   async function generatePdf() {
     setGenerating(true);
     try {
+      // Save before generating — on iOS the download call backgrounds the tab
+      // which can invalidate Supabase's cached auth session mid-request.
+      const saved = await saveInvoice();
+      if (!saved) return;
+
       // dynamic import keeps initial bundle light
       const { default: jsPDF } = await import("jspdf");
       const doc = new jsPDF({ unit: "pt", format: "a4" });
@@ -707,9 +712,6 @@ function PdfInvoice() {
       }
 
       doc.save(`${invoiceNumber}.pdf`);
-
-      // persist after a successful generate
-      await saveInvoice();
     } catch (e: any) {
       alert("PDF generation failed: " + (e?.message || e));
     } finally {

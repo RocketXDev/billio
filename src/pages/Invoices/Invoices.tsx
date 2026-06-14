@@ -40,6 +40,8 @@ function Invoices() {
   const [showAddInvoice, setShowAddInvoice] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState("");
+  const [studentQuery, setStudentQuery] = useState("");
+  const [studentNameError, setStudentNameError] = useState("");
   const [invoiceLessons, setInvoiceLessons] = useState<any[]>([]);
   const [selectedLessonIds, setSelectedLessonIds] = useState<string[]>([]);
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
@@ -47,7 +49,6 @@ function Invoices() {
   const [rangeStart, setRangeStart] = useState("");
   const [rangeEnd, setRangeEnd] = useState("");
   const [isClosingCalendar, setIsClosingCalendar] = useState(false);
-  const [showStudentPicker, setShowStudentPicker] = useState(false);
 
   // Invoices Editing
   const [showEditInvoice, setShowEditInvoice] = useState(false);
@@ -336,7 +337,17 @@ function Invoices() {
   async function handleCreateInvoice(e: any) {
     e.preventDefault();
 
-    if (isSaving) return; 
+    if (isSaving) return;
+
+    const isValidStudent = students.some(
+      (link: any) => link.student_id === selectedStudentId
+    );
+    if (!isValidStudent) {
+      setStudentNameError("Student name is not in the student list.");
+      return;
+    }
+    setStudentNameError("");
+
     setIsSaving(true);
 
     try {
@@ -408,6 +419,8 @@ function Invoices() {
 
     
     setSelectedStudentId("");
+    setStudentQuery("");
+    setStudentNameError("");
     setRangeStart("");
     setRangeEnd("");
     setInvoiceLessons([]);
@@ -467,15 +480,25 @@ function Invoices() {
     }, 220);
   }
 
+  const studentMatches =
+    studentQuery.trim().length > 0 && !selectedStudentId
+      ? students.filter((link: any) =>
+          link.students?.student_name
+            ?.toLowerCase()
+            .includes(studentQuery.trim().toLowerCase())
+        )
+      : [];
+
   function closeAddInvoice() {
     setShowAddInvoice(false);
     setSelectedStudentId("");
+    setStudentQuery("");
+    setStudentNameError("");
     setRangeStart("");
     setRangeEnd("");
     setInvoiceLessons([]);
     setSelectedLessonIds([]);
     setShowDateRangePicker(false);
-    setShowStudentPicker(false);
   }
 
   async function openEditInvoice(invoice: any) {
@@ -1273,9 +1296,7 @@ function Invoices() {
             onClick={closeAddInvoice}
           >
             <div
-              className={`invoices-add-sheet ${
-                showStudentPicker ? "student-picker-open" : ""
-              }`}
+              className="invoices-add-sheet"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="invoices-add-header">
@@ -1291,28 +1312,32 @@ function Invoices() {
 
                   <input
                     type="text"
-                    className="invoice-date-range-btn"
-                    value={
-                      selectedStudentId
-                        ? students.find((link: any) => link.student_id === selectedStudentId)
-                            ?.students?.student_name || ""
-                        : ""
-                    }
-                    placeholder="Select student"
-                    readOnly
-                    onClick={() => setShowStudentPicker(true)}
+                    value={studentQuery}
+                    onChange={(e) => {
+                      setStudentQuery(e.target.value);
+                      setSelectedStudentId("");
+                      setStudentNameError("");
+                      setInvoiceLessons([]);
+                      setSelectedLessonIds([]);
+                    }}
+                    placeholder="Type student name"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="words"
+                    spellCheck={false}
                   />
 
-                  {showStudentPicker && (
+                  {studentMatches.length > 0 && (
                     <div className="student-suggestions invoice-student-dropdown">
-                      {students.map((link: any) => (
+                      {studentMatches.map((link: any) => (
                         <button
                           key={link.student_id}
                           type="button"
                           className="student-suggestion"
                           onClick={() => {
+                            setStudentQuery(link.students.student_name);
                             setSelectedStudentId(link.student_id);
-                            setShowStudentPicker(false);
+                            setStudentNameError("");
                             setInvoiceLessons([]);
                             setSelectedLessonIds([]);
                           }}
@@ -1321,6 +1346,10 @@ function Invoices() {
                         </button>
                       ))}
                     </div>
+                  )}
+
+                  {studentNameError && (
+                    <p className="invoice-student-error">{studentNameError}</p>
                   )}
                 </div>
                 <div className="input-block invoice-date-range-wrapper">

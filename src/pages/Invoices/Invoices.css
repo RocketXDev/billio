@@ -572,6 +572,13 @@
   z-index: 80;
 }
 
+.invoice-student-error {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #ef4444;
+  font-weight: 500;
+}
+
 /* DATE RANGE */
 
 .invoice-date-range-wrapper {

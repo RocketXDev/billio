@@ -331,7 +331,7 @@
   border: 1px solid var(--border);
   background: var(--input-bg);
   outline: none;
-  font-size: 15px;
+  font-size: 16px;
   font-family: inherit;
   padding: 0 14px;
   color: var(--main-text);
@@ -347,7 +347,7 @@
   border-radius: 12px;
   border: 1px solid var(--border);
   background: var(--input-bg);
-  font-size: 15px;
+  font-size: 16px;
   font-family: inherit;
   width: 100%;
   outline: none;
@@ -408,7 +408,7 @@
   border: 1px solid var(--border);
   background: var(--input-bg);
   outline: none;
-  font-size: 14px;
+  font-size: 16px;
   font-family: inherit;
   padding: 0 12px;
   color: var(--main-text);
@@ -429,7 +429,7 @@
   border: 1px solid var(--border);
   background: var(--input-bg);
   outline: none;
-  font-size: 14px;
+  font-size: 16px;
   font-family: inherit;
   padding: 0 8px;
   color: var(--main-text);
@@ -465,7 +465,7 @@
   border: 1px solid var(--border);
   background: var(--input-bg);
   outline: none;
-  font-size: 14px;
+  font-size: 16px;
   font-family: inherit;
   padding: 0 10px 0 24px;
   color: var(--main-text);
@@ -841,7 +841,7 @@
   border: 1px solid var(--border);
   background: var(--input-bg);
   outline: none;
-  font-size: 15px;
+  font-size: 16px;
   font-family: inherit;
   padding: 0 14px;
   color: var(--main-text);

@@ -17,6 +17,7 @@ import {
   FaArrowLeft,
   FaLock,
   FaRedoAlt,
+  FaFilePdf
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import "./More.css";
@@ -128,6 +129,12 @@ export default function More() {
       title: "Recurring Lessons",
       desc: "Schedule repeating lessons for students automatically.",
     },
+    {
+      slug: "pdf-invoice",
+      icon: <FaFilePdf />,
+      title: "PDF Invoices",
+      desc: "Bill competitions, choreography, and travel with branded PDF invoices.",
+    }
   ];
 
   return (

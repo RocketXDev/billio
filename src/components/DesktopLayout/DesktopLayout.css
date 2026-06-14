@@ -786,4 +786,73 @@
     font-size: 4rem;
   }
 
+  /* ── Timer progress bar ── */
+  .timer-progress-track {
+    height: 8px;
+    background: var(--main-bg);
+    border-radius: 999px;
+    overflow: hidden;
+    margin: -4px 0 12px;
+  }
+
+  .timer-progress-fill {
+    height: 100%;
+    background: var(--primary-purple);
+    border-radius: 999px;
+    transition: width 0.5s ease;
+  }
+
+  /* ── Earnings Dashboard – taller bar chart ── */
+  .ed-bar-chart {
+    height: 180px;
+  }
+
+  /* ── About (public page – no DesktopLayout sidebar) ── */
+  .about-page {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 40px 48px 60px;
+  }
+
+  .about-header {
+    padding: 0;
+  }
+
+  .about-header-top {
+    margin-bottom: 24px;
+  }
+
+  .about-hero {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .about-hero-title {
+    font-size: 40px;
+  }
+
+  .about-mission-card {
+    max-width: none;
+    margin: 28px 0 0;
+  }
+
+  .about-section {
+    max-width: none;
+    margin: 0;
+    padding: 28px 0 0;
+  }
+
+  .about-footer {
+    max-width: none;
+    margin: 36px 0 0;
+  }
+
+  /* ── Legal pages (Privacy / Terms) ── */
+  .legal-header {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 0 4px 18px;
+  }
+
 }

@@ -97,6 +97,14 @@
   border-color: var(--primary-purple);
 }
 
+/* Custom duration */
+.settings-custom-duration-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
 /* Invoice prefix */
 .settings-prefix-row {
   display: flex;
@@ -106,13 +114,13 @@
 
 .settings-prefix-input {
   width: 90px;
-  height: 44px;
+  height: 35px;
   border-radius: 12px;
   border: 1px solid var(--border);
   background: var(--input-bg);
   color: var(--main-text);
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 600;
   text-align: center;
   outline: none;
   letter-spacing: 1px;

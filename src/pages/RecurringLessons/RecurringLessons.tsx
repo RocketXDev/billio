@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
   FaArrowLeft, FaPlus, FaEdit, FaTrash, FaRedoAlt,
   FaHome, FaCalendarAlt, FaUsers, FaFileInvoiceDollar, FaEllipsisH,
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
+import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import "./RecurringLessons.css";
 
 const DAYS = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
@@ -44,12 +46,8 @@ function generateOccurrences(
 
 export default function RecurringLessons() {
   const navigate = useNavigate();
-
-  const [coachId, setCoachId] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [series, setSeries] = useState<any[]>([]);
-  const [coachStudents, setCoachStudents] = useState<any[]>([]);
-  const [rateOptions, setRateOptions] = useState<any[]>([]);
+  const { coachId, identityLoading } = useCoachIdentity();
+  const queryClient = useQueryClient();
 
   // Form state
   const [showForm, setShowForm] = useState(false);
@@ -85,6 +83,68 @@ export default function RecurringLessons() {
       ? generateOccurrences(rangeStart, rangeEnd, formFrequency, formDays).length
       : 0;
 
+  const { data: coachRatesData } = useQuery({
+    queryKey: ["coach-rates", coachId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("coaches")
+        .select("default_hourly_rate, custom_rates")
+        .eq("id", coachId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!coachId,
+  });
+
+  const { data: coachStudents = [], isLoading: studentsLoading } = useQuery({
+    queryKey: ["coach-students", coachId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("coach_students")
+        .select("student_id, students(id, student_name)")
+        .eq("coach_id", coachId);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!coachId,
+  });
+
+  const { data: series = [], isLoading: seriesLoading } = useQuery({
+    queryKey: ["recurring-lessons", coachId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("recurring_lessons")
+        .select("*, students(student_name)")
+        .eq("coach_id", coachId)
+        .eq("active", true)
+        .order("start_date", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!coachId,
+  });
+
+  const rateOptions: any[] = [];
+  if (coachRatesData?.default_hourly_rate) {
+    rateOptions.push({ name: "Default", amount: Number(coachRatesData.default_hourly_rate) });
+  }
+  if (Array.isArray(coachRatesData?.custom_rates)) {
+    rateOptions.push(...coachRatesData.custom_rates);
+  }
+
+  useEffect(() => {
+    if (!coachId && !identityLoading) navigate("/login");
+  }, [coachId, identityLoading]);
+
+  useEffect(() => {
+    if (coachRatesData?.default_hourly_rate && !formHourlyRate) {
+      setFormHourlyRate(String(coachRatesData.default_hourly_rate));
+    }
+  }, [coachRatesData]);
+
+  const loading = identityLoading || studentsLoading || seriesLoading;
+
   // Student autocomplete — same as Dashboard.tsx
   const studentMatches =
     studentName.trim().length > 0
@@ -94,52 +154,6 @@ export default function RecurringLessons() {
             .includes(studentName.trim().toLowerCase())
         )
       : [];
-
-  useEffect(() => { load(); }, []);
-
-  async function load() {
-    setLoading(true);
-    const { data: sessionData } = await supabase.auth.getSession();
-    const user = sessionData.session?.user;
-    if (!user) { navigate("/login"); return; }
-
-    const { data: profileData } = await supabase
-      .from("profiles").select("id").eq("user_id", user.id).single();
-    if (!profileData) { setLoading(false); return; }
-
-    const { data: coachData } = await supabase
-      .from("coaches")
-      .select("id, default_hourly_rate, custom_rates")
-      .eq("profile_id", profileData.id).single();
-    if (!coachData) { setLoading(false); return; }
-
-    setCoachId(coachData.id);
-
-    const opts: any[] = [];
-    if (coachData.default_hourly_rate) opts.push({ name: "Default", amount: Number(coachData.default_hourly_rate) });
-    if (Array.isArray(coachData.custom_rates)) opts.push(...coachData.custom_rates);
-    setRateOptions(opts);
-    if (coachData.default_hourly_rate) setFormHourlyRate(String(coachData.default_hourly_rate));
-
-    const { data: studentData } = await supabase
-      .from("coach_students")
-      .select("student_id, students(id, student_name)")
-      .eq("coach_id", coachData.id);
-    setCoachStudents(studentData || []);
-
-    await loadSeries(coachData.id);
-    setLoading(false);
-  }
-
-  async function loadSeries(cId: string) {
-    const { data, error } = await supabase
-      .from("recurring_lessons")
-      .select("*, students(student_name)")
-      .eq("coach_id", cId)
-      .eq("active", true)
-      .order("start_date", { ascending: false });
-    if (!error) setSeries(data || []);
-  }
 
   function openNewForm() {
     setEditingSeries(null);
@@ -244,9 +258,7 @@ export default function RecurringLessons() {
     if (error || !newStudent) return null;
 
     await supabase.from("coach_students").insert({ coach_id: coachId, student_id: newStudent.id });
-    const { data: updated } = await supabase
-      .from("coach_students").select("student_id, students(id, student_name)").eq("coach_id", coachId);
-    setCoachStudents(updated || []);
+    queryClient.invalidateQueries({ queryKey: ["coach-students", coachId] });
     return newStudent.id;
   }
 
@@ -322,7 +334,8 @@ export default function RecurringLessons() {
         if (lessonError) console.log("Lesson insert error:", lessonError);
       }
 
-      await loadSeries(coachId);
+      queryClient.invalidateQueries({ queryKey: ["recurring-lessons", coachId] });
+      queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
       setShowForm(false);
     } finally {
       setIsSaving(false);
@@ -339,7 +352,8 @@ export default function RecurringLessons() {
         .eq("recurring_series_id", deletingId)
         .eq("billing_status", "unbilled")
         .gte("lesson_date", new Date().toLocaleDateString("en-CA"));
-      setSeries((prev) => prev.filter((s) => s.id !== deletingId));
+      queryClient.invalidateQueries({ queryKey: ["recurring-lessons", coachId] });
+      queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
       setShowDeleteModal(false);
       setDeletingId(null);
     } finally {
@@ -354,7 +368,7 @@ export default function RecurringLessons() {
   function formatDate(date: string) {
     if (!date) return "";
     return new Date(date + "T00:00:00").toLocaleDateString("en-US", {
-      month: "short", day: "numeric", year: "numeric",
+      month: "long", day: "numeric", year: "numeric",
     });
   }
 

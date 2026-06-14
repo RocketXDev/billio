@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
   FaArrowLeft,
@@ -12,9 +13,10 @@ import {
   FaChevronRight,
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
+import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import "./Settings.css";
 
-const DURATION_OPTIONS = [15, 30, 45, 60, 90, 120];
+const DURATION_OPTIONS = [30, 45, 60, 90, 120];
 const DUE_DATE_OPTIONS = [
   { label: "Due on receipt", value: 0 },
   { label: "7 days", value: 7 },
@@ -24,14 +26,16 @@ const DUE_DATE_OPTIONS = [
 
 export default function Settings() {
   const navigate = useNavigate();
+  const { coachId, identityLoading } = useCoachIdentity();
+  const queryClient = useQueryClient();
 
-  const [coachId, setCoachId] = useState("");
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   // Settings state
   const [defaultDuration, setDefaultDuration] = useState(60);
+  const [useCustomDuration, setUseCustomDuration] = useState(false);
+  const [customDuration, setCustomDuration] = useState("");
   const [defaultDueDate, setDefaultDueDate] = useState(7);
   const [invoicePrefix, setInvoicePrefix] = useState("INV");
   const [timeFormat, setTimeFormat] = useState<"12h" | "24h">("12h");
@@ -49,34 +53,39 @@ export default function Settings() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
 
+  const { data: settingsData, isLoading: settingsLoading } = useQuery({
+    queryKey: ["coach-settings", coachId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("coaches")
+        .select("id, default_lesson_duration, default_due_date_days, invoice_prefix, time_format")
+        .eq("id", coachId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!coachId,
+  });
+
+  const loading = identityLoading || settingsLoading;
+
   useEffect(() => {
-    loadSettings();
-  }, []);
+    if (!coachId && !identityLoading) navigate("/login");
+  }, [coachId, identityLoading]);
 
-  async function loadSettings() {
-    setLoading(true);
-    const { data: sessionData } = await supabase.auth.getSession();
-    const user = sessionData.session?.user;
-    if (!user) { navigate("/login"); return; }
-
-    const { data: profileData } = await supabase
-      .from("profiles").select("id").eq("user_id", user.id).single();
-    if (!profileData) { setLoading(false); return; }
-
-    const { data: coachData } = await supabase
-      .from("coaches")
-      .select("id, default_lesson_duration, default_due_date_days, invoice_prefix, time_format")
-      .eq("profile_id", profileData.id)
-      .single();
-    if (!coachData) { setLoading(false); return; }
-
-    setCoachId(coachData.id);
-    setDefaultDuration(coachData.default_lesson_duration ?? 60);
-    setDefaultDueDate(coachData.default_due_date_days ?? 7);
-    setInvoicePrefix(coachData.invoice_prefix ?? "INV");
-    setTimeFormat(coachData.time_format ?? "12h");
-    setLoading(false);
-  }
+  useEffect(() => {
+    if (settingsData) {
+      const dur = settingsData.default_lesson_duration ?? 60;
+      setDefaultDuration(dur);
+      if (!DURATION_OPTIONS.includes(dur)) {
+        setUseCustomDuration(true);
+        setCustomDuration(String(dur));
+      }
+      setDefaultDueDate(settingsData.default_due_date_days ?? 7);
+      setInvoicePrefix(settingsData.invoice_prefix ?? "INV");
+      setTimeFormat(settingsData.time_format ?? "12h");
+    }
+  }, [settingsData]);
 
   async function handleSave() {
     if (!coachId || saving) return;
@@ -96,6 +105,7 @@ export default function Settings() {
     if (!error) {
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
+      queryClient.invalidateQueries({ queryKey: ["coach-settings", coachId] });
     }
   }
 
@@ -177,13 +187,45 @@ export default function Settings() {
                 <button
                   key={d}
                   type="button"
-                  className={`settings-chip${defaultDuration === d ? " active" : ""}`}
-                  onClick={() => setDefaultDuration(d)}
+                  className={`settings-chip${!useCustomDuration && defaultDuration === d ? " active" : ""}`}
+                  onClick={() => { setDefaultDuration(d); setUseCustomDuration(false); setCustomDuration(""); }}
                 >
                   {d} min
                 </button>
               ))}
+              <button
+                type="button"
+                className={`settings-chip${useCustomDuration ? " active" : ""}`}
+                onClick={() => {
+                  if (!useCustomDuration) {
+                    setUseCustomDuration(true);
+                    const val = parseInt(customDuration, 10);
+                    if (val > 0) setDefaultDuration(val);
+                  }
+                }}
+              >
+                Custom
+              </button>
             </div>
+            {useCustomDuration && (
+              <div className="settings-custom-duration-row">
+                <input
+                  type="number"
+                  min={1}
+                  max={480}
+                  className="settings-prefix-input"
+                  style={{ width: 80 }}
+                  value={customDuration}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/\D/g, "");
+                    setCustomDuration(raw);
+                    const val = parseInt(raw, 10);
+                    if (val > 0) setDefaultDuration(val);
+                  }}
+                />
+                <span className="settings-prefix-preview">minutes</span>
+              </div>
+            )}
           </div>
         </section>
 

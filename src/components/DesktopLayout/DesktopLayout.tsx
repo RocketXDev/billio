@@ -29,6 +29,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/earnings-dashboard": "Earnings",
   "/recurring-lessons": "Recurring Lessons",
   "/timer": "Lesson Timer",
+  "/pdf-invoice": "PDF Invoice",
 };
 
 function DesktopLayout({ children }: Props) {

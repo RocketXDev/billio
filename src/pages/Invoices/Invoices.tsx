@@ -30,7 +30,6 @@ function Invoices() {
   const { coachId, identityLoading } = useCoachIdentity();
   const queryClient = useQueryClient();
 
-  const [invoices, setInvoices] = useState<any[]>([]);
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [sendSuccessRecipient, setSendSuccessRecipient] = useState("");
@@ -62,6 +61,9 @@ function Invoices() {
   const [editSelectedLessonIds, setEditSelectedLessonIds] = useState<string[]>([]);
   const [originalInvoiceStatus, setOriginalInvoiceStatus] = useState("unbilled");
   const [sendingInvoiceId, setSendingInvoiceId] = useState<string | null>(null);
+  const [invoiceDetailView, setInvoiceDetailView] = useState<any>(null);
+  const [invoiceDetailViewLessons, setInvoiceDetailViewLessons] = useState<any[]>([]);
+  const [invoiceDetailViewLoading, setInvoiceDetailViewLoading] = useState(false);
   const [openMonths, setOpenMonths] = useState<any>({});
   const [openWeeks, setOpenWeeks] = useState<any>({});
 
@@ -99,7 +101,7 @@ function Invoices() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("invoices")
-        .select(`*, students(student_name, email, phone_number, parent_name, parent_phone)`)
+        .select(`*, students(student_name, email, phone_number, parent_name, parent_phone), invoice_lessons(lessons(lesson_date))`)
         .eq("coach_id", coachId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -124,7 +126,7 @@ function Invoices() {
     enabled: !!coachId,
   });
 
-  useEffect(() => { if (invoicesData) setInvoices(invoicesData); }, [invoicesData]);
+  const invoices: any[] = invoicesData ?? [];
 
   useEffect(() => {
     if (!invoiceSettingsData) return;
@@ -214,7 +216,7 @@ function Invoices() {
     if (!date) return "Not set";
 
     return new Date(`${date}T00:00:00`).toLocaleDateString("en-US", {
-      month: "short",
+      month: "long",
       day: "numeric",
       year: "numeric",
     });
@@ -398,7 +400,7 @@ function Invoices() {
         })
         .in("id", selectedLessonIds);
 
-      setInvoices((prev) => [invoiceData, ...prev]);
+      queryClient.setQueryData<any[]>(["invoices", coachId], (prev) => [invoiceData, ...(prev ?? [])]);
 
     } finally {
       setIsSaving(false);
@@ -582,9 +584,7 @@ function Invoices() {
           .eq("coach_id", coachId);
       }
 
-      setInvoices((prev) =>
-        prev.filter((invoice) => invoice.id !== editingInvoice.id)
-      );
+      queryClient.setQueryData<any[]>(["invoices", coachId], (prev) => (prev ?? []).filter((inv) => inv.id !== editingInvoice.id));
 
       setEditInvoiceLessons(selectedLessons);
       closeEditInvoice();
@@ -682,11 +682,7 @@ function Invoices() {
       return;
     }
 
-    setInvoices((prev) =>
-      prev.map((invoice) =>
-        invoice.id === editingInvoice.id ? updatedInvoice : invoice
-      )
-    );
+    queryClient.setQueryData<any[]>(["invoices", coachId], (prev) => (prev ?? []).map((inv) => inv.id === editingInvoice.id ? updatedInvoice : inv));
 
     closeEditInvoice();
   }
@@ -706,9 +702,7 @@ function Invoices() {
       return;
     }
 
-    setInvoices((prev) =>
-      prev.filter((invoice) => invoice.id !== invoiceId)
-    );
+    queryClient.setQueryData<any[]>(["invoices", coachId], (prev) => (prev ?? []).filter((inv) => inv.id !== invoiceId));
 
     closeEditInvoice();
   }
@@ -737,13 +731,15 @@ function Invoices() {
       .select("*, students(student_name, email, phone_number, parent_name, parent_phone)")
       .single();
     if (!error && data) {
-      setInvoices((prev) => prev.map((inv) => inv.id === invoice.id ? data : inv));
+      queryClient.setQueryData<any[]>(["invoices", coachId], (prev) => (prev ?? []).map((inv) => inv.id === invoice.id ? data : inv));
       const { data: lessonLinks } = await supabase
         .from("invoice_lessons").select("lesson_id").eq("invoice_id", invoice.id);
       const lessonIds = (lessonLinks || []).map((l: any) => l.lesson_id);
       if (lessonIds.length > 0) {
         await supabase.from("lessons").update({ billing_status: next }).in("id", lessonIds);
       }
+      queryClient.invalidateQueries({ queryKey: ["invoices", coachId] });
+      queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
     }
     setStatusUpdatingId(null);
   }
@@ -765,6 +761,53 @@ function Invoices() {
 
     return "billed";
   }
+  async function openInvoiceDetailView(invoice: any) {
+    setInvoiceDetailView(invoice);
+    setInvoiceDetailViewLoading(true);
+    setInvoiceDetailViewLessons([]);
+
+    const { data, error } = await supabase
+      .from("invoice_lessons")
+      .select("lessons(*)")
+      .eq("invoice_id", invoice.id);
+
+    if (!error && data) {
+      const lessons = data
+        .map((row: any) => row.lessons)
+        .filter(Boolean)
+        .sort((a: any, b: any) =>
+          a.lesson_date.localeCompare(b.lesson_date) ||
+          (a.start_time || "").localeCompare(b.start_time || "")
+        );
+      setInvoiceDetailViewLessons(lessons);
+    }
+
+    setInvoiceDetailViewLoading(false);
+  }
+
+  function getInvoiceWeekLabel(lessons: any[]) {
+    const dates = lessons.map((l: any) => l.lesson_date).filter(Boolean).sort();
+    if (dates.length === 0) return "";
+    const date = new Date(`${dates[0]}T00:00:00`);
+    const day = date.getDate();
+    const year = date.getFullYear();
+    const month = date.getMonth();
+
+    let bucketStart: number;
+    if (day <= 7) bucketStart = 1;
+    else if (day <= 14) bucketStart = 8;
+    else if (day <= 21) bucketStart = 15;
+    else bucketStart = 22;
+
+    const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+    const bucketEnd = bucketStart === 22 ? lastDayOfMonth : bucketStart + 6;
+
+    const start = new Date(year, month, bucketStart);
+    const end = new Date(year, month, bucketEnd);
+
+    return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+  }
+
   const currentInvoices = invoices.filter(
     (invoice) => (invoice.status || "unbilled") === "unbilled"
   );
@@ -819,19 +862,11 @@ function Invoices() {
       return;
     }
 
-    setInvoices((prev) =>
-      prev.map((invoice) =>
-        invoice.id === invoiceId
-          ? {
-              ...invoice,
-              status: "billed",
-              sent_at: new Date().toISOString(),
-              delivery_method: data.deliveryMethod || "email",
-              recipient_email: data.recipientEmail,
-            }
-          : invoice
-      )
-    );
+    queryClient.setQueryData<any[]>(["invoices", coachId], (prev) => (prev ?? []).map((inv) =>
+      inv.id === invoiceId
+        ? { ...inv, status: "billed", sent_at: new Date().toISOString(), delivery_method: data.deliveryMethod || "email", recipient_email: data.recipientEmail }
+        : inv
+    ));
 
     setSendSuccessRecipient(
       data.recipientPhone || data.recipientEmail || "recipient"
@@ -840,73 +875,48 @@ function Invoices() {
     setSendSuccessMethod(data.deliveryMethod || "email");
   }
 
-  function getWeekStart(dateString: string) {
-    const date = new Date(`${dateString}T00:00:00`);
-    const day = date.getDay();
-    const diff = date.getDate() - day + 1;
+  function getMonthWeekBucket(dateStr: string) {
+    const date = new Date(`${dateStr}T00:00:00`);
+    const day = date.getDate();
+    const year = date.getFullYear();
+    const month = date.getMonth();
 
-    if (day === 0) {
-      date.setDate(date.getDate() - 6);
-    } else {
-      date.setDate(diff);
-    }
+    let bucketStart: number;
+    if (day <= 7) bucketStart = 1;
+    else if (day <= 14) bucketStart = 8;
+    else if (day <= 21) bucketStart = 15;
+    else bucketStart = 22;
 
-    return date;
-  }
+    const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+    const bucketEnd = bucketStart === 22 ? lastDayOfMonth : bucketStart + 6;
 
-  function getWeekEnd(weekStart: Date) {
-    const end = new Date(weekStart);
-    end.setDate(weekStart.getDate() + 6);
-    return end;
-  }
+    const start = new Date(year, month, bucketStart);
+    const end = new Date(year, month, bucketEnd);
 
-  function formatMonthYear(date: Date) {
-    return date.toLocaleDateString("en-US", {
-      month: "long",
-      year: "numeric",
-    });
-  }
-
-  function formatWeekRange(start: Date, end: Date) {
-    const startText = start.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-
-    const endText = end.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-
-    return `${startText} – ${endText}`;
+    return {
+      monthLabel: start.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+      weekKey: `${year}-${String(month + 1).padStart(2, "0")}-${String(bucketStart).padStart(2, "0")}`,
+      weekLabel: `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+    };
   }
 
   const groupedPastInvoices = pastInvoices.reduce((groups: any, invoice: any) => {
-    const dateSource =
-      invoice.period_start ||
-      invoice.issue_date ||
-      invoice.created_at;
+    const lessonDates = (invoice.invoice_lessons || [])
+      .map((il: any) => il.lessons?.lesson_date)
+      .filter(Boolean)
+      .sort();
 
-    const weekStart = getWeekStart(dateSource);
-    const weekEnd = getWeekEnd(weekStart);
+    const firstDate = lessonDates[0];
+    const anchorRaw = firstDate || invoice.period_start || invoice.issue_date || invoice.created_at;
+    const anchorDate = (anchorRaw || "").slice(0, 10);
 
-    const monthKey = formatMonthYear(weekStart);
-    const weekKey = `${weekStart.toISOString().slice(0, 10)}_${weekEnd
-      .toISOString()
-      .slice(0, 10)}`;
+    const { monthLabel, weekKey, weekLabel } = getMonthWeekBucket(anchorDate);
 
-    if (!groups[monthKey]) {
-      groups[monthKey] = {};
+    if (!groups[monthLabel]) groups[monthLabel] = {};
+    if (!groups[monthLabel][weekKey]) {
+      groups[monthLabel][weekKey] = { label: weekLabel, invoices: [] };
     }
-
-    if (!groups[monthKey][weekKey]) {
-      groups[monthKey][weekKey] = {
-        label: formatWeekRange(weekStart, weekEnd),
-        invoices: [],
-      };
-    }
-
-    groups[monthKey][weekKey].invoices.push(invoice);
+    groups[monthLabel][weekKey].invoices.push(invoice);
 
     return groups;
   }, {});
@@ -1045,8 +1055,7 @@ function Invoices() {
                 ) : (
                   <div className="invoices-group-card">
                     {currentInvoices.map((invoice) => (
-                      <div key={invoice.id} className="invoices-row" style={{ cursor: "pointer" }}
-                        onClick={() => quickUpdateInvoiceStatus(invoice)}>
+                      <div key={invoice.id} className="invoices-row" style={{ cursor: "pointer" }} onClick={() => openInvoiceDetailView(invoice)}>
                         <div className="invoices-avatar">
                           {invoice.students?.student_name ? invoice.students.student_name.charAt(0).toUpperCase() : "I"}
                         </div>
@@ -1087,8 +1096,7 @@ function Invoices() {
                 ) : (
                   <div className="invoices-group-card">
                     {billedInvoices.map((invoice) => (
-                      <div key={invoice.id} className="invoices-row" style={{ cursor: "pointer" }}
-                        onClick={() => quickUpdateInvoiceStatus(invoice)}>
+                      <div key={invoice.id} className="invoices-row" style={{ cursor: "pointer" }} onClick={() => openInvoiceDetailView(invoice)}>
                         <div className="invoices-avatar" style={{ background: "#dbeafe", color: "#2563eb" }}>
                           {invoice.students?.student_name ? invoice.students.student_name.charAt(0).toUpperCase() : "I"}
                         </div>
@@ -1195,8 +1203,7 @@ function Invoices() {
                                   {openWeeks[weekKey] && (
                                     <div className="invoices-group-card">
                                       {week.invoices.map((invoice: any) => (
-                                        <div key={invoice.id} className="invoices-row past-invoice-row"
-                                          style={{ cursor: "pointer" }} onClick={() => quickUpdateInvoiceStatus(invoice)}>
+                                        <div key={invoice.id} className="invoices-row past-invoice-row" style={{ cursor: "pointer" }} onClick={() => openInvoiceDetailView(invoice)}>
                                           <div className="invoices-avatar">
                                             {invoice.students?.student_name ? invoice.students.student_name.charAt(0).toUpperCase() : "I"}
                                           </div>
@@ -1431,7 +1438,7 @@ function Invoices() {
                               >
                                 <div>
                                   <strong>
-                                    {lesson.lesson_date} • {lesson.duration_minutes} min
+                                    {formatDate(lesson.lesson_date)} • {lesson.duration_minutes} min
                                   </strong>
 
                                   <span>
@@ -1545,7 +1552,7 @@ function Invoices() {
                           >
                             <div>
                               <strong>
-                                {lesson.lesson_date} • {lesson.duration_minutes} min
+                                {formatDate(lesson.lesson_date)} • {lesson.duration_minutes} min
                               </strong>
 
                               <span>
@@ -1661,6 +1668,76 @@ function Invoices() {
             </div>
           </div>
         )}
+        {invoiceDetailView && (
+          <div
+            className="invoices-add-overlay"
+            style={{ zIndex: 400 }}
+            onClick={() => setInvoiceDetailView(null)}
+          >
+            <div
+              className="invoices-add-sheet"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="invoices-add-header">
+                <div>
+                  <h2>{invoiceDetailView.invoice_number || "Invoice"}</h2>
+                  {!invoiceDetailViewLoading && invoiceDetailViewLessons.length > 0 && (
+                    <span style={{ fontSize: 13, color: "var(--secondary-text)", fontWeight: 500 }}>
+                      {getInvoiceWeekLabel(invoiceDetailViewLessons)}
+                    </span>
+                  )}
+                </div>
+                <button type="button" onClick={() => setInvoiceDetailView(null)}>×</button>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 16px 16px" }}>
+                <button
+                  type="button"
+                  className={`invoice-status-pill ${invoiceDetailView.status || "unbilled"}`}
+                  onClick={(e) => { e.stopPropagation(); quickUpdateInvoiceStatus(invoiceDetailView); setInvoiceDetailView(null); }}
+                  disabled={statusUpdatingId === invoiceDetailView.id}
+                >
+                  {statusUpdatingId === invoiceDetailView.id ? "..." : (invoiceDetailView.status || "unbilled").charAt(0).toUpperCase() + (invoiceDetailView.status || "unbilled").slice(1)}
+                </button>
+                <strong style={{ marginLeft: "auto", fontSize: 16 }}>
+                  {formatMoney(invoiceDetailView.total)}
+                </strong>
+              </div>
+
+              {invoiceDetailViewLoading ? (
+                <div style={{ display: "flex", justifyContent: "center", padding: "32px 0" }}>
+                  <div className="billio-mini-spinner" />
+                </div>
+              ) : invoiceDetailViewLessons.length === 0 ? (
+                <p className="invoices-empty" style={{ padding: "0 16px 24px" }}>No lessons attached to this invoice.</p>
+              ) : (
+                <div className="invoices-group-card" style={{ margin: "0 16px 24px" }}>
+                  {invoiceDetailViewLessons.map((lesson: any) => (
+                    <div key={lesson.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", borderBottom: "1px solid var(--border)" }}>
+                      <div>
+                        <strong style={{ fontSize: 14, display: "block" }}>{formatDate(lesson.lesson_date)}</strong>
+                        <span style={{ fontSize: 13, color: "var(--secondary-text)" }}>{lesson.start_time?.slice(0, 5)} • {lesson.duration_minutes} min</span>
+                      </div>
+                      <strong style={{ fontSize: 14, whiteSpace: "nowrap" }}>{formatMoney(lesson.rate)}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 10, padding: "0 16px 16px" }}>
+                <button
+                  type="button"
+                  className="invoices-save-btn"
+                  style={{ flex: 1 }}
+                  onClick={(e) => { e.stopPropagation(); setInvoiceDetailView(null); openEditInvoice(invoiceDetailView); }}
+                >
+                  Edit Invoice
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {showInvoiceSettings && (
           <div
             className="invoice-settings-overlay"

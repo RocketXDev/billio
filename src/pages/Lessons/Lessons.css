@@ -259,6 +259,11 @@
   line-height: 1;
 }
 
+.lesson-billing-pill {
+  padding: 0px;
+  font-size: 14px;
+}
+
 .clickable-status {
   padding: 0px;
 }
@@ -842,6 +847,74 @@
 
 .delete-lesson-btn:hover {
   background: #fecaca;
+}
+
+/* ── Lesson view popup ── */
+
+.lesson-view-date {
+  font-size: 13px;
+  color: var(--secondary-text);
+  font-weight: 500;
+  display: block;
+  margin-top: 2px;
+}
+
+.lesson-view-body {
+  padding: 0 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lesson-view-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.lesson-view-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.lesson-view-card .lesson-view-row:last-child {
+  border-bottom: none;
+}
+
+.lesson-view-row > span {
+  font-size: 13px;
+  color: var(--secondary-text);
+}
+
+.lesson-view-row > strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--main-text);
+}
+
+.lesson-view-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lesson-view-notes > span:first-child {
+  font-size: 13px;
+  color: var(--secondary-text);
+}
+
+.lesson-view-notes > span:last-child {
+  font-size: 14px;
+  color: var(--main-text);
+}
+
+.lesson-view-actions .save-lesson-btn {
+  margin: 10px auto 0px auto;
+  display: block;;
 }
 
 /* LESSONS TUTORIAL */

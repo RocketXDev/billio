@@ -1,5 +1,6 @@
 import './Profile.css';
 import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
   FaHome,
@@ -14,16 +15,15 @@ import {
 import { supabase } from "../../lib/supabaseClient";
 import Cropper from "react-easy-crop";
 import { usePlan } from "../../hooks/usePlan";
+import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 
 function Profile() {
   const navigate = useNavigate();
   const { isPro, plan } = usePlan();
+  const { coachId, profileId, identityLoading } = useCoachIdentity();
+  const queryClient = useQueryClient();
 
-  const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const [profileId, setProfileId] = useState("");
-  const [coachId, setCoachId] = useState("");
 
   const [avatarUrl, setAvatarUrl] = useState("");
   const [fullName, setFullName] = useState("");
@@ -48,66 +48,44 @@ function Profile() {
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
 
+  const { data: profileCoachData, isLoading: profileDataLoading } = useQuery({
+    queryKey: ["coach-profile", coachId],
+    queryFn: async () => {
+      const [profileRes, coachRes] = await Promise.all([
+        supabase.from("profiles").select("*").eq("id", profileId).single(),
+        supabase.from("coaches").select("*").eq("id", coachId).single(),
+      ]);
+      return { profile: profileRes.data, coach: coachRes.data };
+    },
+    enabled: !!coachId && !!profileId,
+  });
+
+  const loading = identityLoading || profileDataLoading;
+
   useEffect(() => {
-    loadProfile();
-  }, []);
+    if (!coachId && !identityLoading) navigate("/login");
+  }, [coachId, identityLoading]);
 
-  async function loadProfile() {
-    setLoading(true);
-
-    const { data: sessionData } = await supabase.auth.getSession();
-    const user = sessionData.session?.user;
-
-    if (!user) {
-      navigate("/login");
-      return;
+  useEffect(() => {
+    if (profileCoachData) {
+      const { profile, coach } = profileCoachData;
+      if (profile) {
+        setFullName(profile.full_name || "");
+        setEmail(profile.email || "");
+      }
+      if (coach) {
+        setAvatarUrl(coach.avatar_url || "");
+        setAvatarPath(coach.avatar_path || "");
+        setDefaultHourlyRate(coach.default_hourly_rate ? String(coach.default_hourly_rate) : "");
+        setCustomRates(coach.custom_rates || []);
+        setVisibleName(coach.visible_name || "");
+        setBio(coach.bio || "");
+        setPhoneNumber(coach.phone_number || "");
+        setPreferredCommunication(coach.preferred_communication || "email");
+        setCoachSmsConsent(coach.sms_consent || false);
+      }
     }
-
-    const { data: profileData, error: profileError } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("user_id", user.id)
-      .single();
-
-    if (profileError || !profileData) {
-      console.log("Profile load error:", profileError);
-      setLoading(false);
-      return;
-    }
-
-    setProfileId(profileData.id);
-    setFullName(profileData.full_name || "");
-    setEmail(profileData.email || user.email || "");
-
-    const { data: coachData, error: coachError } = await supabase
-      .from("coaches")
-      .select("*")
-      .eq("profile_id", profileData.id)
-      .single();
-
-    if (coachError) {
-      console.log("Coach load error:", coachError);
-      setLoading(false);
-      return;
-    }
-
-    setCoachId(coachData.id);
-    setAvatarUrl(coachData.avatar_url || "");
-    setAvatarPath(coachData.avatar_path || "");
-    setDefaultHourlyRate(
-      coachData.default_hourly_rate ? String(coachData.default_hourly_rate) : ""
-    );
-    setCustomRates(coachData.custom_rates || []);
-    setVisibleName(coachData.visible_name || "");
-    setBio(coachData.bio || "");
-    setPhoneNumber(coachData.phone_number || "");
-    setPreferredCommunication(
-      coachData.preferred_communication || "email"
-    );
-    setCoachSmsConsent(coachData.sms_consent || false);
-
-    setLoading(false);
-  }
+  }, [profileCoachData]);
 
   async function handleSaveProfile(e: any) {
     e.preventDefault();
@@ -151,6 +129,7 @@ function Profile() {
         return;
       }
 
+      queryClient.invalidateQueries({ queryKey: ["coach-profile", coachId] });
     } finally {
       setIsSubmitting(false);
     }
@@ -190,6 +169,8 @@ function Profile() {
         avatar_path: filePath
       })
       .eq("id", coachId);
+
+    queryClient.invalidateQueries({ queryKey: ["coach-profile", coachId] });
   }
 
   function handleAvatarSelect(e: any) {
@@ -245,6 +226,7 @@ function Profile() {
 
     setAvatarUrl("");
     setAvatarPath("");
+    queryClient.invalidateQueries({ queryKey: ["coach-profile", coachId] });
   }
 
   function createImage(url: string): Promise<HTMLImageElement> {
@@ -331,6 +313,7 @@ function Profile() {
       })
       .eq("id", coachId);
 
+    queryClient.invalidateQueries({ queryKey: ["coach-profile", coachId] });
     setShowCropper(false);
     setSelectedAvatarFile(null);
     setAvatarPreviewUrl("");

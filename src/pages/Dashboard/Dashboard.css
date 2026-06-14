@@ -342,6 +342,16 @@
   font-weight: 600;
 }
 
+.invoice-status.unbilled {
+  color: #f59e0b;
+}
+.invoice-status.billed {
+  color: #3b82f6;
+}
+.invoice-status.paid {
+  color: #22c55e;
+}
+
 .dashboard-row-edit-btn {
   width: auto;
   height: auto;

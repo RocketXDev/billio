@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
   FaArrowLeft, FaHome, FaCalendarAlt, FaUsers,
@@ -6,34 +7,46 @@ import {
   FaChartBar, FaExclamationCircle,
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
+import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import "./EarningsDashboard.css";
 
 export default function EarningsDashboard() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [lessons, setLessons] = useState<any[]>([]);
-  const [invoices, setInvoices] = useState<any[]>([]);
+  const { coachId, identityLoading } = useCoachIdentity();
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { if (!coachId && !identityLoading) navigate("/login"); }, [coachId, identityLoading]);
 
-  async function load() {
-    setLoading(true);
-    const { data: sessionData } = await supabase.auth.getSession();
-    const user = sessionData.session?.user;
-    if (!user) { navigate("/login"); return; }
-    const { data: profileData } = await supabase.from("profiles").select("id").eq("user_id", user.id).single();
-    if (!profileData) { setLoading(false); return; }
-    const { data: coachData } = await supabase.from("coaches").select("id").eq("profile_id", profileData.id).single();
-    if (!coachData) { setLoading(false); return; }
-    const [lessonsRes, invoicesRes] = await Promise.all([
-      supabase.from("lessons").select("*, students(student_name)").eq("coach_id", coachData.id),
-      supabase.from("invoices").select("*, students(student_name)").eq("coach_id", coachData.id),
-    ]);
-    setLessons(lessonsRes.data || []);
-    setInvoices(invoicesRes.data || []);
-    setLoading(false);
-  }
+  const { data: lessons = [], isLoading: lessonsLoading } = useQuery({
+    queryKey: ["lessons", coachId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lessons")
+        .select("*, students(student_name)")
+        .eq("coach_id", coachId)
+        .order("lesson_date", { ascending: true })
+        .order("start_time", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!coachId,
+  });
+
+  const { data: invoices = [], isLoading: invoicesLoading } = useQuery({
+    queryKey: ["invoices", coachId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("invoices")
+        .select(`*, students(student_name, email, phone_number, parent_name, parent_phone)`)
+        .eq("coach_id", coachId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!coachId,
+  });
+
+  const loading = identityLoading || lessonsLoading || invoicesLoading;
 
   const now = new Date();
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);

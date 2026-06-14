@@ -28,6 +28,7 @@ import Settings from "./pages/Settings/Settings";
 import MarkInvoicePaid from "./pages/MarkInvoicePaid/MarkInvoicePaid";
 import RecurringLessons from "./pages/RecurringLessons/RecurringLessons";
 import EarningsDashboard from "./pages/EarningsDashboard/EarningsDashboard";
+import PdfInvoice from "./pages/PdfInvoice/PdfInvoice";
 
 function App() {
 
@@ -161,6 +162,17 @@ function App() {
           <ProtectedRoute>
             <DesktopLayout>
               <EarningsDashboard />
+            </DesktopLayout>
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/pdf-invoice" 
+        element={
+          <ProtectedRoute>
+            <DesktopLayout>
+              <PdfInvoice />
             </DesktopLayout>
           </ProtectedRoute>
         } 

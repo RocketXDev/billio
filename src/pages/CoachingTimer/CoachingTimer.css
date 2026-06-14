@@ -182,10 +182,14 @@
 }
 
 .timer-modal p {
-  margin: 10px 0 22px;
+  margin: 10px 0 10px;
   color: var(--secondary-text);
   font-size: 14px;
   line-height: 1.5;
+}
+
+.timer-modal p:nth-child(2) {
+  margin-bottom: 5px;
 }
 
 .timer-modal-actions {

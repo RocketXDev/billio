@@ -1,0 +1,1067 @@
+import { useEffect, useRef, useState } from "react";
+import { supabase } from "../../lib/supabaseClient";
+import { useNavigate } from "react-router-dom";
+import {
+  FaArrowLeft,
+  FaPlus,
+  FaTrash,
+  FaRoute,
+  FaPalette,
+  FaFilePdf,
+  FaSpinner,
+  FaMapMarkerAlt,
+  FaUpload,
+  FaPlane,
+} from "react-icons/fa";
+
+const COLOR_PRESETS = [
+  "#3b33d9", "#2563EB", "#0891B2", "#059669",
+  "#D97706", "#DC2626", "#7C3AED", "#DB2777",
+  "#374151", "#1a1a1a",
+];
+import "./PdfInvoice.css";
+
+/* ------------------------------------------------------------------ */
+/*  Constants                                                          */
+/* ------------------------------------------------------------------ */
+
+// 2026 IRS standard business mileage rate (national average fallback).
+// Coaches can override this in the mileage card or in brand settings.
+const NATIONAL_MILEAGE_RATE = 0.7;
+
+
+type LineItem = {
+  id: string;
+  category: string;
+  label: string;
+  qty: number;
+  unit_amount: number;
+};
+
+type Suggestion = {
+  display_name: string;
+  lat: string;
+  lon: string;
+};
+
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
+function uid() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+function money(n: any) {
+  return Number(n || 0).toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function genInvoiceNumber() {
+  const year = new Date().getFullYear();
+  const rand = Math.random().toString(16).slice(2, 6).toUpperCase();
+  return `INV-${year}-${rand}`;
+}
+
+// Haversine straight-line fallback (miles) if routing fails.
+function haversineMiles(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+) {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const R = 3958.8;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/* ------------------------------------------------------------------ */
+/*  Component                                                          */
+/* ------------------------------------------------------------------ */
+
+function PdfInvoice() {
+  const navigate = useNavigate();
+  const [userId, setUserId] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
+
+  // ── Invoice meta ──
+  const [invoiceNumber] = useState(genInvoiceNumber());
+  const [eventName, setEventName] = useState("");
+  const [clientName, setClientName] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+  const [eventDate, setEventDate] = useState("");
+  const [notes, setNotes] = useState("");
+
+  // ── Line items ──
+  const [items, setItems] = useState<LineItem[]>([
+    { id: uid(), category: "service", label: "", qty: 1, unit_amount: 0 },
+  ]);
+
+  // ── Travel expenses ──
+  const [travelItems, setTravelItems] = useState<LineItem[]>([]);
+
+  // ── Mileage ──
+  const [fromAddress, setFromAddress] = useState("");
+  const [toAddress, setToAddress] = useState("");
+  const [fromCoords, setFromCoords] = useState<[number, number] | null>(null);
+  const [toCoords, setToCoords] = useState<[number, number] | null>(null);
+  const [distanceMiles, setDistanceMiles] = useState("");
+  const [mileageRate, setMileageRate] = useState(String(NATIONAL_MILEAGE_RATE));
+  const [roundTrip, setRoundTrip] = useState(true);
+  const [calcLoading, setCalcLoading] = useState(false);
+  const [calcError, setCalcError] = useState("");
+
+  // address autocomplete
+  const [fromSug, setFromSug] = useState<Suggestion[]>([]);
+  const [toSug, setToSug] = useState<Suggestion[]>([]);
+  const fromTimer = useRef<any>(null);
+  const toTimer = useRef<any>(null);
+
+  // ── Brand settings ──
+  const [showBrand, setShowBrand] = useState(false);
+  const [businessName, setBusinessName] = useState("");
+  const [accentColor, setAccentColor] = useState("#3b33d9");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [brandAddress, setBrandAddress] = useState("");
+  const [footerNote, setFooterNote] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [brandSaving, setBrandSaving] = useState(false);
+
+  /* ---------------------------------------------------------------- */
+  /*  Load user + brand settings                                       */
+  /* ---------------------------------------------------------------- */
+  useEffect(() => {
+    async function load() {
+      const { data } = await supabase.auth.getUser();
+      const user = data.user;
+      if (!user) {
+        navigate("/login");
+        return;
+      }
+      setUserId(user.id);
+
+      const { data: brand } = await supabase
+        .from("invoice_brand_settings")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (brand) {
+        setBusinessName(brand.business_name ?? "");
+        setAccentColor(brand.accent_color ?? "#3b33d9");
+        setContactEmail(brand.contact_email ?? "");
+        setContactPhone(brand.contact_phone ?? "");
+        setBrandAddress(brand.address ?? "");
+        setFooterNote(brand.footer_note ?? "");
+        setLogoUrl(brand.logo_url ?? "");
+        if (brand.mileage_rate) setMileageRate(String(brand.mileage_rate));
+      }
+      setLoading(false);
+    }
+    load();
+  }, [navigate]);
+
+  /* ---------------------------------------------------------------- */
+  /*  Address autocomplete (Nominatim, free)                           */
+  /* ---------------------------------------------------------------- */
+  function fetchSuggestions(query: string, setter: (s: Suggestion[]) => void) {
+    if (query.trim().length < 4) {
+      setter([]);
+      return;
+    }
+    fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&addressdetails=0&limit=5&q=${encodeURIComponent(
+        query
+      )}`,
+      { headers: { "Accept-Language": "en" } }
+    )
+      .then((r) => r.json())
+      .then((rows: Suggestion[]) => setter(rows || []))
+      .catch(() => setter([]));
+  }
+
+  function onFromChange(v: string) {
+    setFromAddress(v);
+    setFromCoords(null);
+    clearTimeout(fromTimer.current);
+    fromTimer.current = setTimeout(() => fetchSuggestions(v, setFromSug), 350);
+  }
+
+  function onToChange(v: string) {
+    setToAddress(v);
+    setToCoords(null);
+    clearTimeout(toTimer.current);
+    toTimer.current = setTimeout(() => fetchSuggestions(v, setToSug), 350);
+  }
+
+  function pickFrom(s: Suggestion) {
+    setFromAddress(s.display_name);
+    setFromCoords([parseFloat(s.lat), parseFloat(s.lon)]);
+    setFromSug([]);
+  }
+  function pickTo(s: Suggestion) {
+    setToAddress(s.display_name);
+    setToCoords([parseFloat(s.lat), parseFloat(s.lon)]);
+    setToSug([]);
+  }
+
+  /* ---------------------------------------------------------------- */
+  /*  Geocode (if user typed but didn't pick) + route distance         */
+  /* ---------------------------------------------------------------- */
+  async function geocode(addr: string): Promise<[number, number] | null> {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(
+          addr
+        )}`,
+        { headers: { "Accept-Language": "en" } }
+      );
+      const rows = await res.json();
+      if (rows && rows[0]) return [parseFloat(rows[0].lat), parseFloat(rows[0].lon)];
+    } catch {
+      /* ignore */
+    }
+    return null;
+  }
+
+  async function calcDistance() {
+    setCalcError("");
+    setCalcLoading(true);
+    try {
+      let a = fromCoords;
+      let b = toCoords;
+      if (!a && fromAddress) a = await geocode(fromAddress);
+      if (!b && toAddress) b = await geocode(toAddress);
+
+      if (!a || !b) {
+        setCalcError("Couldn't find one of the addresses. Enter miles manually below.");
+        setCalcLoading(false);
+        return;
+      }
+      setFromCoords(a);
+      setToCoords(b);
+
+      // OSRM public routing — driving distance in meters
+      let miles: number | null = null;
+      try {
+        const url = `https://router.project-osrm.org/route/v1/driving/${a[1]},${a[0]};${b[1]},${b[0]}?overview=false`;
+        const res = await fetch(url);
+        const json = await res.json();
+        if (json?.routes?.[0]?.distance != null) {
+          miles = json.routes[0].distance / 1609.344;
+        }
+      } catch {
+        /* fall through to haversine */
+      }
+
+      if (miles == null) {
+        miles = haversineMiles(a[0], a[1], b[0], b[1]);
+        setCalcError("Routing unavailable — used straight-line estimate. Adjust manually if needed.");
+      }
+
+      setDistanceMiles(miles.toFixed(1));
+    } catch {
+      setCalcError("Something went wrong. Enter miles manually below.");
+    } finally {
+      setCalcLoading(false);
+    }
+  }
+
+  /* ---------------------------------------------------------------- */
+  /*  Mileage → line item                                              */
+  /* ---------------------------------------------------------------- */
+  const mileageMiles = Number(distanceMiles || 0) * (roundTrip ? 2 : 1);
+  const mileageAmount = mileageMiles * Number(mileageRate || 0);
+
+  function addMileageLine() {
+    if (mileageMiles <= 0) return;
+    const label = `Mileage — ${mileageMiles.toFixed(1)} mi @ ${money(
+      mileageRate
+    )}/mi${roundTrip ? " (round trip)" : ""}`;
+    setItems((prev) => [
+      ...prev,
+      {
+        id: uid(),
+        category: "mileage",
+        label,
+        qty: 1,
+        unit_amount: Number(mileageAmount.toFixed(2)),
+      },
+    ]);
+  }
+
+  /* ---------------------------------------------------------------- */
+  /*  Line item helpers                                                */
+  /* ---------------------------------------------------------------- */
+  function addItem(category = "service") {
+    setItems((prev) => [
+      ...prev,
+      { id: uid(), category, label: "", qty: 1, unit_amount: 0 },
+    ]);
+  }
+  function updateItem(id: string, patch: Partial<LineItem>) {
+    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
+  }
+  function removeItem(id: string) {
+    setItems((prev) => prev.filter((it) => it.id !== id));
+  }
+
+  function addTravelItem() {
+    setTravelItems((prev) => [
+      ...prev,
+      { id: uid(), category: "travel", label: "", qty: 1, unit_amount: 0 },
+    ]);
+  }
+  function updateTravelItem(id: string, patch: Partial<LineItem>) {
+    setTravelItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
+  }
+  function removeTravelItem(id: string) {
+    setTravelItems((prev) => prev.filter((it) => it.id !== id));
+  }
+
+  const allItems = [...items, ...travelItems];
+  const subtotal = allItems.reduce(
+    (sum, it) => sum + Number(it.qty || 0) * Number(it.unit_amount || 0),
+    0
+  );
+  const total = subtotal;
+
+  /* ---------------------------------------------------------------- */
+  /*  Logo upload                                                      */
+  /* ---------------------------------------------------------------- */
+  async function uploadLogo(file: File) {
+    if (!userId) return;
+    const ext = file.name.split(".").pop();
+    const path = `${userId}/logo.${ext}`;
+    const { error } = await supabase.storage
+      .from("brand-logos")
+      .upload(path, file, { upsert: true });
+    if (error) {
+      alert("Logo upload failed: " + error.message);
+      return;
+    }
+    const { data } = supabase.storage.from("brand-logos").getPublicUrl(path);
+    setLogoUrl(data.publicUrl);
+  }
+
+  /* ---------------------------------------------------------------- */
+  /*  Save brand settings                                              */
+  /* ---------------------------------------------------------------- */
+  async function saveBrand() {
+    if (!userId) return;
+    setBrandSaving(true);
+    const { error } = await supabase.from("invoice_brand_settings").upsert(
+      {
+        user_id: userId,
+        business_name: businessName,
+        logo_url: logoUrl,
+        accent_color: accentColor,
+        contact_email: contactEmail,
+        contact_phone: contactPhone,
+        address: brandAddress,
+        footer_note: footerNote,
+        mileage_rate: Number(mileageRate) || null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" }
+    );
+    setBrandSaving(false);
+    if (error) {
+      alert("Couldn't save brand settings: " + error.message);
+      return;
+    }
+    setShowBrand(false);
+  }
+
+  /* ---------------------------------------------------------------- */
+  /*  Save invoice                                                     */
+  /* ---------------------------------------------------------------- */
+  async function saveInvoice() {
+    if (!userId) return;
+    setSaving(true);
+    const { error } = await supabase.from("event_invoices").insert({
+      user_id: userId,
+      invoice_number: invoiceNumber,
+      event_name: eventName,
+      client_name: clientName,
+      client_email: clientEmail,
+      event_date: eventDate || null,
+      line_items: items,
+      travel_line_items: travelItems,
+      mileage: {
+        from_address: fromAddress,
+        to_address: toAddress,
+        from_coords: fromCoords,
+        to_coords: toCoords,
+        distance_miles: Number(distanceMiles) || 0,
+        rate: Number(mileageRate) || 0,
+        round_trip: roundTrip,
+      },
+      notes,
+      subtotal,
+      total,
+      status: "unbilled",
+    });
+    setSaving(false);
+    if (error) {
+      alert("Couldn't save invoice: " + error.message);
+      return;
+    }
+    return true;
+  }
+
+  /* ---------------------------------------------------------------- */
+  /*  Generate PDF (jsPDF, loaded on demand)                           */
+  /* ---------------------------------------------------------------- */
+  async function generatePdf() {
+    setGenerating(true);
+    try {
+      // dynamic import keeps initial bundle light
+      const { default: jsPDF } = await import("jspdf");
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+      const pageW = doc.internal.pageSize.getWidth();
+      const margin = 48;
+      let y = margin;
+
+      // accent header bar
+      const rgb = hexToRgb(accentColor);
+      doc.setFillColor(rgb.r, rgb.g, rgb.b);
+      doc.rect(0, 0, pageW, 10, "F");
+
+      // logo
+      if (logoUrl) {
+        try {
+          const img = await loadImage(logoUrl);
+          doc.addImage(img, "PNG", margin, y, 90, 90 * (img.height / img.width));
+          y += 100;
+        } catch {
+          /* skip logo on failure */
+        }
+      }
+
+      // business name
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(20);
+      doc.setTextColor(15, 23, 42);
+      doc.text(businessName || "Invoice", margin, y + 10);
+      y += 28;
+
+      // contact block
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(100, 116, 139);
+      [contactEmail, contactPhone, brandAddress].filter(Boolean).forEach((line) => {
+        doc.text(line, margin, y);
+        y += 14;
+      });
+
+      // invoice meta (right side)
+      let metaY = margin + (logoUrl ? 100 : 0);
+      doc.setTextColor(15, 23, 42);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text(invoiceNumber, pageW - margin, metaY + 10, { align: "right" });
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(100, 116, 139);
+      metaY += 26;
+      if (eventName) {
+        doc.text(eventName, pageW - margin, metaY, { align: "right" });
+        metaY += 14;
+      }
+      if (eventDate) {
+        doc.text(eventDate, pageW - margin, metaY, { align: "right" });
+        metaY += 14;
+      }
+
+      y = Math.max(y, metaY) + 20;
+
+      // bill to
+      if (clientName || clientEmail) {
+        doc.setTextColor(100, 116, 139);
+        doc.setFontSize(9);
+        doc.text("BILL TO", margin, y);
+        y += 14;
+        doc.setTextColor(15, 23, 42);
+        doc.setFontSize(11);
+        if (clientName) {
+          doc.text(clientName, margin, y);
+          y += 14;
+        }
+        if (clientEmail) {
+          doc.setFontSize(10);
+          doc.setTextColor(100, 116, 139);
+          doc.text(clientEmail, margin, y);
+          y += 14;
+        }
+      }
+      y += 16;
+
+      // table header
+      doc.setFillColor(rgb.r, rgb.g, rgb.b);
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.rect(margin, y, pageW - margin * 2, 24, "F");
+      doc.text("Description", margin + 10, y + 16);
+      doc.text("Qty", pageW - margin - 180, y + 16, { align: "right" });
+      doc.text("Rate", pageW - margin - 95, y + 16, { align: "right" });
+      doc.text("Amount", pageW - margin - 10, y + 16, { align: "right" });
+      y += 24;
+
+      // helper to render a block of rows
+      function renderRows(rows: LineItem[]) {
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(15, 23, 42);
+        rows.forEach((it, i) => {
+          const amount = Number(it.qty || 0) * Number(it.unit_amount || 0);
+          if (i % 2 === 1) {
+            doc.setFillColor(245, 246, 248);
+            doc.rect(margin, y, pageW - margin * 2, 22, "F");
+          }
+          doc.setFontSize(10);
+          const label = it.label || "Item";
+          doc.text(label.slice(0, 60), margin + 10, y + 15);
+          doc.text(String(it.qty), pageW - margin - 180, y + 15, { align: "right" });
+          doc.text(money(it.unit_amount), pageW - margin - 95, y + 15, { align: "right" });
+          doc.text(money(amount), pageW - margin - 10, y + 15, { align: "right" });
+          y += 22;
+        });
+      }
+      renderRows(items);
+
+      // travel expenses section
+      if (travelItems.length > 0) {
+        y += 10;
+        doc.setFillColor(245, 246, 248);
+        doc.setTextColor(100, 116, 139);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.rect(margin, y, pageW - margin * 2, 18, "F");
+        doc.text("TRAVEL EXPENSES", margin + 10, y + 12);
+        y += 18;
+        renderRows(travelItems);
+      }
+
+      // total
+      y += 10;
+      doc.setDrawColor(229, 231, 235);
+      doc.line(pageW - margin - 200, y, pageW - margin, y);
+      y += 22;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.text("Total", pageW - margin - 120, y, { align: "right" });
+      doc.setTextColor(rgb.r, rgb.g, rgb.b);
+      doc.text(money(total), pageW - margin - 10, y, { align: "right" });
+
+      // notes / footer
+      if (notes) {
+        y += 36;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(100, 116, 139);
+        doc.text("NOTES", margin, y);
+        y += 14;
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(15, 23, 42);
+        doc.setFontSize(10);
+        doc.text(doc.splitTextToSize(notes, pageW - margin * 2), margin, y);
+      }
+
+      if (footerNote) {
+        doc.setFontSize(9);
+        doc.setTextColor(148, 163, 184);
+        doc.text(
+          doc.splitTextToSize(footerNote, pageW - margin * 2),
+          margin,
+          doc.internal.pageSize.getHeight() - margin
+        );
+      }
+
+      doc.save(`${invoiceNumber}.pdf`);
+
+      // persist after a successful generate
+      await saveInvoice();
+    } catch (e: any) {
+      alert("PDF generation failed: " + (e?.message || e));
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="loading-screen">
+        <div className="billio-loader">
+          <div className="billio-loader-glow"></div>
+          <img className="billio-loader-logo" src="/logo.png" alt="Billio" />
+        </div>
+      </div>
+    );
+  }
+
+  /* ---------------------------------------------------------------- */
+  /*  Render                                                           */
+  /* ---------------------------------------------------------------- */
+  return (
+    <div className="pdfinv-page">
+      <div className="pdfinv-wrapper">
+        {/* Header */}
+        <div className="pdfinv-header">
+          <div className="pdfinv-header-top">
+            <button className="up-back-btn" onClick={() => navigate(-1)}>
+              <FaArrowLeft />
+            </button>
+            <img src="/logo.png" alt="Billio" className="about-logo" />
+            <button className="pdfinv-brand-btn" onClick={() => setShowBrand(true)}>
+              <FaPalette />
+            </button>
+          </div>
+          <h1 className="pdfinv-title">PDF Invoice</h1>
+          <p className="pdfinv-subtitle">{invoiceNumber}</p>
+        </div>
+
+        <div className="pdfinv-body">
+          {/* ── Event / client details ── */}
+          <section className="pdfinv-card">
+            <h3>Event details</h3>
+            <div className="pdfinv-grid2">
+              <div className="input-block">
+                <label>Event name</label>
+                <input
+                  value={eventName}
+                  onChange={(e) => setEventName(e.target.value)}
+                  placeholder="Spring Open 2026"
+                />
+              </div>
+              <div className="input-block">
+                <label>Event date</label>
+                <input
+                  type="date"
+                  value={eventDate}
+                  onChange={(e) => setEventDate(e.target.value)}
+                />
+              </div>
+              <div className="input-block">
+                <label>Bill to (name)</label>
+                <input
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  placeholder="Family / student"
+                />
+              </div>
+              <div className="input-block">
+                <label>Bill to (email)</label>
+                <input
+                  type="email"
+                  value={clientEmail}
+                  onChange={(e) => setClientEmail(e.target.value)}
+                  placeholder="name@email.com"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* ── Line items ── */}
+          <section className="pdfinv-card">
+            <div className="pdfinv-card-head">
+              <h3>Expenses</h3>
+            </div>
+
+            <div className="pdfinv-items">
+              {items.map((it) => (
+                <div className="pdfinv-item" key={it.id}>
+                  <input
+                    className="pdfinv-item-label"
+                    value={it.label}
+                    onChange={(e) => updateItem(it.id, { label: e.target.value })}
+                    placeholder="Description"
+                  />
+                  <div className="pdfinv-item-row">
+                    <input
+                      className="pdfinv-item-qty"
+                      type="number"
+                      min="0"
+                      value={it.qty}
+                      onChange={(e) => updateItem(it.id, { qty: Number(e.target.value) })}
+                      placeholder="Qty"
+                    />
+                    <div className="pdfinv-item-amt">
+                      <span>$</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={it.unit_amount === 0 ? "" : it.unit_amount}
+                        onChange={(e) => updateItem(it.id, { unit_amount: Number(e.target.value) || 0 })}
+                        placeholder="Rate"
+                      />
+                    </div>
+                    <span className="pdfinv-item-total">
+                      {money(Number(it.qty || 0) * Number(it.unit_amount || 0))}
+                    </span>
+                    <button
+                      className="pdfinv-item-del"
+                      onClick={() => removeItem(it.id)}
+                      aria-label="Remove"
+                    >
+                      <FaTrash />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button className="pdfinv-add-line" onClick={() => addItem()}>
+              <FaPlus /> Add line
+            </button>
+          </section>
+
+          {/* ── Mileage tracker ── */}
+          <section className="pdfinv-card">
+            <div className="pdfinv-card-head">
+              <h3>
+                <FaRoute style={{ marginRight: 8 }} />
+                Mileage
+              </h3>
+              <span className="pdfinv-rate-pill">
+                Nat'l avg {money(NATIONAL_MILEAGE_RATE)}/mi
+              </span>
+            </div>
+
+            <div className="pdfinv-mileage">
+              <div className="input-block pdfinv-addr">
+                <label>From</label>
+                <input
+                  value={fromAddress}
+                  onChange={(e) => onFromChange(e.target.value)}
+                  placeholder="Start address"
+                />
+                {fromSug.length > 0 && (
+                  <ul className="pdfinv-sug">
+                    {fromSug.map((s, i) => (
+                      <li key={i} onClick={() => pickFrom(s)}>
+                        <FaMapMarkerAlt /> {s.display_name}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="input-block pdfinv-addr">
+                <label>To</label>
+                <input
+                  value={toAddress}
+                  onChange={(e) => onToChange(e.target.value)}
+                  placeholder="Destination address"
+                />
+                {toSug.length > 0 && (
+                  <ul className="pdfinv-sug">
+                    {toSug.map((s, i) => (
+                      <li key={i} onClick={() => pickTo(s)}>
+                        <FaMapMarkerAlt /> {s.display_name}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            <button
+              className="pdfinv-calc-btn"
+              onClick={calcDistance}
+              disabled={calcLoading}
+            >
+              {calcLoading ? <FaSpinner className="spin" /> : <FaRoute />}
+              {calcLoading ? "Calculating…" : "Calculate distance"}
+            </button>
+            {calcError && <p className="pdfinv-calc-error">{calcError}</p>}
+
+            <div className="pdfinv-grid3">
+              <div className="input-block">
+                <label>Distance (mi)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={distanceMiles}
+                  onChange={(e) => setDistanceMiles(e.target.value)}
+                  placeholder="Manual / auto"
+                />
+              </div>
+              <div className="input-block">
+                <label>Rate ($/mi)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.001"
+                  value={mileageRate}
+                  onChange={(e) => setMileageRate(e.target.value)}
+                />
+              </div>
+              <div className="input-block pdfinv-roundtrip">
+                <label>Round trip</label>
+                <button
+                  className={`pdfinv-toggle ${roundTrip ? "on" : ""}`}
+                  onClick={() => setRoundTrip((r) => !r)}
+                  type="button"
+                >
+                  <span />
+                </button>
+              </div>
+            </div>
+
+            <div className="pdfinv-mileage-summary">
+              <span>
+                {mileageMiles.toFixed(1)} mi × {money(mileageRate)} ={" "}
+                <strong>{money(mileageAmount)}</strong>
+              </span>
+              <button
+                className="pdfinv-add-mileage"
+                onClick={addMileageLine}
+                disabled={mileageMiles <= 0}
+              >
+                <FaPlus /> Add to invoice
+              </button>
+            </div>
+          </section>
+
+          {/* ── Travel expenses ── */}
+          <section className="pdfinv-card">
+            <div className="pdfinv-card-head">
+              <h3><FaPlane style={{ marginRight: 8 }} />Travel expenses</h3>
+            </div>
+            <div className="pdfinv-items">
+              {travelItems.map((it) => (
+                <div className="pdfinv-item" key={it.id}>
+                  <input
+                    className="pdfinv-item-label"
+                    value={it.label}
+                    onChange={(e) => updateTravelItem(it.id, { label: e.target.value })}
+                    placeholder="e.g. Hotel, Flight, Meals"
+                  />
+                  <div className="pdfinv-item-row">
+                    <input
+                      className="pdfinv-item-qty"
+                      type="number"
+                      min="0"
+                      value={it.qty}
+                      onChange={(e) => updateTravelItem(it.id, { qty: Number(e.target.value) })}
+                      placeholder="Qty"
+                    />
+                    <div className="pdfinv-item-amt">
+                      <span>$</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={it.unit_amount === 0 ? "" : it.unit_amount}
+                        onChange={(e) => updateTravelItem(it.id, { unit_amount: Number(e.target.value) || 0 })}
+                        placeholder="Amount"
+                      />
+                    </div>
+                    <span className="pdfinv-item-total">
+                      {money(Number(it.qty || 0) * Number(it.unit_amount || 0))}
+                    </span>
+                    <button
+                      className="pdfinv-item-del"
+                      onClick={() => removeTravelItem(it.id)}
+                      aria-label="Remove"
+                    >
+                      <FaTrash />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {travelItems.length === 0 && (
+                <p className="pdfinv-items-empty">No travel expenses added yet.</p>
+              )}
+            </div>
+            <button className="pdfinv-add-line" onClick={addTravelItem}>
+              <FaPlus /> Add travel expense
+            </button>
+          </section>
+
+          {/* ── Notes ── */}
+          <section className="pdfinv-card">
+            <h3>Notes</h3>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Payment terms, thank-you note, etc."
+            />
+          </section>
+
+          {/* ── Total + actions ── */}
+          <div className="pdfinv-total-bar">
+            <div className="pdfinv-total-amt">
+              <span>Total</span>
+              <strong>{money(total)}</strong>
+            </div>
+            <div className="pdfinv-actions">
+              <button
+                className="pdfinv-save"
+                onClick={saveInvoice}
+                disabled={saving}
+              >
+                {saving ? <FaSpinner className="spin" /> : null}
+                Save draft
+              </button>
+              <button
+                className="pdfinv-generate"
+                onClick={generatePdf}
+                disabled={generating}
+              >
+                {generating ? <FaSpinner className="spin" /> : <FaFilePdf />}
+                Generate PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Brand settings sheet ── */}
+      {showBrand && (
+        <div className="pdfinv-overlay" onClick={() => setShowBrand(false)}>
+          <div className="pdfinv-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="pdfinv-sheet-head">
+              <h3>Brand settings</h3>
+              <button onClick={() => setShowBrand(false)}>×</button>
+            </div>
+
+            <div className="pdfinv-sheet-body">
+              <div className="input-block">
+                <label>Logo</label>
+                <label className="pdfinv-logo-clickable" style={{ borderColor: accentColor }}>
+                  {logoUrl
+                    ? <img src={logoUrl} alt="logo" />
+                    : <div className="pdfinv-logo-empty"><FaUpload /><span>Add logo</span></div>
+                  }
+                  <div className="pdfinv-logo-overlay"><FaUpload /></div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={(e) => e.target.files?.[0] && uploadLogo(e.target.files[0])}
+                  />
+                </label>
+              </div>
+
+              <div className="input-block">
+                <label>Business name</label>
+                <input
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  placeholder="Your coaching business"
+                />
+              </div>
+
+              <div className="input-block">
+                <label>Accent color</label>
+                <div className="pdfinv-color-swatches">
+                  {COLOR_PRESETS.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      className={`pdfinv-swatch-btn${accentColor === color ? " active" : ""}`}
+                      style={{ background: color }}
+                      onClick={() => setAccentColor(color)}
+                      aria-label={color}
+                    />
+                  ))}
+                  <label className={`pdfinv-swatch-btn pdfinv-swatch-custom${!COLOR_PRESETS.includes(accentColor) ? " active" : ""}`} aria-label="Custom color">
+                    <input
+                      type="color"
+                      value={accentColor}
+                      onChange={(e) => setAccentColor(e.target.value)}
+                      style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div className="input-block">
+                <label>Contact email</label>
+                <input
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
+                  placeholder="you@email.com"
+                />
+              </div>
+
+              <div className="input-block">
+                <label>Contact phone</label>
+                <input
+                  value={contactPhone}
+                  onChange={(e) => setContactPhone(e.target.value)}
+                  placeholder="(555) 555-5555"
+                />
+              </div>
+
+              <div className="input-block">
+                <label>Address</label>
+                <input
+                  value={brandAddress}
+                  onChange={(e) => setBrandAddress(e.target.value)}
+                  placeholder="Business address"
+                />
+              </div>
+
+              <div className="input-block">
+                <label>Footer note</label>
+                <textarea
+                  value={footerNote}
+                  onChange={(e) => setFooterNote(e.target.value)}
+                  placeholder="Payment due within 14 days. Thank you!"
+                />
+              </div>
+            </div>
+
+            <button
+              className="pdfinv-sheet-save"
+              onClick={saveBrand}
+              disabled={brandSaving}
+            >
+              {brandSaving ? <FaSpinner className="spin" /> : null}
+              Save brand settings
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Small utilities used by PDF                                        */
+/* ------------------------------------------------------------------ */
+function hexToRgb(hex: string) {
+  const h = hex.replace("#", "");
+  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const num = parseInt(full, 16);
+  return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+}
+
+function loadImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+export default PdfInvoice;

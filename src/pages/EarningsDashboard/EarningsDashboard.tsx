@@ -161,8 +161,10 @@ export default function EarningsDashboard() {
           </button>
           <img src="/logo.png" alt="Billio" className="about-logo" />
         </div>
-        <h1 className="ed-title">Earnings</h1>
-        <p className="ed-subtitle">{now.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</p>
+        <div className="ed-header-inner">
+          <h1 className="ed-title">Earnings</h1>
+          <p className="ed-subtitle">{now.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</p>
+        </div>
       </div>
 
       <div className="ed-body">

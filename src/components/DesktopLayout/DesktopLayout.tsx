@@ -67,7 +67,7 @@ function DesktopLayout({ children }: Props) {
             .split(" ")
             .map((n: string) => n[0])
             .join("")
-            .slice(0, 2)
+            .slice(0, 1)
             .toUpperCase()
         );
       }
@@ -154,9 +154,9 @@ function DesktopLayout({ children }: Props) {
         <div className="desktop-sidebar-user">
           <div className="side-menu-avatar">
             {avatarUrl ? (
-              <img src={avatarUrl} alt="" />
+              <img src={avatarUrl} alt="Coach avatar" />
             ) : (
-              initials
+              fullName ? fullName.charAt(0).toUpperCase() : "B"
             )}
           </div>
           <div className="desktop-sidebar-user-info">

@@ -10,9 +10,8 @@
 
 /* ── Header ── */
 .ed-header {
-  padding: 20px 18px 0;
-  max-width: 520px;
-  margin: 0 auto;
+  width: 100%;
+  padding: 20px 0 0;
   margin-bottom: 0;
 }
 
@@ -20,10 +19,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 15px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 16px;
-  padding: 0px 5px;
+  padding: 0 18px 15px;
+}
+
+.ed-header-inner {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 0 18px;
 }
 
 .ed-title {
@@ -45,6 +49,7 @@
   padding: 0 18px;
   max-width: 520px;
   margin: 0 auto;
+  box-sizing: border-box;
 }
 
 /* ── Section label ── */
@@ -410,4 +415,46 @@
   font-size: 13px;
   margin-top: 6px;
   color: var(--primary-purple);
+}
+
+/* ============================================================
+   DESKTOP
+   ============================================================ */
+@media (min-width: 769px) {
+  .ed-header {
+    display: none;
+  }
+
+  .ed-body {
+    max-width: 960px;
+    padding: 0 40px;
+  }
+
+  .ed-stat-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+
+  .ed-outstanding-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .ed-insights-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+
+  .ed-chart-card {
+    padding: 20px 20px 16px;
+  }
+
+  .ed-bar-chart {
+    height: 160px;
+  }
+
+  .ed-section-label {
+    font-size: 22px;
+    margin: 28px 0 12px;
+  }
 }

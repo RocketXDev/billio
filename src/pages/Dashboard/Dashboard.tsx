@@ -13,6 +13,7 @@ import {
   FaEllipsisH,
   FaTrash,
   FaLock,
+  FaRedoAlt,
 } from "react-icons/fa";
 import { useNavigate, useLocation } from "react-router-dom";
 import { usePlan } from "../../hooks/usePlan";
@@ -21,6 +22,42 @@ import { InstallBanner, InstallGuide } from "../../components/InstallGuide/Insta
 import { useInstallPrompt } from "../../hooks/useInstallPrompt";
 import { createInstallNotification } from "../../lib/installNotification";
 import './Dashboard.css';
+import "../RecurringLessons/RecurringLessons.css";
+
+const RECURRING_DAYS = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
+const RECURRING_DAY_LABELS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const RECURRING_MAX_MONTHS = 12;
+
+function generateOccurrences(
+  startDate: string,
+  endDate: string,
+  frequency: "weekly" | "biweekly",
+  daysOfWeek: string[]
+): string[] {
+  const dates: string[] = [];
+  const end = new Date(endDate + "T00:00:00");
+  const maxEnd = new Date(startDate + "T00:00:00");
+  maxEnd.setMonth(maxEnd.getMonth() + RECURRING_MAX_MONTHS);
+  const cap = end < maxEnd ? end : maxEnd;
+  const dayIndexes = daysOfWeek.map((d) => RECURRING_DAYS.indexOf(d)).filter((i) => i >= 0);
+  const jsToMon = (jsDay: number) => (jsDay === 0 ? 6 : jsDay - 1);
+  let cur = new Date(startDate + "T00:00:00");
+  const startWeekMs = new Date(startDate + "T00:00:00").getTime();
+  const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+  while (cur <= cap) {
+    const monDay = jsToMon(cur.getDay());
+    if (dayIndexes.includes(monDay)) {
+      if (frequency === "weekly") {
+        dates.push(cur.toLocaleDateString("en-CA"));
+      } else {
+        const weekDiff = Math.floor((cur.getTime() - startWeekMs) / msPerWeek);
+        if (weekDiff % 2 === 0) dates.push(cur.toLocaleDateString("en-CA"));
+      }
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+  return dates;
+}
 
 function Dashboard() {
   const [fullName, setFullName] = useState("");
@@ -55,6 +92,12 @@ function Dashboard() {
   const [showRateSheet, setShowRateSheet] = useState(false);
   const [showEditLesson, setShowEditLesson] = useState(false);
   const [editingLesson, setEditingLesson] = useState<any>(null);
+
+  // Recurring lesson states
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringFrequency, setRecurringFrequency] = useState<"weekly" | "biweekly">("weekly");
+  const [recurringDays, setRecurringDays] = useState<string[]>([]);
+  const [recurringEndDate, setRecurringEndDate] = useState("");
 
   // Coaches info
   const [coachSmsConsent, setCoachSmsConsent] = useState(false);
@@ -614,10 +657,30 @@ function Dashboard() {
       maximumFractionDigits: 2,
     });
   }
+  const recurringPreviewCount =
+    isRecurring && lessonDate && recurringEndDate && recurringDays.length > 0
+      ? generateOccurrences(lessonDate, recurringEndDate, recurringFrequency, recurringDays).length
+      : 0;
+
+  function toggleRecurringDay(day: string) {
+    setRecurringDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+    );
+  }
+
+  function handleToggleRecurring() {
+    if (!isRecurring && lessonDate) {
+      const jsDay = new Date(lessonDate + "T00:00:00").getDay();
+      const monIdx = jsDay === 0 ? 6 : jsDay - 1;
+      setRecurringDays([RECURRING_DAYS[monIdx]]);
+    }
+    setIsRecurring((prev) => !prev);
+  }
+
   async function handleCreateLesson(e: any) {
     e.preventDefault();
 
-    if (isSubmitting) return; 
+    if (isSubmitting) return;
     setIsSubmitting(true);
 
     try {
@@ -689,23 +752,80 @@ function Dashboard() {
         }
       }
 
-      const calculatedRate = Number(hourlyRate) * (Number(durationMinutes) / 60);
+      if (isRecurring) {
+        if (recurringDays.length === 0) { alert("Please select at least one day."); return; }
+        if (!recurringEndDate) { alert("Please select an end date."); return; }
+        if (recurringEndDate <= lessonDate) { alert("End date must be after start date."); return; }
 
-      const { error: lessonError } = await supabase.from("lessons").insert({
-        coach_id: coachId,
-        student_id: finalStudentId,
-        lesson_date: lessonDate,
-        start_time: startTime,
-        duration_minutes: Number(durationMinutes),
-        lesson_type: lessonType || null,
-        hourly_rate: Number(hourlyRate),
-        rate: calculatedRate,
-        notes: notes || null,
-      });
+        const seriesPayload = {
+          coach_id: coachId,
+          student_id: finalStudentId,
+          title: lessonType || null,
+          start_time: startTime,
+          duration_minutes: Number(durationMinutes),
+          hourly_rate: hourlyRate ? Number(hourlyRate) : null,
+          frequency: recurringFrequency,
+          days_of_week: recurringDays,
+          start_date: lessonDate,
+          end_date: recurringEndDate,
+          notes: notes || null,
+          active: true,
+          updated_at: new Date().toISOString(),
+        };
 
-      if (lessonError) {
-        console.log("Lesson create error:", lessonError);
-        return;
+        const { data: newSeries, error: seriesError } = await supabase
+          .from("recurring_lessons")
+          .insert(seriesPayload)
+          .select()
+          .single();
+
+        if (seriesError || !newSeries) {
+          console.log("Series create error:", seriesError);
+          return;
+        }
+
+        const occurrences = generateOccurrences(lessonDate, recurringEndDate, recurringFrequency, recurringDays);
+        if (occurrences.length > 0) {
+          const calculatedRate = Number(hourlyRate) * (Number(durationMinutes) / 60);
+          const lessonRows = occurrences.map((date) => ({
+            coach_id: coachId,
+            student_id: finalStudentId,
+            lesson_date: date,
+            start_time: startTime,
+            duration_minutes: Number(durationMinutes),
+            lesson_type: lessonType || null,
+            hourly_rate: Number(hourlyRate),
+            rate: calculatedRate,
+            billing_status: "unbilled",
+            notes: notes || null,
+            is_recurring: true,
+            recurring_series_id: newSeries.id,
+            recurring_occurrence_date: date,
+          }));
+          const { error: lessonError } = await supabase.from("lessons").insert(lessonRows);
+          if (lessonError) console.log("Recurring lesson insert error:", lessonError);
+        }
+
+        queryClient.invalidateQueries({ queryKey: ["recurring-lessons", coachId] });
+      } else {
+        const calculatedRate = Number(hourlyRate) * (Number(durationMinutes) / 60);
+
+        const { error: lessonError } = await supabase.from("lessons").insert({
+          coach_id: coachId,
+          student_id: finalStudentId,
+          lesson_date: lessonDate,
+          start_time: startTime,
+          duration_minutes: Number(durationMinutes),
+          lesson_type: lessonType || null,
+          hourly_rate: Number(hourlyRate),
+          rate: calculatedRate,
+          notes: notes || null,
+        });
+
+        if (lessonError) {
+          console.log("Lesson create error:", lessonError);
+          return;
+        }
       }
 
       queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
@@ -719,6 +839,10 @@ function Dashboard() {
       setLessonType("");
       setHourlyRate("");
       setNotes("");
+      setIsRecurring(false);
+      setRecurringFrequency("weekly");
+      setRecurringDays([]);
+      setRecurringEndDate("");
       setShowAddLesson(false);
 
     } finally {
@@ -1062,6 +1186,10 @@ function Dashboard() {
     setHourlyRate("");
     setNotes("");
     setEditingLesson(null);
+    setIsRecurring(false);
+    setRecurringFrequency("weekly");
+    setRecurringDays([]);
+    setRecurringEndDate("");
   }
 
   function closeAddLesson() {
@@ -1860,8 +1988,75 @@ function Dashboard() {
                 />
               </div>
 
+              <div className="lesson-recurring-toggle-row">
+                <div className="lesson-recurring-toggle-label">
+                  <FaRedoAlt className="lesson-recurring-icon" />
+                  <span>Make Recurring</span>
+                </div>
+                <button
+                  type="button"
+                  className={`lesson-recurring-toggle-btn ${isRecurring ? "active" : ""}`}
+                  onClick={handleToggleRecurring}
+                >
+                  <span className="lesson-recurring-toggle-knob" />
+                </button>
+              </div>
+
+              {isRecurring && (
+                <>
+                  <div className="input-block">
+                    <label>Frequency</label>
+                    <div className="rl-chip-group">
+                      {(["weekly", "biweekly"] as const).map((f) => (
+                        <button
+                          key={f}
+                          type="button"
+                          className={`rl-chip${recurringFrequency === f ? " active" : ""}`}
+                          onClick={() => setRecurringFrequency(f)}
+                        >
+                          {f === "weekly" ? "Weekly" : "Every 2 weeks"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="input-block">
+                    <label>Repeat on</label>
+                    <div className="rl-days-row">
+                      {RECURRING_DAYS.map((day, i) => (
+                        <button
+                          key={day}
+                          type="button"
+                          className={`rl-day-btn${recurringDays.includes(day) ? " active" : ""}`}
+                          onClick={() => toggleRecurringDay(day)}
+                        >
+                          {RECURRING_DAY_LABELS[i]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="input-block">
+                    <label>End Date</label>
+                    <input
+                      type="date"
+                      value={recurringEndDate}
+                      onChange={(e) => setRecurringEndDate(e.target.value)}
+                      min={lessonDate || undefined}
+                    />
+                  </div>
+
+                  {recurringPreviewCount > 0 && (
+                    <div className="rl-preview">
+                      <FaRedoAlt style={{ fontSize: 12, marginRight: 8 }} />
+                      This will create <strong>&nbsp;{recurringPreviewCount} lessons</strong>.
+                    </div>
+                  )}
+                </>
+              )}
+
               <button type="submit" className="save-lesson-btn" disabled={isSubmitting}>
-                {isSubmitting ? "Saving..." : "Save Lesson"}
+                {isSubmitting ? "Saving..." : isRecurring ? "Create Recurring Lesson" : "Save Lesson"}
               </button>
             </form>
           </div>

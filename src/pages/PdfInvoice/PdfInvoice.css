@@ -745,6 +745,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0px 10px;
+  gap: 5px;
 }
 
 .pdfinv-total-amt span {
@@ -1063,6 +1064,7 @@
   /* Drafts drawer — match body width on desktop */
   .pdfinv-drafts-wrap {
     max-width: 960px;
+    margin: 0 auto;
     padding: 24px 40px 0;
   }
 
@@ -1073,6 +1075,7 @@
   .pdfinv-body {
     padding: 14px 40px 0;
     max-width: 960px;
+    margin: 0 auto;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 18px;

@@ -130,6 +130,19 @@ function PdfInvoice() {
   const fromTimer = useRef<any>(null);
   const toTimer = useRef<any>(null);
 
+  // ── Student suggestions (Bill to) ──
+  const [coachStudents, setCoachStudents] = useState<any[]>([]);
+  const [clientSelected, setClientSelected] = useState(false);
+
+  const clientNameMatches =
+    clientName.trim().length > 0 && !clientSelected
+      ? coachStudents.filter((link: any) =>
+          link.students?.student_name
+            ?.toLowerCase()
+            .includes(clientName.trim().toLowerCase())
+        )
+      : [];
+
   // ── Brand settings ──
   const [showBrand, setShowBrand] = useState(false);
   const [businessName, setBusinessName] = useState("");
@@ -159,6 +172,26 @@ function PdfInvoice() {
         return;
       }
       setUserId(user.id);
+
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+      if (profileData) {
+        const { data: coachData } = await supabase
+          .from("coaches")
+          .select("id")
+          .eq("profile_id", profileData.id)
+          .single();
+        if (coachData) {
+          const { data: students } = await supabase
+            .from("coach_students")
+            .select("student_id, students(id, student_name, email)")
+            .eq("coach_id", coachData.id);
+          setCoachStudents(students || []);
+        }
+      }
 
       const { data: brand } = await supabase
         .from("invoice_brand_settings")
@@ -844,13 +877,37 @@ function PdfInvoice() {
                   onChange={(e) => setEventDate(e.target.value)}
                 />
               </div>
-              <div className="input-block">
+              <div className="input-block student-search-block">
                 <label>Bill to (name)</label>
                 <input
                   value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
+                  onChange={(e) => {
+                    setClientName(e.target.value);
+                    setClientSelected(false);
+                  }}
                   placeholder="Family / student"
+                  autoComplete="new-password"
+                  autoCorrect="off"
+                  spellCheck={false}
                 />
+                {clientNameMatches.length > 0 && (
+                  <div className="student-suggestions">
+                    {clientNameMatches.map((link: any) => (
+                      <button
+                        key={link.student_id}
+                        type="button"
+                        className="student-suggestion"
+                        onClick={() => {
+                          setClientName(link.students.student_name);
+                          if (link.students.email) setClientEmail(link.students.email);
+                          setClientSelected(true);
+                        }}
+                      >
+                        {link.students.student_name}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="input-block">
                 <label>Bill to (email)</label>

@@ -2,6 +2,49 @@
    PDF INVOICE PAGE
    ============================================================ */
 
+.student-search-block {
+  position: relative;
+  z-index: 20;
+}
+
+.student-suggestions {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 100%;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+  z-index: 50;
+}
+
+.student-suggestion {
+  width: 100%;
+  margin: 0;
+  padding: 14px 16px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--main-text);
+  text-align: left;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.student-suggestion:last-child {
+  border-bottom: none;
+}
+
+.student-suggestion:hover {
+  background: #eef2ff;
+  color: var(--primary-purple);
+}
+
 .pdfinv-page {
   width: 100%;
   min-height: 100vh;

@@ -18,6 +18,7 @@ import {
   FaChevronRight,
   FaCog,
   FaLock,
+  FaHistory
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
 import { usePlan } from "../../hooks/usePlan";
@@ -82,6 +83,15 @@ function Invoices() {
   const [autoInvoiceDay, setAutoInvoiceDay] = useState("0");
   const [autoInvoiceDayOfMonth, setAutoInvoiceDayOfMonth] = useState("1");
   const [autoInvoiceTime, setAutoInvoiceTime] = useState("09:00");
+
+  // Invoices Logs
+  const [showSentLog, setShowSentLog] = useState(false);
+  const [logSearch, setLogSearch] = useState("");
+  const [logDeliveryFilter, setLogDeliveryFilter] = useState("all"); // all | email | text
+  const [logStatusFilter, setLogStatusFilter] = useState("all");     // all | billed | paid | unbilled
+  const [logSort, setLogSort] = useState("newest");                   // newest | oldest
+  const [logStartDate, setLogStartDate] = useState("");
+  const [logEndDate, setLogEndDate] = useState("");
 
   // Loading
   const [isSaving, setIsSaving] = useState(false);
@@ -831,6 +841,50 @@ function Invoices() {
     return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
   }
 
+  const sentInvoices = invoices.filter((inv) => inv.sent_at);
+
+  const filteredSentInvoices = sentInvoices
+    .filter((inv) => {
+      if (logSearch.trim()) {
+        const q = logSearch.trim().toLowerCase();
+        const name = (inv.students?.student_name || "").toLowerCase();
+        const number = (inv.invoice_number || "").toLowerCase();
+        if (!name.includes(q) && !number.includes(q)) return false;
+      }
+      if (logDeliveryFilter !== "all") {
+        const method = inv.delivery_method || "email";
+        if (logDeliveryFilter === "email" && !(method === "email" || method === "both")) return false;
+        if (logDeliveryFilter === "text" && !(method === "text" || method === "both")) return false;
+      }
+      if (logStatusFilter !== "all" && (inv.status || "unbilled") !== logStatusFilter) return false;
+
+      const sentDay = (inv.sent_at || "").slice(0, 10);
+      if (logStartDate && sentDay < logStartDate) return false;
+      if (logEndDate && sentDay > logEndDate) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      const da = a.sent_at || "";
+      const db = b.sent_at || "";
+      return logSort === "newest" ? db.localeCompare(da) : da.localeCompare(db);
+    });
+
+  function formatSentDate(iso: string) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    return (
+      d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) +
+      " · " +
+      d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+    );
+  }
+
+  function deliveryLabel(method: string) {
+    if (method === "text") return "Text";
+    if (method === "both") return "Email + Text";
+    return "Email";
+  }
+
   const currentInvoices = invoices.filter(
     (invoice) => (invoice.status || "unbilled") === "unbilled"
   );
@@ -1001,6 +1055,20 @@ function Invoices() {
                     <h1>Invoices</h1>
 
                      <div className="invoices-header-actions">
+
+                     <button
+                        type="button"
+                        className="invoices-log-btn"
+                        aria-disabled={showTutorial}
+                        title="Sent invoice log"
+                        onClick={(e) => {
+                          if (showTutorial) { e.preventDefault(); return; }
+                          setShowSentLog(true);
+                        }}
+                      >
+                        <FaHistory />
+                      </button>
+
                       <button
                         ref={settingsBtnRef}
                         type="button"
@@ -1766,6 +1834,124 @@ function Invoices() {
                   Edit Invoice
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {showSentLog && (
+          <div className="invoice-log-overlay" onClick={() => setShowSentLog(false)}>
+            <div className="invoice-log-sheet" onClick={(e) => e.stopPropagation()}>
+              <div className="invoice-log-header">
+                <div>
+                  <h2>Sent Invoices History</h2>
+                  <span>{filteredSentInvoices.length} of {sentInvoices.length} shown</span>
+                </div>
+                <button type="button" onClick={() => setShowSentLog(false)}>×</button>
+              </div>
+
+              <div className="invoice-log-filters">
+                <input
+                  type="text"
+                  className="invoice-log-search"
+                  placeholder="Search by student or invoice #"
+                  value={logSearch}
+                  onChange={(e) => setLogSearch(e.target.value)}
+                />
+
+                <div className="invoice-log-segment">
+                  {["all", "email", "text"].map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      className={logDeliveryFilter === opt ? "active" : ""}
+                      onClick={() => setLogDeliveryFilter(opt)}
+                    >
+                      {opt === "all" ? "All" : opt === "email" ? "Email" : "Text"}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="invoice-log-segment">
+                  {["all", "billed", "paid", "unbilled"].map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      className={logStatusFilter === opt ? "active" : ""}
+                      onClick={() => setLogStatusFilter(opt)}
+                    >
+                      {opt === "all" ? "All" : opt.charAt(0).toUpperCase() + opt.slice(1)}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="invoice-log-dates">
+                  <div className="input-block">
+                    <label>From</label>
+                    <input type="date" value={logStartDate} onChange={(e) => setLogStartDate(e.target.value)} />
+                  </div>
+                  <div className="input-block">
+                    <label>To</label>
+                    <input type="date" value={logEndDate} onChange={(e) => setLogEndDate(e.target.value)} />
+                  </div>
+                </div>
+
+                <div className="invoice-log-toolbar">
+                  <button
+                    type="button"
+                    className="invoice-log-sort"
+                    onClick={() => setLogSort((s) => (s === "newest" ? "oldest" : "newest"))}
+                  >
+                    {logSort === "newest" ? "Newest first" : "Oldest first"}
+                  </button>
+                  {(logSearch || logDeliveryFilter !== "all" || logStatusFilter !== "all" || logStartDate || logEndDate) && (
+                    <button
+                      type="button"
+                      className="invoice-log-clear"
+                      onClick={() => {
+                        setLogSearch(""); setLogDeliveryFilter("all");
+                        setLogStatusFilter("all"); setLogStartDate(""); setLogEndDate("");
+                      }}
+                    >
+                      Clear filters
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {filteredSentInvoices.length === 0 ? (
+                <p className="invoices-empty">No sent invoices match your filters.</p>
+              ) : (
+                <div className="invoices-group-card invoice-log-list">
+                  {filteredSentInvoices.map((invoice) => (
+                    <div
+                      key={invoice.id}
+                      className="invoices-row"
+                      style={{ cursor: "pointer" }}
+                      onClick={() => { setShowSentLog(false); openInvoiceDetailView(invoice); }}
+                    >
+                      <div className="invoices-avatar" style={{ background: "#dbeafe", color: "#2563eb" }}>
+                        {invoice.students?.student_name ? invoice.students.student_name.charAt(0).toUpperCase() : "I"}
+                      </div>
+                      <div className="invoices-info">
+                        <strong>{invoice.invoice_number || "Invoice"}</strong>
+                        <span>{invoice.students?.student_name || "Student"} • {formatMoney(invoice.total)}</span>
+                        <span className="invoice-log-meta">
+                          <span className={`invoice-log-method ${invoice.delivery_method || "email"}`}>
+                            {deliveryLabel(invoice.delivery_method || "email")}
+                          </span>
+                          <span className="invoice-log-sent">Sent {formatSentDate(invoice.sent_at)}</span>
+                        </span>
+                      </div>
+                      <span
+                        className={`invoice-status-pill ${invoice.status || "unbilled"}`}
+                        style={{ pointerEvents: "none" }}
+                      >
+                        {(invoice.status || "unbilled").charAt(0).toUpperCase() + (invoice.status || "unbilled").slice(1)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

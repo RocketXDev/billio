@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import "./DesktopLayout.css";
+import { PullToRefresh } from "../PullToRefresh/PullToRefresh";
 import {
   FaHome,
   FaCalendarAlt,
@@ -111,6 +112,7 @@ function DesktopLayout({ children }: Props) {
 
   return (
     <div className="desktop-shell">
+      <PullToRefresh />
       {/* ── Sidebar ── */}
       <aside className="desktop-sidebar">
         <img

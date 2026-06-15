@@ -43,6 +43,29 @@
   letter-spacing: -1px;
 }
 
+.lessons-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lessons-log-btn {
+  flex-shrink: 0;
+  width: 45px;
+  height: 45px;
+  margin: 0;
+  border-radius: 50%;
+  border: 1px solid #c7d2fe;
+  background: #eef2ff;
+  color: var(--primary-purple);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  box-shadow: 0 4px 12px rgba(91, 61, 245, 0.10);
+  cursor: pointer;
+}
+
 .lessons-add-btn {
   width: 45px;
   height: 45px;
@@ -59,6 +82,121 @@
   line-height: 1;
   box-shadow: 0 10px 22px rgba(79, 70, 229, 0.25);
   cursor: pointer;
+}
+
+/* ── List view date nav ── */
+.lessons-list-date-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+}
+
+.lessons-list-date-nav span {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--main-text);
+  letter-spacing: -0.2px;
+}
+
+.lessons-list-date-nav button {
+  width: 34px;
+  height: 34px;
+  margin: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--input-bg);
+  color: var(--main-text);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* ── List view empty state ── */
+.lessons-list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  color: var(--secondary-text);
+  font-size: 14px;
+}
+
+.lessons-list-empty-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 14px;
+  background: var(--primary-purple);
+  color: #fff;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ── Lesson history rows ── */
+.lesson-history-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.lesson-history-row:last-child {
+  border-bottom: none;
+}
+
+.lesson-history-date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 40px;
+  flex-shrink: 0;
+}
+
+.lesson-history-date strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--main-text);
+  line-height: 1.2;
+}
+
+.lesson-history-date span {
+  font-size: 11px;
+  color: var(--secondary-text);
+}
+
+.lesson-history-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lesson-history-info strong {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--main-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lesson-history-info span {
+  font-size: 12px;
+  color: var(--secondary-text);
 }
 
 /* ── View toggle ── */
@@ -1094,4 +1232,3 @@
     font-size: 13px;
   }
 }
-

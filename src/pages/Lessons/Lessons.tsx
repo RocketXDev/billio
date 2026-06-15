@@ -15,6 +15,7 @@ import {
   FaTrash,
   FaLock,
   FaRedoAlt,
+  FaHistory,
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
 import { useNavigate } from "react-router-dom";
@@ -95,6 +96,11 @@ function Lessons() {
   const [recurringEndDate, setRecurringEndDate] = useState("");
 
   const [viewingLesson, setViewingLesson] = useState<any>(null);
+
+  // History sheet
+  const [showLessonHistory, setShowLessonHistory] = useState(false);
+  const [historySearch, setHistorySearch] = useState("");
+  const [historyStatusFilter, setHistoryStatusFilter] = useState("all");
 
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -620,32 +626,6 @@ function Lessons() {
     setStatusUpdatingId(null);
   }
 
-  function getLessonStatus(lesson: any) {
-    if (!lesson.lesson_date || !lesson.start_time) {
-      return "upcoming";
-    }
-
-    const lessonStart = new Date(
-      `${lesson.lesson_date}T${lesson.start_time}`
-    );
-
-    const lessonEnd = new Date(lessonStart);
-    lessonEnd.setMinutes(
-      lessonEnd.getMinutes() + Number(lesson.duration_minutes || 0)
-    );
-
-    const now = new Date();
-
-    if (now < lessonStart) {
-      return "upcoming";
-    }
-
-    if (now >= lessonStart && now <= lessonEnd) {
-      return "current";
-    }
-
-    return "past";
-  }
   async function pullDefaultRate() {
     if (!coachId) return;
 
@@ -684,25 +664,6 @@ function Lessons() {
     setDurationMinutes(String(settings.defaultLessonDuration));
     setShowAddLesson(true);
   }
-
-  const sortedLessons = [...lessons].sort((a, b) => {
-    const dateA = new Date(`${a.lesson_date}T${a.start_time}`);
-    const dateB = new Date(`${b.lesson_date}T${b.start_time}`);
-
-    return dateB.getTime() - dateA.getTime();
-  });
-
-  const currentLessons = sortedLessons.filter(
-    (lesson) => getLessonStatus(lesson) === "current"
-  );
-
-  const upcomingLessons = sortedLessons.filter(
-    (lesson) => getLessonStatus(lesson) === "upcoming"
-  );
-
-  const pastLessons = sortedLessons.filter(
-    (lesson) => getLessonStatus(lesson) === "past"
-  );
 
   const studentMatches =
     studentName.trim().length > 0
@@ -1069,13 +1030,23 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
             <div className="lessons-header">
                 <div className="lessons-header-add">
                     <h1>Lessons</h1>
-                    <button
+                    <div className="lessons-header-actions">
+                      <button
                         type="button"
-                        className="lessons-add-btn"
-                        onClick={() => openAddLesson()}
-                    >
-                        <FaPlus />
-                    </button>
+                        className="lessons-log-btn"
+                        title="Lesson history"
+                        onClick={() => setShowLessonHistory(true)}
+                      >
+                        <FaHistory />
+                      </button>
+                      <button
+                          type="button"
+                          className="lessons-add-btn"
+                          onClick={() => openAddLesson()}
+                      >
+                          <FaPlus />
+                      </button>
+                    </div>
                 </div>
             </div>
             <div
@@ -1278,71 +1249,78 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                 </div>
               )}
               {viewMode === "list" && (
-                <div
-                  ref={listViewRef}
-                  className="lessons-list-view"
-                >
-                  {lessons.length === 0 ? (
-                    <p className="empty-lessons">No lessons yet. Tap + to add one.</p>
+                <div ref={listViewRef} className="lessons-list-view">
+                  {/* Day navigation header */}
+                  <div className="lessons-list-date-nav">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const d = new Date(`${selectedCalendarDate}T00:00:00`);
+                        d.setDate(d.getDate() - 1);
+                        setSelectedCalendarDate(getLocalDateString(d));
+                      }}
+                    >
+                      <FaChevronLeft />
+                    </button>
+                    <span>
+                      {new Date(`${selectedCalendarDate}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric" })}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const d = new Date(`${selectedCalendarDate}T00:00:00`);
+                        d.setDate(d.getDate() + 1);
+                        setSelectedCalendarDate(getLocalDateString(d));
+                      }}
+                    >
+                      <FaChevronRight />
+                    </button>
+                  </div>
+
+                  {selectedCalendarLessons.length === 0 ? (
+                    <div className="lessons-list-empty">
+                      <p>No lessons for this day.</p>
+                      <button
+                        type="button"
+                        className="lessons-list-empty-add"
+                        onClick={() => { setLessonDate(selectedCalendarDate); openAddLesson(); }}
+                      >
+                        <FaPlus /> Add lesson
+                      </button>
+                    </div>
                   ) : (
-                    <>
-                      {[
-                        { title: "Current Lessons", items: currentLessons },
-                        { title: "Upcoming Lessons", items: upcomingLessons },
-                        { title: "Past Lessons", items: pastLessons },
-                      ].map(
-                        (group) =>
-                          group.items.length > 0 && (
-                            <section className="lesson-group" key={group.title}>
-                              <div className="lesson-group-title">
-                                <h2>{group.title}</h2>
-                                <span>
-                                  {group.items.length}{" "}
-                                  {group.items.length === 1 ? "lesson" : "lessons"}
-                                </span>
-                              </div>
+                    <div className="lesson-group-card">
+                      {selectedCalendarLessons.map((lesson) => (
+                        <div key={lesson.id} className="lesson-page-row" style={{ cursor: "pointer" }} onClick={() => setViewingLesson(lesson)}>
+                          <div className="lesson-page-time">
+                            <strong>{formatTime(lesson.start_time)}</strong>
+                            <span>{lesson.duration_minutes} min</span>
+                          </div>
 
-                              <div className="lesson-group-card">
-                                {group.items.map((lesson) => (
-                                  <div key={lesson.id} className="lesson-page-row" style={{ cursor: "pointer" }} onClick={() => setViewingLesson(lesson)}>
-                                    <div className="lesson-page-time">
-                                      <strong>{formatTime(lesson.start_time)}</strong>
-                                      <span>{new Date(`${lesson.lesson_date}T00:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</span>
-                                    </div>
+                          <div className="lesson-page-info">
+                            <strong>{lesson.students?.student_name || "Student"}</strong>
+                            <span>${formatMoney(lesson.rate)}{lesson.lesson_type ? ` • ${lesson.lesson_type}` : ""}</span>
+                          </div>
 
-                                    <div className="lesson-page-info">
-                                      <strong>
-                                        {lesson.students?.student_name || "Student"}
-                                      </strong>
-                                      <span>
-                                        {lesson.duration_minutes} min •{" "}$
-                                        {formatMoney(lesson.rate)}
-                                      </span>
-                                    </div>
+                          <button
+                            type="button"
+                            className={`lesson-billing-pill ${lesson.billing_status || "unbilled"}`}
+                            onClick={(e) => { e.stopPropagation(); quickUpdateStatus(lesson); }}
+                            disabled={statusUpdatingId === lesson.id}
+                          >
+                            {statusUpdatingId === lesson.id ? "..." : (lesson.billing_status || "unbilled").charAt(0).toUpperCase() + (lesson.billing_status || "unbilled").slice(1)}
+                          </button>
 
-                                    <button
-                                      type="button"
-                                      className={`lesson-billing-pill ${lesson.billing_status || "unbilled"}`}
-                                      onClick={(e) => { e.stopPropagation(); quickUpdateStatus(lesson); }}
-                                      disabled={statusUpdatingId === lesson.id}
-                                    >
-                                      {statusUpdatingId === lesson.id ? "..." : (lesson.billing_status || "unbilled").charAt(0).toUpperCase() + (lesson.billing_status || "unbilled").slice(1)}
-                                    </button>
-
-                                    <button
-                                      type="button"
-                                      className="lesson-edit-btn"
-                                      onClick={(e) => { e.stopPropagation(); openEditLesson(lesson); }}
-                                    >
-                                      <FaEdit />
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            </section>
-                          )
-                      )}
-                    </>
+                          <button
+                            type="button"
+                            className="lesson-edit-btn"
+                            onClick={(e) => { e.stopPropagation(); openEditLesson(lesson); }}
+                          >
+                            <FaEdit />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               )}
@@ -1817,6 +1795,79 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
           </div>
         </div>
       )}
+
+      {showLessonHistory && (() => {
+        const allSorted = [...lessons].sort((a, b) =>
+          new Date(`${b.lesson_date}T${b.start_time || "00:00"}`).getTime() -
+          new Date(`${a.lesson_date}T${a.start_time || "00:00"}`).getTime()
+        );
+        const filtered = allSorted.filter((l) => {
+          const nameMatch = historySearch.trim()
+            ? (l.students?.student_name || "").toLowerCase().includes(historySearch.trim().toLowerCase())
+            : true;
+          const statusMatch = historyStatusFilter === "all" || l.billing_status === historyStatusFilter;
+          return nameMatch && statusMatch;
+        });
+        return (
+          <div className="invoice-log-overlay" onClick={() => setShowLessonHistory(false)}>
+            <div className="invoice-log-sheet" onClick={(e) => e.stopPropagation()}>
+              <div className="invoice-log-header">
+                <div>
+                  <h2>Lesson History</h2>
+                  <span>{filtered.length} of {lessons.length} lessons</span>
+                </div>
+                <button type="button" onClick={() => setShowLessonHistory(false)}>×</button>
+              </div>
+
+              <div className="invoice-log-filters">
+                <input
+                  type="text"
+                  className="invoice-log-search"
+                  placeholder="Search by student name..."
+                  value={historySearch}
+                  onChange={(e) => setHistorySearch(e.target.value)}
+                />
+                <div className="invoice-log-segment">
+                  {["all", "unbilled", "billed", "paid"].map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      className={historyStatusFilter === opt ? "active" : ""}
+                      onClick={() => setHistoryStatusFilter(opt)}
+                    >
+                      {opt === "all" ? "All" : opt.charAt(0).toUpperCase() + opt.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="invoice-log-list">
+                {filtered.length === 0 ? (
+                  <p style={{ textAlign: "center", color: "var(--secondary-text)", padding: "24px 0" }}>No lessons found.</p>
+                ) : filtered.map((lesson) => (
+                  <div
+                    key={lesson.id}
+                    className="lesson-history-row"
+                    onClick={() => { setShowLessonHistory(false); setViewingLesson(lesson); }}
+                  >
+                    <div className="lesson-history-date">
+                      <strong>{new Date(`${lesson.lesson_date}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</strong>
+                      <span>{new Date(`${lesson.lesson_date}T00:00:00`).getFullYear()}</span>
+                    </div>
+                    <div className="lesson-history-info">
+                      <strong>{lesson.students?.student_name || "Student"}</strong>
+                      <span>{formatTime(lesson.start_time)} · {lesson.duration_minutes} min · ${formatMoney(lesson.rate)}</span>
+                    </div>
+                    <span className={`lesson-billing-pill ${lesson.billing_status || "unbilled"}`}>
+                      {(lesson.billing_status || "unbilled").charAt(0).toUpperCase() + (lesson.billing_status || "unbilled").slice(1)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {showRateSheet && (
           <div

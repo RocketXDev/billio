@@ -891,6 +891,9 @@ function Invoices() {
         : inv
     ));
 
+    queryClient.invalidateQueries({ queryKey: ["invoices", coachId] });
+    queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
+
     setSendSuccessRecipient(
       data.recipientPhone || data.recipientEmail || "recipient"
     );

@@ -545,6 +545,10 @@ function Lessons() {
     setSeriesDays([]);
     setSeriesEndDate("");
     setSeriesFrequency("weekly");
+    setIsRecurring(false);
+    setRecurringFrequency("weekly");
+    setRecurringDays([]);
+    setRecurringEndDate("");
   }
 
   async function handleUpdateLesson(e: any) {
@@ -598,6 +602,78 @@ function Lessons() {
             recurring_series_id: seriesData.id,
             recurring_occurrence_date: date,
             notes: notes || null,
+          }));
+          await supabase.from("lessons").insert(lessonRows);
+        }
+
+        queryClient.invalidateQueries({ queryKey: ["recurring-lessons", coachId] });
+        queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
+        closeEditLesson();
+        return;
+      }
+
+      // ── Convert to recurring ──
+      if (isRecurring && !editingLesson.is_recurring) {
+        if (recurringDays.length === 0) { alert("Please select at least one day."); return; }
+        if (!recurringEndDate) { alert("Please select an end date."); return; }
+        if (recurringEndDate <= lessonDate) { alert("End date must be after the lesson date."); return; }
+
+        const seriesPayload = {
+          coach_id: coachId,
+          student_id: editingLesson.student_id,
+          title: lessonType || null,
+          start_time: startTime,
+          duration_minutes: Number(durationMinutes),
+          hourly_rate: hourlyRate ? Number(hourlyRate) : null,
+          frequency: recurringFrequency,
+          days_of_week: recurringDays,
+          start_date: lessonDate,
+          end_date: recurringEndDate,
+          notes: notes || null,
+          active: true,
+          updated_at: new Date().toISOString(),
+        };
+
+        const { data: newSeries, error: seriesError } = await supabase
+          .from("recurring_lessons").insert(seriesPayload).select().single();
+        if (seriesError || !newSeries) { console.log("Series create error:", seriesError); return; }
+
+        const calculatedRate = hourlyRate ? Number(hourlyRate) * (Number(durationMinutes) / 60) : 0;
+
+        // Update the current lesson to be part of the series
+        await supabase.from("lessons").update({
+          lesson_date: lessonDate,
+          start_time: startTime,
+          duration_minutes: Number(durationMinutes),
+          lesson_type: lessonType || null,
+          hourly_rate: hourlyRate ? Number(hourlyRate) : null,
+          rate: calculatedRate,
+          notes: notes || null,
+          billing_status: billingStatus,
+          is_recurring: true,
+          recurring_series_id: newSeries.id,
+          recurring_occurrence_date: lessonDate,
+        }).eq("id", editingLesson.id).eq("coach_id", coachId);
+
+        // Insert remaining occurrences (skip current lesson's date)
+        const occurrences = generateOccurrences(lessonDate, recurringEndDate, recurringFrequency, recurringDays)
+          .filter((d) => d !== lessonDate);
+
+        if (occurrences.length > 0) {
+          const lessonRows = occurrences.map((date) => ({
+            coach_id: coachId,
+            student_id: editingLesson.student_id,
+            lesson_date: date,
+            start_time: startTime,
+            duration_minutes: Number(durationMinutes),
+            lesson_type: lessonType || null,
+            hourly_rate: hourlyRate ? Number(hourlyRate) : null,
+            rate: calculatedRate,
+            billing_status: "unbilled",
+            notes: notes || null,
+            is_recurring: true,
+            recurring_series_id: newSeries.id,
+            recurring_occurrence_date: date,
           }));
           await supabase.from("lessons").insert(lessonRows);
         }
@@ -1808,6 +1884,79 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                 <textarea id="editNotes" value={notes} onChange={(e) => setNotes(e.target.value)} />
               </div>
 
+              {/* Make Recurring — only for non-recurring lessons */}
+              {!editingLesson.is_recurring && (
+                <>
+                  <div className="lesson-recurring-toggle-row">
+                    <div className="lesson-recurring-toggle-label">
+                      <FaRedoAlt className="lesson-recurring-icon" />
+                      <span>Make Recurring</span>
+                    </div>
+                    <button
+                      type="button"
+                      className={`lesson-recurring-toggle-btn ${isRecurring ? "active" : ""}`}
+                      onClick={handleToggleRecurring}
+                    >
+                      <span className="lesson-recurring-toggle-knob" />
+                    </button>
+                  </div>
+
+                  {isRecurring && (
+                    <>
+                      <div className="input-block">
+                        <label>Frequency</label>
+                        <div className="rl-chip-group">
+                          {(["weekly", "biweekly"] as const).map((f) => (
+                            <button
+                              key={f}
+                              type="button"
+                              className={`rl-chip${recurringFrequency === f ? " active" : ""}`}
+                              onClick={() => setRecurringFrequency(f)}
+                            >
+                              {f === "weekly" ? "Weekly" : "Every 2 weeks"}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="input-block">
+                        <label>Repeat on</label>
+                        <div className="rl-days-row">
+                          {RECURRING_DAYS.map((day, i) => (
+                            <button
+                              key={day}
+                              type="button"
+                              className={`rl-day-btn${recurringDays.includes(day) ? " active" : ""}`}
+                              onClick={() => toggleRecurringDay(day)}
+                            >
+                              {RECURRING_DAY_LABELS[i]}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="input-block">
+                        <label htmlFor="editRecurringEndDate">End Date</label>
+                        <input
+                          id="editRecurringEndDate"
+                          type="date"
+                          value={recurringEndDate}
+                          onChange={(e) => setRecurringEndDate(e.target.value)}
+                          min={lessonDate || undefined}
+                        />
+                      </div>
+
+                      {recurringPreviewCount > 0 && (
+                        <div className="rl-preview">
+                          <FaRedoAlt style={{ fontSize: 12, marginRight: 8, flexShrink: 0 }} />
+                          <span>This will create <strong>{recurringPreviewCount} lessons</strong> total.</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+
               {/* Series-specific fields */}
               {editSeriesMode && (
                 <>
@@ -1871,7 +2020,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
               )}
 
               <button type="submit" className="save-lesson-btn" disabled={isSaving}>
-                {isSaving ? "Saving..." : editSeriesMode ? "Update Series" : "Save Changes"}
+                {isSaving ? "Saving..." : editSeriesMode ? "Update Series" : isRecurring ? "Create Recurring Lesson" : "Save Changes"}
               </button>
 
               {editSeriesMode && seriesData ? (

@@ -1,5 +1,86 @@
 /* LESSONS PAGE */
 
+/* ── Edit lesson: recurring badge ── */
+.edit-lesson-recurring-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary-purple);
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 999px;
+  padding: 2px 9px;
+  margin-top: 4px;
+}
+
+/* ── Edit lesson: scope toggle (This lesson / Entire series) ── */
+.edit-series-scope {
+  position: relative;
+  display: flex;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 5px;
+  gap: 5px;
+  margin: 0 0 18px;
+  overflow: hidden;
+  height: 50px;
+}
+
+.edit-series-scope-slider {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  width: calc(50% - 5px);
+  height: calc(100% - 10px);
+  background: var(--primary-purple);
+  border-radius: 14px;
+  transition: transform 0.25s ease;
+  z-index: 1;
+}
+
+.edit-series-scope-slider.edit-series-scope-slider-right {
+  transform: translateX(100%);
+}
+
+.edit-series-scope-btn {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  height: 100%;
+  margin: 0;
+  border: none;
+  background: transparent;
+  color: var(--secondary-text);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 0.18s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edit-series-scope-btn.active {
+  color: #fff;
+}
+
+/* ── Edit lesson: series divider ── */
+.edit-series-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--primary-purple);
+  margin-top: 2px;
+  padding: 10px 0 6px;
+  border-top: 1px solid var(--border);
+}
+
 .lessons-page {
   width: 100%;
   min-height: 100vh;

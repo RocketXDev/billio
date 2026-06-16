@@ -89,11 +89,18 @@ function Lessons() {
   const hiddenRates = rateOptions.slice(3);
   const [showRateSheet, setShowRateSheet] = useState(false);
 
-  // Recurring lesson states
+  // Recurring lesson states (add form)
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurringFrequency, setRecurringFrequency] = useState<"weekly" | "biweekly">("weekly");
   const [recurringDays, setRecurringDays] = useState<string[]>([]);
   const [recurringEndDate, setRecurringEndDate] = useState("");
+
+  // Edit series states
+  const [editSeriesMode, setEditSeriesMode] = useState(false);
+  const [seriesData, setSeriesData] = useState<any>(null);
+  const [seriesFrequency, setSeriesFrequency] = useState<"weekly" | "biweekly">("weekly");
+  const [seriesDays, setSeriesDays] = useState<string[]>([]);
+  const [seriesEndDate, setSeriesEndDate] = useState("");
 
   const [viewingLesson, setViewingLesson] = useState<any>(null);
 
@@ -104,6 +111,8 @@ function Lessons() {
 
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeletingSeries, setIsDeletingSeries] = useState(false);
+  const [showDeleteSeriesModal, setShowDeleteSeriesModal] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
   const [lessonsLoading, setLessonsLoading] = useState(false);
 
@@ -487,25 +496,42 @@ function Lessons() {
     });
   }
 
-  function openEditLesson(lesson: any) {
-  setEditingLesson(lesson);
+  async function openEditLesson(lesson: any) {
+    setEditingLesson(lesson);
+    setStudentName(lesson.students?.student_name || "");
+    setLessonDate(lesson.lesson_date || "");
+    setStartTime(lesson.start_time?.slice(0, 5) || "");
+    setDurationMinutes(String(lesson.duration_minutes || "30"));
+    setLessonType(lesson.lesson_type || "");
+    setHourlyRate(String(lesson.hourly_rate || ""));
+    setNotes(lesson.notes || "");
+    setBillingStatus(lesson.billing_status || "unbilled");
+    setEditSeriesMode(false);
+    setSeriesData(null);
+    setSeriesDays([]);
+    setSeriesEndDate("");
+    setSeriesFrequency("weekly");
 
-  setStudentName(lesson.students?.student_name || "");
-  setLessonDate(lesson.lesson_date || "");
-  setStartTime(lesson.start_time?.slice(0, 5) || "");
-  setDurationMinutes(String(lesson.duration_minutes || "30"));
-  setLessonType(lesson.lesson_type || "");
-  setHourlyRate(String(lesson.hourly_rate || ""));
-  setNotes(lesson.notes || "");
-  setBillingStatus(lesson.billing_status || "unbilled");
+    if (lesson.is_recurring && lesson.recurring_series_id) {
+      const { data: series } = await supabase
+        .from("recurring_lessons")
+        .select("*")
+        .eq("id", lesson.recurring_series_id)
+        .single();
+      if (series) {
+        setSeriesData(series);
+        setSeriesFrequency(series.frequency || "weekly");
+        setSeriesDays(series.days_of_week || []);
+        setSeriesEndDate(series.end_date || "");
+      }
+    }
 
-  setShowEditLesson(true);
+    setShowEditLesson(true);
   }
 
   function closeEditLesson() {
     setShowEditLesson(false);
     setEditingLesson(null);
-
     setStudentName("");
     setLessonDate("");
     setStartTime("");
@@ -514,20 +540,76 @@ function Lessons() {
     setHourlyRate("");
     setNotes("");
     setBillingStatus("unbilled");
+    setEditSeriesMode(false);
+    setSeriesData(null);
+    setSeriesDays([]);
+    setSeriesEndDate("");
+    setSeriesFrequency("weekly");
   }
 
   async function handleUpdateLesson(e: any) {
     e.preventDefault();
-
-    if (isSaving) return; 
+    if (isSaving) return;
     setIsSaving(true);
 
     try {
-
       if (!editingLesson || !coachId) return;
 
-      const calculatedRate =
-        Number(hourlyRate) * (Number(durationMinutes) / 60);
+      // ── Series edit mode ──
+      if (editSeriesMode && seriesData) {
+        if (seriesDays.length === 0) { alert("Please select at least one day."); return; }
+        if (!seriesEndDate) { alert("Please select an end date."); return; }
+
+        const today = new Date().toLocaleDateString("en-CA");
+        const seriesPayload = {
+          start_time: startTime,
+          duration_minutes: Number(durationMinutes),
+          hourly_rate: hourlyRate ? Number(hourlyRate) : null,
+          frequency: seriesFrequency,
+          days_of_week: seriesDays,
+          end_date: seriesEndDate,
+          notes: notes || null,
+          updated_at: new Date().toISOString(),
+        };
+
+        await supabase.from("recurring_lessons").update(seriesPayload).eq("id", seriesData.id);
+
+        // Delete future unbilled occurrences and regenerate
+        await supabase.from("lessons")
+          .delete()
+          .eq("recurring_series_id", seriesData.id)
+          .eq("billing_status", "unbilled")
+          .gte("lesson_date", today);
+
+        const occurrences = generateOccurrences(today, seriesEndDate, seriesFrequency, seriesDays);
+        if (occurrences.length > 0) {
+          const rate = hourlyRate ? parseFloat((Number(hourlyRate) * Number(durationMinutes) / 60).toFixed(2)) : null;
+          const lessonRows = occurrences.map((date) => ({
+            coach_id: coachId,
+            student_id: editingLesson.student_id,
+            lesson_date: date,
+            start_time: startTime,
+            duration_minutes: Number(durationMinutes),
+            lesson_type: lessonType || null,
+            hourly_rate: hourlyRate ? Number(hourlyRate) : null,
+            rate,
+            billing_status: "unbilled",
+            is_recurring: true,
+            recurring_series_id: seriesData.id,
+            recurring_occurrence_date: date,
+            notes: notes || null,
+          }));
+          await supabase.from("lessons").insert(lessonRows);
+        }
+
+        queryClient.invalidateQueries({ queryKey: ["recurring-lessons", coachId] });
+        queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
+        closeEditLesson();
+        return;
+      }
+
+      // ── Single lesson edit mode ──
+      const calculatedRate = Number(hourlyRate) * (Number(durationMinutes) / 60);
 
       const { data, error } = await supabase
         .from("lessons")
@@ -543,12 +625,7 @@ function Lessons() {
         })
         .eq("id", editingLesson.id)
         .eq("coach_id", coachId)
-        .select(`
-          *,
-          students (
-            student_name
-          )
-        `)
+        .select("*, students(student_name)")
         .single();
 
       if (error) {
@@ -556,20 +633,14 @@ function Lessons() {
         return;
       }
 
-      setLessons((prev) =>
-        prev.map((lesson) => (lesson.id === editingLesson.id ? data : lesson))
-      );
+      setLessons((prev) => prev.map((lesson) => (lesson.id === editingLesson.id ? data : lesson)));
       queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
-
       await syncInvoiceStatusFromLesson(editingLesson.id);
-
       closeEditLesson();
 
     } finally {
       setIsSaving(false);
     }
-
-
   }
 
   async function handleDeleteLesson(lessonId: string) {
@@ -600,6 +671,25 @@ function Lessons() {
       setIsDeleting(false)
     }
 
+  }
+
+  async function handleDeleteSeries() {
+    if (isDeletingSeries || !seriesData) return;
+    setIsDeletingSeries(true);
+    try {
+      await supabase.from("recurring_lessons").update({ active: false }).eq("id", seriesData.id);
+      await supabase.from("lessons")
+        .delete()
+        .eq("recurring_series_id", seriesData.id)
+        .eq("billing_status", "unbilled")
+        .gte("lesson_date", new Date().toLocaleDateString("en-CA"));
+      queryClient.invalidateQueries({ queryKey: ["recurring-lessons", coachId] });
+      queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
+      setShowDeleteSeriesModal(false);
+      closeEditLesson();
+    } finally {
+      setIsDeletingSeries(false);
+    }
   }
 
   async function quickUpdateStatus(lesson: any) {
@@ -1584,41 +1674,63 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         <div className="add-lesson-overlay" onClick={closeEditLesson}>
           <div className="add-lesson-sheet" onClick={(e) => e.stopPropagation()}>
             <div className="add-lesson-header">
-              <h2>Edit Lesson</h2>
-              <button type="button" onClick={closeEditLesson}>
-                ×
-              </button>
+              <div>
+                <h2>Edit Lesson</h2>
+                {editingLesson.is_recurring && (
+                  <span className="edit-lesson-recurring-badge">
+                    <FaRedoAlt /> Recurring
+                  </span>
+                )}
+              </div>
+              <button type="button" onClick={closeEditLesson}>×</button>
             </div>
+
+            {/* Scope toggle for recurring lessons */}
+            {editingLesson.is_recurring && seriesData && (
+              <div className="edit-series-scope">
+                <div className={`edit-series-scope-slider${editSeriesMode ? " edit-series-scope-slider-right" : ""}`} />
+                <button
+                  type="button"
+                  className={`edit-series-scope-btn${!editSeriesMode ? " active" : ""}`}
+                  onClick={() => setEditSeriesMode(false)}
+                >
+                  This lesson only
+                </button>
+                <button
+                  type="button"
+                  className={`edit-series-scope-btn${editSeriesMode ? " active" : ""}`}
+                  onClick={() => setEditSeriesMode(true)}
+                >
+                  Entire series
+                </button>
+              </div>
+            )}
 
             <form autoComplete="off" onSubmit={handleUpdateLesson} className="add-lesson-form">
               <div className="input-block">
                 <label htmlFor="editStudentName">Student Name</label>
-                <input
-                  id="editStudentName"
-                  type="text"
-                  value={studentName}
-                  disabled
-                />
+                <input id="editStudentName" type="text" value={studentName} disabled />
               </div>
 
-              <div className="input-block">
-                <label htmlFor="editLessonDate">Lesson Date</label>
-                <input
-                  id="editLessonDate"
-                  type="date"
-                  placeholder="Lesson Date"
-                  value={lessonDate}
-                  onChange={(e) => setLessonDate(e.target.value)}
-                  required
-                />
-              </div>
+              {/* Date only shown for single-lesson edits */}
+              {!editSeriesMode && (
+                <div className="input-block">
+                  <label htmlFor="editLessonDate">Lesson Date</label>
+                  <input
+                    id="editLessonDate"
+                    type="date"
+                    value={lessonDate}
+                    onChange={(e) => setLessonDate(e.target.value)}
+                    required
+                  />
+                </div>
+              )}
 
               <div className="input-block">
                 <label htmlFor="editStartTime">Start Time</label>
                 <input
                   id="editStartTime"
                   type="time"
-                  placeholder="Lesson Time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
                   required
@@ -1626,7 +1738,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
               </div>
 
               <div className="input-block">
-                <label htmlFor="editDurationMinutes">Duration</label>
+                <label htmlFor="editDurationMinutes">Duration (min)</label>
                 <input
                   id="editDurationMinutes"
                   type="text"
@@ -1638,18 +1750,17 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                 />
               </div>
 
-              <div className="input-block">
-                <label>Billing Status</label>
-
-                <select
-                  value={billingStatus}
-                  onChange={(e) => setBillingStatus(e.target.value)}
-                >
-                  <option value="unbilled">Unbilled</option>
-                  <option value="billed">Billed</option>
-                  <option value="paid">Paid</option>
-                </select>
-              </div>
+              {/* Billing status only for single-lesson edits */}
+              {!editSeriesMode && (
+                <div className="input-block">
+                  <label>Billing Status</label>
+                  <select value={billingStatus} onChange={(e) => setBillingStatus(e.target.value)}>
+                    <option value="unbilled">Unbilled</option>
+                    <option value="billed">Billed</option>
+                    <option value="paid">Paid</option>
+                  </select>
+                </div>
+              )}
 
               <div className="input-block">
                 <label htmlFor="editLessonType">Lesson Type</label>
@@ -1669,67 +1780,145 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                       <button
                         key={`${rate.name}-${index}`}
                         type="button"
-                        className={`rate-option-chip ${
-                          Number(hourlyRate) === Number(rate.amount) ? "active" : ""
-                        }`}
+                        className={`rate-option-chip ${Number(hourlyRate) === Number(rate.amount) ? "active" : ""}`}
                         onClick={() => setHourlyRate(String(rate.amount))}
                       >
                         {rate.name} ${Number(rate.amount).toFixed(0)}
                       </button>
                     ))}
-
                     {hiddenRates.length > 0 && (
-                      <button
-                        type="button"
-                        className="rate-option-chip more-rate-chip"
-                        onClick={() => setShowRateSheet(true)}
-                      >
+                      <button type="button" className="rate-option-chip more-rate-chip" onClick={() => setShowRateSheet(true)}>
                         More +{hiddenRates.length}
                       </button>
                     )}
                   </div>
                 )}
                 <input
-                  id="hourlyRate"
+                  id="editHourlyRate"
                   type="text"
                   inputMode="decimal"
                   value={hourlyRate ? `$${hourlyRate}` : ""}
-                  onChange={(e) =>
-                    setHourlyRate(
-                      e.target.value.replace(/[^0-9.]/g, "")
-                    )
-                  }
+                  onChange={(e) => setHourlyRate(e.target.value.replace(/[^0-9.]/g, ""))}
                   placeholder="$100"
                 />
               </div>
 
               <div className="input-block">
                 <label htmlFor="editNotes">Notes</label>
-                <textarea
-                  id="editNotes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                />
+                <textarea id="editNotes" value={notes} onChange={(e) => setNotes(e.target.value)} />
               </div>
 
+              {/* Series-specific fields */}
+              {editSeriesMode && (
+                <>
+                  <div className="edit-series-divider">
+                    <FaRedoAlt />
+                    <span>Series Settings</span>
+                  </div>
+
+                  <div className="input-block">
+                    <label>Frequency</label>
+                    <div className="rl-chip-group">
+                      {(["weekly", "biweekly"] as const).map((f) => (
+                        <button
+                          key={f}
+                          type="button"
+                          className={`rl-chip${seriesFrequency === f ? " active" : ""}`}
+                          onClick={() => setSeriesFrequency(f)}
+                        >
+                          {f === "weekly" ? "Weekly" : "Every 2 weeks"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="input-block">
+                    <label>Repeat on</label>
+                    <div className="rl-days-row">
+                      {RECURRING_DAYS.map((day, i) => (
+                        <button
+                          key={day}
+                          type="button"
+                          className={`rl-day-btn${seriesDays.includes(day) ? " active" : ""}`}
+                          onClick={() => setSeriesDays((prev) =>
+                            prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+                          )}
+                        >
+                          {RECURRING_DAY_LABELS[i]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="input-block">
+                    <label htmlFor="editSeriesEndDate">Series End Date</label>
+                    <input
+                      id="editSeriesEndDate"
+                      type="date"
+                      value={seriesEndDate}
+                      onChange={(e) => setSeriesEndDate(e.target.value)}
+                      min={new Date().toLocaleDateString("en-CA")}
+                    />
+                  </div>
+
+                  {seriesDays.length > 0 && seriesEndDate && (
+                    <div className="rl-preview">
+                      <FaRedoAlt style={{ fontSize: 12, marginRight: 8, flexShrink: 0 }} />
+                      <span>Will regenerate <strong>{generateOccurrences(new Date().toLocaleDateString("en-CA"), seriesEndDate, seriesFrequency, seriesDays).length} future lessons</strong> (unbilled only).</span>
+                    </div>
+                  )}
+                </>
+              )}
+
               <button type="submit" className="save-lesson-btn" disabled={isSaving}>
-                {isSaving ? "Saving..." : "Save Changes"}
+                {isSaving ? "Saving..." : editSeriesMode ? "Update Series" : "Save Changes"}
               </button>
 
-              <button
-                type="button"
-                className="delete-lesson-btn"
-                onClick={() => handleDeleteLesson(editingLesson.id)}
-                disabled={isDeleting}
+              {editSeriesMode && seriesData ? (
+                <button
+                  type="button"
+                  className="delete-lesson-btn"
+                  onClick={() => setShowDeleteSeriesModal(true)}
                 >
-                
-                <FaTrash />
-                {isDeleting ? "Deleting..." : "Delete Lesson"}
-              </button>
+                  <FaTrash />
+                  Delete Series
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="delete-lesson-btn"
+                  onClick={() => handleDeleteLesson(editingLesson.id)}
+                  disabled={isDeleting}
+                >
+                  <FaTrash />
+                  {isDeleting ? "Deleting..." : "Delete Lesson"}
+                </button>
+              )}
             </form>
           </div>
         </div>
       )}
+      {showDeleteSeriesModal && (
+        <div className="billio-confirm-overlay" onClick={() => setShowDeleteSeriesModal(false)}>
+          <div className="billio-confirm-card" onClick={(e) => e.stopPropagation()}>
+            <div className="billio-confirm-icon" style={{ background: "#fee2e2", color: "#dc2626" }}>
+              <FaTrash />
+            </div>
+            <h2>Delete Series?</h2>
+            <p>
+              This will deactivate the series and delete all <strong>upcoming unbilled</strong> occurrences.
+              Past, billed, and paid lessons are not affected.
+            </p>
+            <div className="billio-confirm-actions">
+              <button type="button" className="billio-cancel-btn" onClick={() => setShowDeleteSeriesModal(false)}>Cancel</button>
+              <button type="button" className="billio-danger-btn" disabled={isDeletingSeries} onClick={handleDeleteSeries}>
+                {isDeletingSeries ? "Deleting..." : "Delete Series"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {viewingLesson && (
         <div className="add-lesson-overlay" onClick={() => setViewingLesson(null)}>
           <div className="add-lesson-sheet" onClick={(e) => e.stopPropagation()}>

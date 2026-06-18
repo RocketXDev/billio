@@ -14,92 +14,94 @@ import "./LandingPage.css";
 export default function LandingPage() {
   return (
     <main className="landing-page">
-      <nav className="landing-nav-bar">
-        <div className="landing-nav-inner">
-          <div className="landing-logo">
-            <img src="./logo.png" alt="Billio" />
+      <div className="landing-dark-band">
+        <nav className="landing-nav-bar">
+          <div className="landing-nav-inner">
+            <div className="landing-logo">
+              <img src="./logo-white.png" alt="Billio" />
+            </div>
+            <div className="landing-nav-buttons">
+              <Link to="/login" className="landing-login-btn">Login</Link>
+              <Link to="/signup" className="landing-register-btn">Get Started</Link>
+            </div>
           </div>
-          <div className="landing-nav-buttons">
-            <Link to="/login" className="landing-login-btn">Login</Link>
-            <Link to="/signup" className="landing-register-btn">Get Started</Link>
+        </nav>
+
+        <section className="landing-hero">
+          <div className="landing-hero-left">
+            <p className="landing-badge">Built for private coaches, tutors & instructors</p>
+
+            <h1>Track lessons.<br />Automate Invoices.<br /><span className="landing-hero-accent">Get Paid Faster.</span></h1>
+
+            <p className="landing-subtitle">
+              Billio keeps your students, lessons, rates, and invoices in one simple
+              app — so you spend less time sorting payments and more time coaching.
+            </p>
+
+            <Link to="/signup" className="landing-main-btn">
+              Get Started Free <FaArrowRight className="landing-arrow" />
+            </Link>
+
+            <div className="landing-mini-checks">
+              <span><FaCheckCircle /> Free plan available</span>
+              <span><FaCheckCircle /> 30-day Pro trial</span>
+              <span><FaCheckCircle /> Send invoices in seconds</span>
+              <span><FaCheckCircle /> Trusted by coaches and instructors</span>
+            </div>
           </div>
-        </div>
-      </nav>
 
-      <section className="landing-hero">
-        <div className="landing-hero-left">
-          <p className="landing-badge">Built for private coaches, tutors & instructors</p>
-
-          <h1>Track lessons.<br />Automate Invoices.<br />Bill Faster.</h1>
-
-          <p className="landing-subtitle">
-            Billio keeps your students, lessons, rates, and invoices in one simple
-            app — so you spend less time sorting payments and more time coaching.
-          </p>
-
-          <Link to="/signup" className="landing-main-btn">
-            Get Started Free <FaArrowRight className="landing-arrow" />
-          </Link>
-
-          <div className="landing-mini-checks">
-            <span><FaCheckCircle /> Free plan available</span>
-            <span><FaCheckCircle /> 30-day Pro trial</span>
-            <span><FaCheckCircle /> Send invoices in seconds</span>
-            <span><FaCheckCircle /> Trusted by coaches and instructors</span>
-          </div>
-        </div>
-
-        <div className="landing-hero-right">
-          <div className="landing-preview-card">
-            <div className="preview-top">
-              <div>
-                <p>Today's Schedule</p>
-                <h3>3 Lessons</h3>
+          <div className="landing-hero-right">
+            <div className="landing-preview-card">
+              <div className="preview-top">
+                <div>
+                  <p>Today's Schedule</p>
+                  <h3>3 Lessons</h3>
+                </div>
+                <button><FaPlus /></button>
               </div>
-              <button><FaPlus /></button>
+
+              <div className="preview-lesson">
+                <div>
+                  <strong>4:30 PM</strong>
+                  <span>Sarah Johnson</span>
+                </div>
+                <p>Unbilled</p>
+              </div>
+
+              <div className="preview-lesson">
+                <div>
+                  <strong>6:00 PM</strong>
+                  <span>Alex Miller</span>
+                </div>
+                <p className="paid">Paid</p>
+              </div>
+
+              <div className="preview-lesson">
+                <div>
+                  <strong>7:30 PM</strong>
+                  <span>Emma Davis</span>
+                </div>
+                <p>Unbilled</p>
+              </div>
             </div>
 
-            <div className="preview-lesson">
-              <div>
-                <strong>4:30 PM</strong>
-                <span>Sarah Johnson</span>
+            <div className="landing-stat-row">
+              <div className="landing-stat-card">
+                <strong>$2,400</strong>
+                <span>Billed this month</span>
               </div>
-              <p>Unbilled</p>
-            </div>
-
-            <div className="preview-lesson">
-              <div>
-                <strong>6:00 PM</strong>
-                <span>Alex Miller</span>
+              <div className="landing-stat-card">
+                <strong>12</strong>
+                <span>Active students</span>
               </div>
-              <p className="paid">Paid</p>
-            </div>
-
-            <div className="preview-lesson">
-              <div>
-                <strong>7:30 PM</strong>
-                <span>Emma Davis</span>
+              <div className="landing-stat-card">
+                <strong>38</strong>
+                <span>Lessons logged</span>
               </div>
-              <p>Unbilled</p>
             </div>
           </div>
-
-          <div className="landing-stat-row">
-            <div className="landing-stat-card">
-              <strong>$2,400</strong>
-              <span>Billed this month</span>
-            </div>
-            <div className="landing-stat-card">
-              <strong>12</strong>
-              <span>Active students</span>
-            </div>
-            <div className="landing-stat-card">
-              <strong>38</strong>
-              <span>Lessons logged</span>
-            </div>
-          </div>
-        </div>
-      </section>
+        </section>
+      </div>
 
       <section className="landing-section">
         <p className="section-label">Why Billio?</p>

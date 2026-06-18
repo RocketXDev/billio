@@ -1,7 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 
 :root {
-  --main-bg: #ebebeb;
+  --main-bg: #f6f7fb;
   --card-bg: #FFFFFF;
   --main-text: #0F172A;
   --secondary-text: #64748B;
@@ -9,16 +9,27 @@
   --secondary-purple: #4338FF;
   --indigo: #312E81;
   --shadow: #C7D2FE;
-  --border: #E5E7EB;
+  --border: #E2E8F0;
   --input-bg: #f2f3f4;
   --error: #EF4444;
+  --accent-grad: linear-gradient(135deg,#4338FF,#3b33d9);
+  --accent-tint: #eef2ff;
+  --ink-deep: #1e1b4b;
+  --ink: #312E81;
+  --shadow-md: 0 4px 6px rgba(16,24,40,.04), 0 12px 24px rgba(16,24,40,.10);
+  --shadow-lg: 0 12px 24px rgba(16,24,40,.08), 0 28px 56px rgba(16,24,40,.12);
+  --glow: 0 24px 60px rgba(59,51,217,.45);
 }
 
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Inter', sans-serif;
+}
+
+h1, h2, h3, .section-label {
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 *, *::before, *::after {

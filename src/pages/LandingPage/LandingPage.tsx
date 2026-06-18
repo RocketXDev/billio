@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
   FaCalendarAlt,
@@ -12,6 +13,22 @@ import {
 import "./LandingPage.css";
 
 export default function LandingPage() {
+  const accentRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const el = accentRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      if (window.scrollY > 60) {
+        el.classList.add("sparked");
+      } else {
+        el.classList.remove("sparked");
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
     <main className="landing-page">
       <div className="landing-dark-band">
@@ -31,7 +48,7 @@ export default function LandingPage() {
           <div className="landing-hero-left">
             <p className="landing-badge">Built for private coaches, tutors & instructors</p>
 
-            <h1>Track lessons.<br />Automate Invoices.<br /><span className="landing-hero-accent">Get Paid Faster.</span></h1>
+            <h1>Track lessons.<br />Automate Invoices.<br /><span ref={accentRef} className="landing-hero-accent">Get Paid Faster.</span></h1>
 
             <p className="landing-subtitle">
               Billio keeps your students, lessons, rates, and invoices in one simple

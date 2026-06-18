@@ -109,25 +109,25 @@ export default function LandingPage() {
 
         <div className="landing-features">
           <div className="landing-feature-card">
-            <FaCalendarAlt />
+            <span className="feature-icon-chip"><FaCalendarAlt /></span>
             <h3>Plan your day</h3>
             <p>See today's lessons, upcoming sessions, and completed work at a glance.</p>
           </div>
 
           <div className="landing-feature-card">
-            <FaUsers />
+            <span className="feature-icon-chip"><FaUsers /></span>
             <h3>Keep student details handy</h3>
             <p>Save contact info, parent details, lesson notes, and preferences in one place.</p>
           </div>
 
           <div className="landing-feature-card">
-            <FaFileInvoiceDollar />
+            <span className="feature-icon-chip"><FaFileInvoiceDollar /></span>
             <h3>Never forget to bill</h3>
             <p>Track unbilled, billed, paid, and overdue lessons without a spreadsheet.</p>
           </div>
 
           <div className="landing-feature-card">
-            <FaMobileAlt />
+            <span className="feature-icon-chip"><FaMobileAlt /></span>
             <h3>Built for between lessons</h3>
             <p>Add a lesson, update a student, or check billing status quickly from your phone.</p>
           </div>
@@ -214,8 +214,6 @@ export default function LandingPage() {
           Create Your Account <FaArrowRight className="landing-arrow" />
         </Link>
       </section>
-
-      <div className="landing-divider" />
 
       <footer className="landing-footer">
         <img src="./logo.png" alt="Billio" className="landing-footer-logo" />

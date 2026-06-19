@@ -46,8 +46,8 @@ export default function More() {
       title: "Coaching Tools",
       text: "This section is for extra features that help you manage your coaching work faster.",
       bullets: [
-        "Lesson Timer helps you track lesson time live.",
-        "Recurring Lessons and advanced summaries are available here when enabled for your plan.",
+        "Recurring Lessons helps you schedule repeating lessons automatically.",
+        "Lesson Timer and advanced summaries are available here when enabled for your plan.",
       ],
       target: "coaching",
     },
@@ -124,10 +124,10 @@ export default function More() {
       desc: "Weekly summary, income totals, and lesson stats at a glance.",
     },
     {
-      slug: "recurring-lessons",
-      icon: <FaRedoAlt />,
-      title: "Recurring Lessons",
-      desc: "Schedule repeating lessons for students automatically.",
+      slug: "timer",
+      icon: <FaClock />,
+      title: "Lesson Timer",
+      desc: "Start and stop a live timer while teaching a lesson.",
     },
     {
       slug: "pdf-invoice",
@@ -156,12 +156,12 @@ export default function More() {
         <h2>Coaching Tools</h2>
         <div className="more-grid">
 
-          {/* Lesson Timer — free */}
-          <Link to="/timer" className="more-card">
-            <div className="more-icon"><FaClock /></div>
+          {/* Recurring Lessons — free */}
+          <Link to="/recurring-lessons" className="more-card">
+            <div className="more-icon"><FaRedoAlt /></div>
             <div>
-              <h3>Lesson Timer</h3>
-              <p>Start and stop a live timer while teaching a lesson.</p>
+              <h3>Recurring Lessons</h3>
+              <p>Schedule repeating lessons for students automatically.</p>
             </div>
             <FaChevronRight className="more-arrow" />
           </Link>

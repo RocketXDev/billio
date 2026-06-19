@@ -23,12 +23,14 @@ import {
 import { supabase } from "../../lib/supabaseClient";
 import { usePlan } from "../../hooks/usePlan";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
+import { useSettings } from "../../hooks/useSettings";
 import "./Invoices.css"
 
 function Invoices() {
   const navigate = useNavigate();
   const { isPro } = usePlan();
   const { coachId, identityLoading } = useCoachIdentity();
+  const { settings } = useSettings();
   const queryClient = useQueryClient();
 
   const [selectedFilter, setSelectedFilter] = useState("all");
@@ -231,6 +233,23 @@ function Invoices() {
       day: "numeric",
       year: "numeric",
     });
+  }
+
+  function formatTime(time?: string | null) {
+    if (!time) return "";
+
+    const [hoursStr, minutesStr] = time.split(":");
+    const hours = Number(hoursStr);
+    const minutes = Number(minutesStr);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return time.slice(0, 5);
+
+    if (settings.timeFormat === "24h") {
+      return `${hoursStr.padStart(2, "0")}:${minutesStr.padStart(2, "0")}`;
+    }
+
+    const period = hours >= 12 ? "PM" : "AM";
+    const displayHours = hours % 12 === 0 ? 12 : hours % 12;
+    return `${displayHours}:${minutesStr.padStart(2, "0")} ${period}`;
   }
 
   const filteredInvoices =
@@ -1542,7 +1561,7 @@ function Invoices() {
                                   </strong>
 
                                   <span>
-                                    {lesson.start_time?.slice(0, 5)} •{" "}
+                                    {formatTime(lesson.start_time)} •{" "}
                                     <b className={`billing-status ${billingStatus}`}>
                                       {billingStatus.charAt(0).toUpperCase() + billingStatus.slice(1)}
                                     </b>
@@ -1656,7 +1675,7 @@ function Invoices() {
                               </strong>
 
                               <span>
-                                {lesson.start_time?.slice(0, 5)} •{" "}
+                                {formatTime(lesson.start_time)} •{" "}
                                 <b className={`billing-status ${billingStatus}`}>
                                   {billingStatus.charAt(0).toUpperCase() + billingStatus.slice(1)}
                                 </b>
@@ -1816,7 +1835,7 @@ function Invoices() {
                     <div key={lesson.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", borderBottom: "1px solid var(--border)" }}>
                       <div>
                         <strong style={{ fontSize: 14, display: "block" }}>{formatDate(lesson.lesson_date)}</strong>
-                        <span style={{ fontSize: 13, color: "var(--secondary-text)" }}>{lesson.start_time?.slice(0, 5)} • {lesson.duration_minutes} min</span>
+                        <span style={{ fontSize: 13, color: "var(--secondary-text)" }}>{formatTime(lesson.start_time)} • {lesson.duration_minutes} min</span>
                       </div>
                       <strong style={{ fontSize: 14, whiteSpace: "nowrap" }}>{formatMoney(lesson.rate)}</strong>
                     </div>

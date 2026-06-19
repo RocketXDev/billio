@@ -9,14 +9,20 @@ import {
   FaArrowLeft,
   FaInfinity,
   FaMobileAlt,
-  FaUserFriends,
+  FaCalendarCheck,
   FaBolt,
+  FaPaperPlane,
+  FaSms,
+  FaCalendarWeek,
   FaCalendarAlt,
+  FaClock,
+  FaChartLine,
+  FaFilePdf,
+  FaPlus,
   FaHome,
   FaUsers,
   FaFileInvoiceDollar,
   FaEllipsisH,
-  FaTimes,
 } from "react-icons/fa";
 import "./Upgrade.css"
 
@@ -26,18 +32,24 @@ const TRIAL_DAYS = 30;
 
 const PRO_FEATURES = [
   { icon: <FaInfinity />, text: "Unlimited active students" },
-  { icon: <FaCalendarAlt />, text: "Unlimited calendar navigation" },
-  { icon: <FaMobileAlt />, text: "SMS & text invoice delivery" },
+  { icon: <FaCalendarCheck />, text: "Full lesson scheduling" },
   { icon: <FaBolt />, text: "Automated invoice generation" },
-  { icon: <FaCheck />, text: "Priority support" },
+  { icon: <FaPaperPlane />, text: "Automated invoice sending and review" },
+  { icon: <FaMobileAlt />, text: "Email & SMS invoice sending" },
+  { icon: <FaSms />, text: "Text message reminders" },
+  { icon: <FaCalendarWeek />, text: "Weekly billing workflow" },
+  { icon: <FaCalendarAlt />, text: "Unlimited calendar navigation" },
+  { icon: <FaClock />, text: "Live Timer" },
+  { icon: <FaChartLine />, text: "Earnings dashboard" },
+  { icon: <FaFilePdf />, text: "Custom PDF invoice generator" },
 ];
 
 const FREE_FEATURES = [
   "Up to 5 active students",
-  "Current month calendar only",
-  "Email invoices only",
-  "Basic student profiles",
-  "Manual invoice creation",
+  "Manual lesson tracking",
+  "Manual invoice generation",
+  "Email invoice sending",
+  "Current month day-to-day calendar",
 ];
 
 function Upgrade() {
@@ -199,7 +211,7 @@ function Upgrade() {
               <ul className="up-feature-list">
                 {FREE_FEATURES.map((f) => (
                   <li key={f}>
-                    <span className="up-feat-icon up-feat-no">+</span>
+                    <span className="up-feat-icon up-feat-no"><FaPlus /></span>
                     {f}
                   </li>
                 ))}

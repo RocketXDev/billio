@@ -192,7 +192,7 @@ export default function LandingPage() {
               <li>Manual invoice generation</li>
               <li>Email invoice sending</li>
               <li>Current month day-to-day calendar</li>
-              <li>Live lesson timer</li>
+              <li>Recurring lesson scheduling</li>
             </ul>
             <Link to="/signup" className="pricing-btn secondary-pricing">Start Free</Link>
           </div>
@@ -213,7 +213,7 @@ export default function LandingPage() {
               <li>Text message reminders</li>
               <li>Weekly billing workflow</li>
               <li>Unlimited calendar navigation</li>
-              <li>Recurring lesson scheduling</li>
+              <li>Live lesson timer</li>
               <li>Earnings dashboard</li>
               <li>Custom PDF invoice generator</li>
             </ul>

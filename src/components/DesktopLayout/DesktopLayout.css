@@ -681,7 +681,8 @@
   .rate-sheet-overlay,
   .avatar-crop-overlay,
   .invoice-success-overlay,
-  .invoice-sending-overlay {
+  .invoice-sending-overlay,
+  .invoice-log-overlay {
     align-items: center;
   }
 
@@ -708,6 +709,13 @@
     border-radius: 28px;
     max-height: 86vh;
     max-width: 500px;
+  }
+
+  .invoice-log-sheet {
+    height: auto;
+    border-radius: 28px;
+    max-height: 88vh;
+    max-width: 560px;
   }
 
   .rate-sheet {

@@ -2171,10 +2171,20 @@ function Invoices() {
                       value={invoiceTimezone}
                       onChange={(e) => setInvoiceTimezone(e.target.value)}
                     >
-                      <option value="America/Denver">Mountain Time</option>
-                      <option value="America/Los_Angeles">Pacific Time</option>
-                      <option value="America/Chicago">Central Time</option>
-                      <option value="America/New_York">Eastern Time</option>
+                      <optgroup label="Americas">
+                        <option value="America/Denver">Mountain Time</option>
+                        <option value="America/Los_Angeles">Pacific Time</option>
+                        <option value="America/Chicago">Central Time</option>
+                        <option value="America/New_York">Eastern Time</option>
+                      </optgroup>
+                      <optgroup label="Europe">
+                        <option value="Europe/London">London (GMT/BST)</option>
+                        <option value="Europe/Lisbon">Lisbon (WET/WEST)</option>
+                        <option value="Europe/Paris">Paris, Berlin, Madrid, Rome (CET/CEST)</option>
+                        <option value="Europe/Athens">Athens, Helsinki, Bucharest (EET/EEST)</option>
+                        <option value="Europe/Istanbul">Istanbul (TRT)</option>
+                        <option value="Europe/Moscow">Moscow (MSK)</option>
+                      </optgroup>
                     </select>
                   </div>
                 </section>

@@ -11,6 +11,8 @@ import {
   FaEdit,
   FaFilter,
   FaLock,
+  FaSearch,
+  FaSortAmountDown,
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
 import { usePlan } from "../../hooks/usePlan";
@@ -27,6 +29,11 @@ function Students() {
   const [showAddStudent, setShowAddStudent] = useState(false);
   const [showEditStudent, setShowEditStudent] = useState(false);
   const [editingStudent, setEditingStudent] = useState<any>(null);
+
+  // Students list search/sort
+  const [studentSearch, setStudentSearch] = useState("");
+  const [studentSort, setStudentSort] = useState<"name_asc" | "name_desc" | "date_new" | "date_old">("name_asc");
+  const [showStudentSortMenu, setShowStudentSortMenu] = useState(false);
 
 //   Add Student Block
   const [studentName, setStudentName] = useState("");
@@ -620,6 +627,39 @@ function Students() {
     (link: any) => link.students?.active === false
   );
 
+  function filterAndSortStudents(list: any[]) {
+    const query = studentSearch.trim().toLowerCase();
+    const filtered = query
+      ? list.filter((link: any) =>
+          (link.students?.student_name || "").toLowerCase().includes(query)
+        )
+      : list;
+
+    return [...filtered].sort((a: any, b: any) => {
+      if (studentSort === "name_asc" || studentSort === "name_desc") {
+        const nameA = (a.students?.student_name || "").toLowerCase();
+        const nameB = (b.students?.student_name || "").toLowerCase();
+        return studentSort === "name_asc"
+          ? nameA.localeCompare(nameB)
+          : nameB.localeCompare(nameA);
+      }
+
+      const dateA = new Date(a.students?.created_at || 0).getTime();
+      const dateB = new Date(b.students?.created_at || 0).getTime();
+      return studentSort === "date_new" ? dateB - dateA : dateA - dateB;
+    });
+  }
+
+  const visibleActiveStudents = filterAndSortStudents(activeStudents);
+  const visibleArchivedStudents = filterAndSortStudents(archivedStudents);
+
+  const studentSortLabels: Record<typeof studentSort, string> = {
+    name_asc: "Name (A-Z)",
+    name_desc: "Name (Z-A)",
+    date_new: "Date added (newest)",
+    date_old: "Date added (oldest)",
+  };
+
   async function handleArchiveStudent(studentId: string) {
 
     if (isMoving) return; 
@@ -883,23 +923,71 @@ function Students() {
             </div>
           )}
 
+          <div className="students-search-bar">
+            <div className="students-search-input">
+              <FaSearch />
+              <input
+                type="text"
+                placeholder="Search students by name"
+                value={studentSearch}
+                onChange={(e) => setStudentSearch(e.target.value)}
+              />
+            </div>
+
+            <div className="students-sort-wrapper">
+              <button
+                type="button"
+                className="students-sort-btn"
+                onClick={() => setShowStudentSortMenu((prev) => !prev)}
+              >
+                <FaSortAmountDown />
+              </button>
+
+              {showStudentSortMenu && (
+                <>
+                  <div
+                    className="students-sort-backdrop"
+                    onClick={() => setShowStudentSortMenu(false)}
+                  />
+                  <div className="students-sort-menu">
+                    {(Object.keys(studentSortLabels) as Array<keyof typeof studentSortLabels>).map((key) => (
+                      <button
+                        key={key}
+                        type="button"
+                        className={`students-sort-option${studentSort === key ? " active" : ""}`}
+                        onClick={() => {
+                          setStudentSort(key);
+                          setShowStudentSortMenu(false);
+                        }}
+                      >
+                        {studentSortLabels[key]}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
           <div className="students-list-view">
             <section className="students-group">
               <div className="students-group-title">
                 <h2>Your Students</h2>
                 <span>
-                  {activeStudents.length}{" "}
-                  {activeStudents.length === 1 ? "student" : "students"}
+                  {visibleActiveStudents.length}{" "}
+                  {visibleActiveStudents.length === 1 ? "student" : "students"}
                 </span>
               </div>
 
-              {activeStudents.length === 0 ? (
+              {visibleActiveStudents.length === 0 ? (
                 <p className="students-empty">
-                  No students yet. Tap + to add one.
+                  {activeStudents.length === 0
+                    ? "No students yet. Tap + to add one."
+                    : "No students match your search."}
                 </p>
               ) : (
                 <div className="students-group-card">
-                  {activeStudents.map((link: any) => {
+                  {visibleActiveStudents.map((link: any) => {
                     const student = link.students;
 
                     return (
@@ -936,16 +1024,20 @@ function Students() {
               <div className="students-group-title">
                 <h2>Archived Students</h2>
                 <span>
-                  {archivedStudents.length}{" "}
-                  {archivedStudents.length === 1 ? "student" : "students"}
+                  {visibleArchivedStudents.length}{" "}
+                  {visibleArchivedStudents.length === 1 ? "student" : "students"}
                 </span>
               </div>
 
-              {archivedStudents.length === 0 ? (
-                <p className="students-empty">No archived students.</p>
+              {visibleArchivedStudents.length === 0 ? (
+                <p className="students-empty">
+                  {archivedStudents.length === 0
+                    ? "No archived students."
+                    : "No archived students match your search."}
+                </p>
               ) : (
                 <div className="students-group-card">
-                  {archivedStudents.map((link: any) => {
+                  {visibleArchivedStudents.map((link: any) => {
                     const student = link.students;
 
                     return (

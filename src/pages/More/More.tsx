@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  FaClock,
-  FaChartLine,
   FaCog,
   FaCrown,
   FaUser,
@@ -16,17 +14,19 @@ import {
   FaEllipsisH,
   FaArrowLeft,
   FaLock,
-  FaRedoAlt,
-  FaFilePdf
+  FaThumbtack,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import "./More.css";
 import { useNavigate } from "react-router-dom";
 import { usePlan } from "../../hooks/usePlan";
+import { useDashboardWidgets } from "../../hooks/useDashboardWidgets";
+import { DASHBOARD_TOOLS } from "../../lib/dashboardTools";
 
 export default function More() {
   const navigate = useNavigate();
   const { isPro, isFree, planLoading } = usePlan();
+  const { pinned, togglePinned } = useDashboardWidgets();
 
   const [showMoreTutorial, setShowMoreTutorial] = useState(false);
   const [moreTutorialStep, setMoreTutorialStep] = useState(0);
@@ -116,27 +116,6 @@ export default function More() {
     );
   }
 
-  const proTools = [
-    {
-      slug: "earnings-dashboard",
-      icon: <FaChartLine />,
-      title: "Earnings Dashboard",
-      desc: "Weekly summary, income totals, and lesson stats at a glance.",
-    },
-    {
-      slug: "timer",
-      icon: <FaClock />,
-      title: "Lesson Timer",
-      desc: "Start and stop a live timer while teaching a lesson.",
-    },
-    {
-      slug: "pdf-invoice",
-      icon: <FaFilePdf />,
-      title: "PDF Invoices",
-      desc: "Bill competitions, choreography, and travel with branded PDF invoices.",
-    }
-  ];
-
   return (
     <div className="more-page">
 
@@ -155,35 +134,46 @@ export default function More() {
       <section className="more-section">
         <h2>Coaching Tools</h2>
         <div className="more-grid">
+          {DASHBOARD_TOOLS.map(({ slug, icon, title, desc, free }) => {
+            const locked = !free && !isPro;
+            const isPinned = pinned.includes(slug);
 
-          {/* Recurring Lessons — free */}
-          <Link to="/recurring-lessons" className="more-card">
-            <div className="more-icon"><FaRedoAlt /></div>
-            <div>
-              <h3>Recurring Lessons</h3>
-              <p>Schedule repeating lessons for students automatically.</p>
-            </div>
-            <FaChevronRight className="more-arrow" />
-          </Link>
+            const pinBtn = isPro && (
+              <button
+                type="button"
+                className={`more-pin-btn${isPinned ? " active" : ""}`}
+                title={isPinned ? "Remove from Dashboard" : "Add to Dashboard"}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  togglePinned(slug);
+                }}
+              >
+                <FaThumbtack />
+              </button>
+            );
 
-          {/* Pro tools */}
-          {proTools.map(({ slug, icon, title, desc }) =>
-            isPro ? (
-              <Link key={slug} to={`/${slug}`} className="more-card">
+            if (locked) {
+              return (
+                <div key={slug} className="more-card more-card-locked">
+                  <div className="more-icon more-icon-locked">{icon}</div>
+                  <div><h3>{title}</h3><p>{desc}</p></div>
+                  <span className="pro-only-bubble" style={{ position: "static", transform: "none" }}>
+                    <FaLock style={{ fontSize: 8 }} /> Pro only
+                  </span>
+                </div>
+              );
+            }
+
+            return (
+              <Link key={slug} to={`/${slug}`} className={`more-card${isPro ? " pinnable" : ""}`}>
                 <div className="more-icon">{icon}</div>
                 <div><h3>{title}</h3><p>{desc}</p></div>
+                {pinBtn}
                 <FaChevronRight className="more-arrow" />
               </Link>
-            ) : (
-              <div key={slug} className="more-card more-card-locked">
-                <div className="more-icon more-icon-locked">{icon}</div>
-                <div><h3>{title}</h3><p>{desc}</p></div>
-                <span className="pro-only-bubble" style={{ position: "static", transform: "none" }}>
-                  <FaLock style={{ fontSize: 8 }} /> Pro only
-                </span>
-              </div>
-            )
-          )}
+            );
+          })}
         </div>
       </section>
 

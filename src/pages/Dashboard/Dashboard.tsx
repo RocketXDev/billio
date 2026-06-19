@@ -14,13 +14,25 @@ import {
   FaTrash,
   FaLock,
   FaRedoAlt,
+  FaGripVertical,
 } from "react-icons/fa";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { usePlan } from "../../hooks/usePlan";
 import { useSettings } from "../../hooks/useSettings";
+import { useDashboardWidgets } from "../../hooks/useDashboardWidgets";
+import { getDashboardTool } from "../../lib/dashboardTools";
 import { InstallBanner, InstallGuide } from "../../components/InstallGuide/InstallGuide";
 import { useInstallPrompt } from "../../hooks/useInstallPrompt";
 import { createInstallNotification } from "../../lib/installNotification";
+import {
+  DndContext,
+  PointerSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
 import './Dashboard.css';
 import "../RecurringLessons/RecurringLessons.css";
 
@@ -57,6 +69,62 @@ function generateOccurrences(
     cur.setDate(cur.getDate() + 1);
   }
   return dates;
+}
+
+function QuickToolsSection({ pinned }: { pinned: string[] }) {
+  const { setNodeRef, transform, listeners, attributes, isDragging } = useDraggable({
+    id: "quickTools",
+  });
+
+  const style = {
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : undefined,
+    position: isDragging ? ("relative" as const) : undefined,
+  };
+
+  return (
+    <section ref={setNodeRef} style={style} className="dashboard-section quick-tools-section">
+      <div className="section-title-row">
+        <h3>Quick Tools</h3>
+        <button
+          type="button"
+          className="drag-handle"
+          aria-label="Drag to reposition"
+          {...attributes}
+          {...listeners}
+        >
+          <FaGripVertical />
+        </button>
+      </div>
+
+      <div className="quick-tools-row">
+        {pinned.map((slug) => {
+          const tool = getDashboardTool(slug);
+          if (!tool) return null;
+          return (
+            <Link key={slug} to={`/${slug}`} className="quick-tool-card">
+              <div className="quick-tool-icon">{tool.icon}</div>
+              <span>{tool.title}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function QuickToolsDropSlot({ position, active }: { position: number; active: boolean }) {
+  const { setNodeRef, isOver } = useDroppable({ id: `quick-tools-slot-${position}` });
+
+  if (!active) return null;
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`quick-tools-drop-slot${isOver ? " over" : ""}`}
+    />
+  );
 }
 
 function Dashboard() {
@@ -112,6 +180,11 @@ function Dashboard() {
   const location = useLocation();
   const { isPro } = usePlan();
   const { settings } = useSettings();
+  const { pinned, quickToolsPosition, setQuickToolsPosition } = useDashboardWidgets();
+  const [quickToolsDragging, setQuickToolsDragging] = useState(false);
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
   const { shouldShow, remindLater } = useInstallPrompt();
   const [showUpgradeToast, setShowUpgradeToast] = useState(false);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
@@ -1218,7 +1291,240 @@ function Dashboard() {
       </div>
     );
   }
-  
+
+  const renderStats = () => (
+    <>
+      <section className="stat-card">
+        <div className="card-header">
+          <h3>Today</h3>
+          <button onClick={() => navigate("/lessons")}>View lessons</button>
+        </div>
+
+        <div className="today-stats">
+          <div>
+            <strong>{todayLessons.length}</strong>
+            <p>Lessons<br />Today</p>
+          </div>
+
+          <span className="divider" />
+
+          <div>
+            <strong>{formatMoney(todayEarnings)}</strong>
+            <p>Earned</p>
+          </div>
+
+          <span className="divider" />
+
+          <div>
+            <strong>  {
+              upcomingTodayLessons.length
+            }</strong>
+            <p>Upcoming</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="stat-card">
+        <h3>This Week</h3>
+
+        <div className="week-stats">
+          <div>
+            <strong className="purple">{formatMoney(weekEarnings)}</strong>
+            <p>Earnings</p>
+          </div>
+
+          <span className="divider" />
+
+          <div>
+            <strong>{weekLessons.length}</strong>
+            <p>Lessons</p>
+          </div>
+
+          <span className="divider" />
+
+          <div>
+            <strong className="orange">{weekUnbilledLessons.length}</strong>
+            <p>Unbilled</p>
+          </div>
+
+          <span className="divider" />
+
+          <div>
+            <strong className="red">{weekPendingInvoices.length}</strong>
+            <p>Invoices<br />Pending</p>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+
+  const renderUpcoming = () => (
+    <section className="dashboard-section">
+      <h3>Upcoming</h3>
+
+      {todayLessons
+        .filter((lesson) => getLessonStatus(lesson) === "upcoming")
+        .sort((a, b) => {
+          const dateA = new Date(
+            `${a.lesson_date}T${a.start_time}`
+          );
+
+          const dateB = new Date(
+            `${b.lesson_date}T${b.start_time}`
+          );
+
+          return dateA.getTime() - dateB.getTime();
+        }).length === 0 ? (
+        <p className="empty-lessons">
+          No upcoming lessons for today.
+        </p>
+      ) : (
+        <div className="lesson-list">
+          {todayLessons
+            .filter(
+              (lesson) => getLessonStatus(lesson) === "upcoming"
+            )
+            .sort((a, b) => {
+              const dateA = new Date(
+                `${a.lesson_date}T${a.start_time}`
+              );
+
+              const dateB = new Date(
+                `${b.lesson_date}T${b.start_time}`
+              );
+
+              return dateA.getTime() - dateB.getTime();
+            })
+            .map((lesson, index, array) => {
+              const lessonStart = new Date(
+                `${lesson.lesson_date}T${lesson.start_time}`
+              );
+
+              const now = new Date();
+
+              const diffMs =
+                lessonStart.getTime() - now.getTime();
+
+              const totalMinutes = Math.max(
+                0,
+                Math.floor(diffMs / 60000)
+              );
+
+              const hours = Math.floor(totalMinutes / 60);
+              const minutes = totalMinutes % 60;
+
+              let timeUntil = "";
+
+              if (hours > 0) {
+                timeUntil = `In ${hours}h ${minutes}m`;
+              } else {
+                timeUntil = `In ${minutes} min`;
+              }
+
+              return (
+                <div
+                  key={lesson.id}
+                  className={`lesson-row ${
+                    index === array.length - 1 ? "last" : ""
+                  }`}
+                >
+                  <div className="lesson-time">
+                    <strong>
+                      {formatTime(lesson.start_time)}
+                    </strong>
+
+                    <span>Today</span>
+                  </div>
+
+                  <div className="lesson-info">
+                    <strong>
+                      {lesson.students?.student_name ||
+                        "Student"}
+                    </strong>
+
+                    <span>
+                      {lesson.duration_minutes} min • {formatMoney(lesson.rate)}
+                    </span>
+                  </div>
+
+                  <div className="lesson-status purple-bg">
+                    {timeUntil}
+                  </div>
+                  <button
+                    type="button"
+                    className="dashboard-row-edit-btn"
+                    onClick={() => openEditLesson(lesson)}
+                  >
+                    <FaChevronRight />
+                  </button>
+                </div>
+              );
+            })}
+        </div>
+      )}
+    </section>
+  );
+
+  const renderInvoices = () => (
+    <section className="dashboard-section recent-invoices-section">
+      <div className="section-title-row">
+        <h3>Recent Invoices</h3>
+
+        <button type="button" onClick={() => navigate("/invoices")}>
+          View all
+        </button>
+      </div>
+
+      {recentInvoices.length === 0 ? (
+        <p className="empty-lessons">
+          No invoices yet.
+        </p>
+      ) : (
+        <>
+          {recentInvoices.map((invoice) => (
+            <div key={invoice.id} className="invoice-card">
+              <div className="invoice-avatar">
+                {invoice.students?.student_name
+                  ? invoice.students.student_name.charAt(0).toUpperCase()
+                  : "I"}
+              </div>
+
+              <div className="invoice-info">
+                <strong>{invoice.students?.student_name || "Student"}</strong>
+                <span className="invoice-info-number">{invoice.invoice_number || "Invoice"}</span>
+                <span className="invoice-info-price">{formatMoney(invoice.total)}</span>
+              </div>
+
+              <div className="invoice-price">
+                {formatMoney(invoice.total)}
+              </div>
+              <div className={`invoice-status ${invoice.status || "unbilled"}`}>
+                {formatStatus(invoice.status)}
+              </div>
+              <FaChevronRight
+                className="row-arrow"
+                onClick={() => navigate("/invoices")}
+              />
+            </div>
+          ))}
+        </>
+      )}
+    </section>
+  );
+
+  function handleQuickToolsDragStart() {
+    setQuickToolsDragging(true);
+  }
+
+  function handleQuickToolsDragEnd(event: DragEndEvent) {
+    setQuickToolsDragging(false);
+    const { over } = event;
+    if (!over) return;
+    const match = /^quick-tools-slot-(\d)$/.exec(String(over.id));
+    if (!match) return;
+    setQuickToolsPosition(Number(match[1]));
+  }
+
   return (
     <div className="mb-dashboard">
       <div className="mb-dashboard-wrapper">
@@ -1289,217 +1595,31 @@ function Dashboard() {
             <FaChevronRight className="add-arrow" />
           </button>
 
-          <section className="stat-card">
-            <div className="card-header">
-              <h3>Today</h3>
-              <button onClick={() => navigate("/lessons")}>View lessons</button>
-            </div>
-
-            <div className="today-stats">
-              <div>
-                <strong>{todayLessons.length}</strong>
-                <p>Lessons<br />Today</p>
-              </div>
-
-              <span className="divider" />
-
-              <div>
-                <strong>{formatMoney(todayEarnings)}</strong>
-                <p>Earned</p>
-              </div>
-
-              <span className="divider" />
-
-              <div>
-                <strong>  {
-                  upcomingTodayLessons.length
-                }</strong>
-                <p>Upcoming</p>
-              </div>
-            </div>
-          </section>
-
-          <section className="stat-card">
-            <h3>This Week</h3>
-
-            <div className="week-stats">
-              <div>
-                <strong className="purple">{formatMoney(weekEarnings)}</strong>
-                <p>Earnings</p>
-              </div>
-
-              <span className="divider" />
-
-              <div>
-                <strong>{weekLessons.length}</strong>
-                <p>Lessons</p>
-              </div>
-
-              <span className="divider" />
-
-              <div>
-                <strong className="orange">{weekUnbilledLessons.length}</strong>
-                <p>Unbilled</p>
-              </div>
-
-              <span className="divider" />
-
-              <div>
-                <strong className="red">{weekPendingInvoices.length}</strong>
-                <p>Invoices<br />Pending</p>
-              </div>
-            </div>
-          </section>
-
-          <section className="dashboard-section">
-            <h3>Upcoming</h3>
-
-            {todayLessons
-              .filter((lesson) => getLessonStatus(lesson) === "upcoming")
-              .sort((a, b) => {
-                const dateA = new Date(
-                  `${a.lesson_date}T${a.start_time}`
-                );
-
-                const dateB = new Date(
-                  `${b.lesson_date}T${b.start_time}`
-                );
-
-                return dateA.getTime() - dateB.getTime();
-              }).length === 0 ? (
-              <p className="empty-lessons">
-                No upcoming lessons for today.
-              </p>
-            ) : (
-              <div className="lesson-list">
-                {todayLessons
-                  .filter(
-                    (lesson) => getLessonStatus(lesson) === "upcoming"
-                  )
-                  .sort((a, b) => {
-                    const dateA = new Date(
-                      `${a.lesson_date}T${a.start_time}`
-                    );
-
-                    const dateB = new Date(
-                      `${b.lesson_date}T${b.start_time}`
-                    );
-
-                    return dateA.getTime() - dateB.getTime();
-                  })
-                  .map((lesson, index, array) => {
-                    const lessonStart = new Date(
-                      `${lesson.lesson_date}T${lesson.start_time}`
-                    );
-
-                    const now = new Date();
-
-                    const diffMs =
-                      lessonStart.getTime() - now.getTime();
-
-                    const totalMinutes = Math.max(
-                      0,
-                      Math.floor(diffMs / 60000)
-                    );
-
-                    const hours = Math.floor(totalMinutes / 60);
-                    const minutes = totalMinutes % 60;
-
-                    let timeUntil = "";
-
-                    if (hours > 0) {
-                      timeUntil = `In ${hours}h ${minutes}m`;
-                    } else {
-                      timeUntil = `In ${minutes} min`;
-                    }
-
-                    return (
-                      <div
-                        key={lesson.id}
-                        className={`lesson-row ${
-                          index === array.length - 1 ? "last" : ""
-                        }`}
-                      >
-                        <div className="lesson-time">
-                          <strong>
-                            {formatTime(lesson.start_time)}
-                          </strong>
-
-                          <span>Today</span>
-                        </div>
-
-                        <div className="lesson-info">
-                          <strong>
-                            {lesson.students?.student_name ||
-                              "Student"}
-                          </strong>
-
-                          <span>
-                            {lesson.duration_minutes} min • {formatMoney(lesson.rate)}
-                          </span>
-                        </div>
-
-                        <div className="lesson-status purple-bg">
-                          {timeUntil}
-                        </div>
-                        <button
-                          type="button"
-                          className="dashboard-row-edit-btn"
-                          onClick={() => openEditLesson(lesson)}
-                        >
-                          <FaChevronRight />
-                        </button>
-                      </div>
-                    );
-                  })}
-              </div>
-            )}
-          </section>
-
-          <section className="dashboard-section">
-            <div className="section-title-row">
-              <h3>Recent Invoices</h3>
-
-              <button type="button" onClick={() => navigate("/invoices")}>
-                View all
-              </button>
-            </div>
-
-            {recentInvoices.length === 0 ? (
-              <p className="empty-lessons">
-                No invoices yet.
-              </p>
-            ) : (
-              <>
-                {recentInvoices.map((invoice) => (
-                  <div key={invoice.id} className="invoice-card">
-                    <div className="invoice-avatar">
-                      {invoice.students?.student_name
-                        ? invoice.students.student_name.charAt(0).toUpperCase()
-                        : "I"}
-                    </div>
-
-                    <div className="invoice-info">
-                      <strong>{invoice.students?.student_name || "Student"}</strong>
-                      <span className="invoice-info-number">{invoice.invoice_number || "Invoice"}</span>
-                      <span className="invoice-info-price">{formatMoney(invoice.total)}</span>
-                    </div>
-
-                    <div className="invoice-price">
-                      {formatMoney(invoice.total)}
-                    </div>
-                    <div className={`invoice-status ${invoice.status || "unbilled"}`}>
-                      {formatStatus(invoice.status)}
-                    </div>
-                    <FaChevronRight
-                      className="row-arrow"
-                      onClick={() => navigate("/invoices")}
-                    />
-                  </div>
-                ))}
-              </>
-            )}
-          </section>
+          {isPro && pinned.length > 0 ? (
+            <DndContext
+              sensors={dndSensors}
+              onDragStart={handleQuickToolsDragStart}
+              onDragEnd={handleQuickToolsDragEnd}
+            >
+              <QuickToolsDropSlot position={0} active={quickToolsDragging} />
+              {quickToolsPosition === 0 && <QuickToolsSection pinned={pinned} />}
+              {renderStats()}
+              <QuickToolsDropSlot position={1} active={quickToolsDragging} />
+              {quickToolsPosition === 1 && <QuickToolsSection pinned={pinned} />}
+              {renderUpcoming()}
+              <QuickToolsDropSlot position={2} active={quickToolsDragging} />
+              {quickToolsPosition === 2 && <QuickToolsSection pinned={pinned} />}
+              {renderInvoices()}
+              <QuickToolsDropSlot position={3} active={quickToolsDragging} />
+              {quickToolsPosition === 3 && <QuickToolsSection pinned={pinned} />}
+            </DndContext>
+          ) : (
+            <>
+              {renderStats()}
+              {renderUpcoming()}
+              {renderInvoices()}
+            </>
+          )}
 
         </div>
       </div>

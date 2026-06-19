@@ -542,7 +542,17 @@
     margin-bottom: 40px;
   }
 
-  .mb-dashboard-body > .dashboard-section:last-of-type {
+  /* Quick Tools can land in the first slot via drag-and-drop; it shouldn't
+     pick up the extra inset/spacing meant for whichever section used to be
+     first (originally always "Upcoming"). */
+  .mb-dashboard-body > .quick-tools-section:first-of-type {
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 28px;
+    margin-bottom: 0;
+  }
+
+  .mb-dashboard-body > .dashboard-section.recent-invoices-section {
     grid-column: 2;
     grid-row: 1 / span 100;
     padding: 36px 32px 40px 32px;
@@ -553,17 +563,17 @@
   }
 
   /* Invoice cards in right column */
-  .mb-dashboard-body > .dashboard-section:last-of-type .invoice-card {
+  .mb-dashboard-body > .dashboard-section.recent-invoices-section .invoice-card {
     margin-top: 12px;
     border-radius: 18px;
   }
 
   /* Show price under name, hide invoice number and separate price col */
-  .mb-dashboard-body > .dashboard-section:last-of-type .invoice-info-number {
+  .mb-dashboard-body > .dashboard-section.recent-invoices-section .invoice-info-number {
     display: none;
   }
 
-  .mb-dashboard-body > .dashboard-section:last-of-type .invoice-info-price {
+  .mb-dashboard-body > .dashboard-section.recent-invoices-section .invoice-info-price {
     display: block;
     font-size: 13px;
     font-weight: 500;
@@ -571,20 +581,20 @@
     margin-top: 2px;
   }
 
-  .mb-dashboard-body > .dashboard-section:last-of-type .invoice-price {
+  .mb-dashboard-body > .dashboard-section.recent-invoices-section .invoice-price {
     display: none;
   }
 
   /* Prevent wrapping in info block */
-  .mb-dashboard-body > .dashboard-section:last-of-type .invoice-info strong,
-  .mb-dashboard-body > .dashboard-section:last-of-type .invoice-info-price {
+  .mb-dashboard-body > .dashboard-section.recent-invoices-section .invoice-info strong,
+  .mb-dashboard-body > .dashboard-section.recent-invoices-section .invoice-info-price {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
   /* Right-column section header */
-  .mb-dashboard-body > .dashboard-section:last-of-type h3 {
+  .mb-dashboard-body > .dashboard-section.recent-invoices-section h3 {
     font-size: 13px;
     font-weight: 600;
     text-transform: uppercase;
@@ -593,11 +603,11 @@
     margin-bottom: 4px;
   }
 
-  .mb-dashboard-body > .dashboard-section:last-of-type .section-title-row {
+  .mb-dashboard-body > .dashboard-section.recent-invoices-section .section-title-row {
     margin-bottom: 0;
   }
 
-  .mb-dashboard-body > .dashboard-section:last-of-type .section-title-row button {
+  .mb-dashboard-body > .dashboard-section.recent-invoices-section .section-title-row button {
     font-size: 13px;
   }
 

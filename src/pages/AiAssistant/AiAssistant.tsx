@@ -22,6 +22,7 @@ type DraftKind =
   | "create_invoice"
   | "update_lesson"
   | "delete_lesson"
+  | "update_lesson_status"
   | "update_invoice_status"
   | "delete_invoice"
   | "update_student";
@@ -458,10 +459,25 @@ export default function AiAssistant() {
     if (!coachId) throw new Error("Not signed in.");
     const lessonId = data.lesson_id;
 
+    // Verify the lesson is actually this coach's own BEFORE touching
+    // anything linked to it — never trust an id the model echoed back
+    // without checking ownership first.
+    const { data: ownedLesson, error: ownError } = await supabase
+      .from("lessons")
+      .select("id")
+      .eq("id", lessonId)
+      .eq("coach_id", coachId)
+      .maybeSingle();
+    if (ownError) throw new Error(ownError.message);
+    if (!ownedLesson) throw new Error("Could not find that lesson.");
+
+    // Only invoices that are actually this coach's own (inner-join + filter
+    // on the embedded invoices row) are eligible for cleanup below.
     const { data: invoiceLinks, error: linksError } = await supabase
       .from("invoice_lessons")
-      .select("invoice_id")
-      .eq("lesson_id", lessonId);
+      .select("invoice_id, invoices!inner(coach_id)")
+      .eq("lesson_id", lessonId)
+      .eq("invoices.coach_id", coachId);
     if (linksError) throw new Error(linksError.message);
 
     for (const link of invoiceLinks || []) {
@@ -473,7 +489,7 @@ export default function AiAssistant() {
       if (remainingError) throw new Error(remainingError.message);
 
       if (!remaining || remaining.length === 0) {
-        await supabase.from("invoices").delete().eq("id", link.invoice_id);
+        await supabase.from("invoices").delete().eq("id", link.invoice_id).eq("coach_id", coachId);
       } else {
         const total = remaining.reduce((sum: number, r: any) => sum + Number(r.lessons?.rate || 0), 0);
         const statuses = remaining.map((r: any) => r.lessons?.billing_status || "unbilled");
@@ -484,7 +500,11 @@ export default function AiAssistant() {
           : statuses.some((s: string) => s === "unbilled")
           ? "unbilled"
           : "billed";
-        await supabase.from("invoices").update({ subtotal: total, total, status }).eq("id", link.invoice_id);
+        await supabase
+          .from("invoices")
+          .update({ subtotal: total, total, status })
+          .eq("id", link.invoice_id)
+          .eq("coach_id", coachId);
       }
     }
 
@@ -516,17 +536,21 @@ export default function AiAssistant() {
   async function updateInvoiceStatusFromDraft(data: any): Promise<string> {
     if (!coachId) throw new Error("Not signed in.");
 
-    const { error } = await supabase
+    // Scope by coach_id AND check a row actually came back — never assume an
+    // id the model echoed back is one we're allowed to touch.
+    const { data: updated, error } = await supabase
       .from("invoices")
       .update({ status: data.status })
       .eq("id", data.invoice_id)
-      .eq("coach_id", coachId);
+      .eq("coach_id", coachId)
+      .select("id");
     if (error) throw new Error(error.message);
+    if (!updated || updated.length === 0) throw new Error("Could not find that invoice.");
 
     const { data: links } = await supabase.from("invoice_lessons").select("lesson_id").eq("invoice_id", data.invoice_id);
     const lessonIds = (links || []).map((l: any) => l.lesson_id);
     if (lessonIds.length > 0) {
-      await supabase.from("lessons").update({ billing_status: data.status }).in("id", lessonIds);
+      await supabase.from("lessons").update({ billing_status: data.status }).in("id", lessonIds).eq("coach_id", coachId);
     }
 
     queryClient.invalidateQueries({ queryKey: ["invoices", coachId] });
@@ -535,6 +559,65 @@ export default function AiAssistant() {
     queryClient.invalidateQueries({ queryKey: ["assistant-lessons", coachId] });
 
     return `Invoice marked as ${data.status}.`;
+  }
+
+  // Like Invoices.tsx's status cycling, but starting from a single lesson —
+  // useful when a lesson was paid directly and never went through an
+  // invoice. If this lesson is attached to an invoice, that invoice's
+  // status/total is recomputed from all its lessons afterward (same
+  // precedence as deleteLessonFromDraft) so the two stay consistent.
+  async function updateLessonStatusFromDraft(data: any): Promise<string> {
+    if (!coachId) throw new Error("Not signed in.");
+
+    // Scope by coach_id AND check a row actually came back — never assume an
+    // id the model echoed back is one we're allowed to touch.
+    const { data: updated, error } = await supabase
+      .from("lessons")
+      .update({ billing_status: data.status })
+      .eq("id", data.lesson_id)
+      .eq("coach_id", coachId)
+      .select("id");
+    if (error) throw new Error(error.message);
+    if (!updated || updated.length === 0) throw new Error("Could not find that lesson.");
+
+    // Only invoices that are actually this coach's own (inner-join + filter
+    // on the embedded invoices row) are eligible for the recompute below.
+    const { data: invoiceLinks } = await supabase
+      .from("invoice_lessons")
+      .select("invoice_id, invoices!inner(coach_id)")
+      .eq("lesson_id", data.lesson_id)
+      .eq("invoices.coach_id", coachId);
+
+    for (const link of invoiceLinks || []) {
+      const { data: linked } = await supabase
+        .from("invoice_lessons")
+        .select("lessons(rate, billing_status)")
+        .eq("invoice_id", link.invoice_id);
+
+      const rows = linked || [];
+      const total = rows.reduce((sum: number, r: any) => sum + Number(r.lessons?.rate || 0), 0);
+      const statuses = rows.map((r: any) => r.lessons?.billing_status || "unbilled");
+      const status = statuses.every((s: string) => s === "paid")
+        ? "paid"
+        : statuses.every((s: string) => s === "billed")
+        ? "billed"
+        : statuses.some((s: string) => s === "unbilled")
+        ? "unbilled"
+        : "billed";
+
+      await supabase
+        .from("invoices")
+        .update({ subtotal: total, total, status })
+        .eq("id", link.invoice_id)
+        .eq("coach_id", coachId);
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
+    queryClient.invalidateQueries({ queryKey: ["invoices", coachId] });
+    queryClient.invalidateQueries({ queryKey: ["assistant-lessons", coachId] });
+    queryClient.invalidateQueries({ queryKey: ["assistant-invoices", coachId] });
+
+    return `Lesson marked as ${data.status}.`;
   }
 
   async function updateStudentFromDraft(data: any): Promise<string> {
@@ -599,6 +682,11 @@ export default function AiAssistant() {
           pushAssistantConfirmation(`✅ ${summary}`);
           break;
         }
+        case "update_lesson_status": {
+          const summary = await updateLessonStatusFromDraft(draft.data);
+          pushAssistantConfirmation(`✅ ${summary}`);
+          break;
+        }
         case "update_invoice_status": {
           const summary = await updateInvoiceStatusFromDraft(draft.data);
           pushAssistantConfirmation(`✅ ${summary}`);
@@ -636,11 +724,30 @@ export default function AiAssistant() {
   }
 
   function findAssistantLesson(id: string) {
-    return assistantLessons.find((l: any) => l.id === id);
+    const l: any = assistantLessons.find((row: any) => row.id === id);
+    if (!l) return undefined;
+    return {
+      id: l.id,
+      student_name: l.students?.student_name,
+      date: l.lesson_date,
+      time: l.start_time,
+      duration_min: l.duration_minutes,
+      rate: l.rate,
+      billing_status: l.billing_status,
+    };
   }
 
   function findAssistantInvoice(id: string) {
-    return assistantInvoices.find((i: any) => i.id === id);
+    const i: any = assistantInvoices.find((row: any) => row.id === id);
+    if (!i) return undefined;
+    return {
+      id: i.id,
+      invoice_number: i.invoice_number,
+      student_name: i.students?.student_name,
+      status: i.status,
+      total: i.total,
+      issue_date: i.issue_date,
+    };
   }
 
   function formatDraftDateTime(start: string) {
@@ -683,13 +790,13 @@ export default function AiAssistant() {
 
       case "update_lesson": {
         const lesson = findAssistantLesson(d.data.lesson_id);
+        const name = lesson?.student_name || d.data.student_name || "this student";
         return (
           <>
-            <h3>Update Lesson</h3>
-            <p className="ai-assistant-draft-name">{lesson?.student_name || "Lesson"}</p>
+            <h3>Lesson with {name}</h3>
             {lesson && (
               <p>
-                Currently {lesson.date} at {lesson.time}
+                {lesson.date} at {lesson.time}
               </p>
             )}
             {d.data.start && <p>New time: {formatDraftDateTime(d.data.start)}</p>}
@@ -703,10 +810,10 @@ export default function AiAssistant() {
 
       case "delete_lesson": {
         const lesson = findAssistantLesson(d.data.lesson_id);
+        const name = lesson?.student_name || d.data.student_name || "this student";
         return (
           <>
-            <h3>Delete Lesson</h3>
-            <p className="ai-assistant-draft-name">{lesson?.student_name || "This lesson"}</p>
+            <h3>Lesson with {name}</h3>
             {lesson && (
               <p>
                 {lesson.date} at {lesson.time}
@@ -715,6 +822,24 @@ export default function AiAssistant() {
             <p className="ai-assistant-draft-notes">
               This can't be undone. If it's already on an invoice, that invoice's total is
               recalculated (or removed if this was its only lesson).
+            </p>
+          </>
+        );
+      }
+
+      case "update_lesson_status": {
+        const lesson = findAssistantLesson(d.data.lesson_id);
+        const name = lesson?.student_name || d.data.student_name || "this student";
+        return (
+          <>
+            <h3>Lesson with {name}</h3>
+            {lesson && (
+              <p>
+                {lesson.date} at {lesson.time}
+              </p>
+            )}
+            <p>
+              Mark as <strong>{d.data.status}</strong>
             </p>
           </>
         );

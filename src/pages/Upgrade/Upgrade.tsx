@@ -18,6 +18,7 @@ import {
   FaClock,
   FaChartLine,
   FaFilePdf,
+  FaRobot,
   FaPlus,
   FaHome,
   FaUsers,
@@ -42,6 +43,7 @@ const PRO_FEATURES = [
   { icon: <FaClock />, text: "Live Timer" },
   { icon: <FaChartLine />, text: "Earnings dashboard" },
   { icon: <FaFilePdf />, text: "Custom PDF invoice generator" },
+  { icon: <FaRobot />, text: "AI Assistant for lessons & invoices" },
 ];
 
 const FREE_FEATURES = [

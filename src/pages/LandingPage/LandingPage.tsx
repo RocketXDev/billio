@@ -216,6 +216,7 @@ export default function LandingPage() {
               <li>Live lesson timer</li>
               <li>Earnings dashboard</li>
               <li>Custom PDF invoice generator</li>
+              <li>AI Assistant for lessons & invoices</li>
             </ul>
             <Link to="/signup" className="pricing-btn primary-pricing">Start Pro Trial</Link>
           </div>

@@ -23,6 +23,7 @@ import DesktopLayout from "./components/DesktopLayout/DesktopLayout";
 import Support from "./pages/Support/Support";
 import More from "./pages/More/More";
 import CoachingTimer from "./pages/CoachingTimer/CoachingTimer";
+import AiAssistant from "./pages/AiAssistant/AiAssistant";
 import About from "./pages/About/About";
 import Settings from "./pages/Settings/Settings";
 import MarkInvoicePaid from "./pages/MarkInvoicePaid/MarkInvoicePaid";
@@ -140,6 +141,17 @@ function App() {
           <ProtectedRoute>
             <DesktopLayout>
               <CoachingTimer />
+            </DesktopLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/assistant"
+        element={
+          <ProtectedRoute>
+            <DesktopLayout>
+              <AiAssistant />
             </DesktopLayout>
           </ProtectedRoute>
         }

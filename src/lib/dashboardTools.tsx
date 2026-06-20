@@ -1,4 +1,4 @@
-import { FaChartLine, FaClock, FaFilePdf, FaRedoAlt } from "react-icons/fa";
+import { FaChartLine, FaClock, FaFilePdf, FaRedoAlt, FaRobot } from "react-icons/fa";
 
 export interface DashboardTool {
   slug: string;
@@ -35,6 +35,13 @@ export const DASHBOARD_TOOLS: DashboardTool[] = [
     icon: <FaFilePdf />,
     title: "PDF Invoices",
     desc: "Bill competitions, choreography, and travel with branded PDF invoices.",
+    free: false,
+  },
+  {
+    slug: "assistant",
+    icon: <FaRobot />,
+    title: "AI Assistant",
+    desc: "Create lessons and invoices by chatting or speaking naturally.",
     free: false,
   },
 ];

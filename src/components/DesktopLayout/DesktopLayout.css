@@ -849,6 +849,28 @@
     display: none;
   }
 
+  /* ── AI Assistant ── */
+  .ai-assistant-page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 32px 40px;
+  }
+
+  .ai-assistant-header .logo-wrapper {
+    display: none;
+  }
+
+  .desktop-content .ai-assistant-input-row {
+    left: 240px;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 14px 40px calc(14px + env(safe-area-inset-bottom));
+  }
+
+  .desktop-content .ai-assistant-editing-pill {
+    left: 40px;
+  }
+
   .timer-header h1 {
     font-size: 30px;
     margin-top: 0;

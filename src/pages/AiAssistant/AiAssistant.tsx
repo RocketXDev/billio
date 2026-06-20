@@ -17,8 +17,19 @@ import "./AiAssistant.css";
 type ApiMessage = { role: "user" | "assistant"; content: any };
 type Bubble = { id: string; role: "user" | "assistant"; text: string };
 
+type DraftKind =
+  | "create_lesson"
+  | "create_invoice"
+  | "update_lesson"
+  | "delete_lesson"
+  | "update_invoice_status"
+  | "delete_invoice"
+  | "update_student";
+
+const DESTRUCTIVE_KINDS: DraftKind[] = ["delete_lesson", "delete_invoice"];
+
 type Draft = {
-  kind: "create_lesson" | "create_invoice";
+  kind: DraftKind;
   data: any;
   toolUseId?: string;
   assistantContent: any[];
@@ -51,6 +62,46 @@ export default function AiAssistant() {
         .from("coach_students")
         .select(`student_id, students(id, student_name)`)
         .eq("coach_id", coachId);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!coachId,
+  });
+
+  // A bounded recent+upcoming window so the assistant can resolve "my lesson
+  // with Sarah on Friday" to an actual lesson_id without us sending the
+  // coach's entire lesson history.
+  const { data: assistantLessons = [] } = useQuery({
+    queryKey: ["assistant-lessons", coachId],
+    queryFn: async () => {
+      const start = new Date();
+      start.setDate(start.getDate() - 60);
+      const end = new Date();
+      end.setDate(end.getDate() + 60);
+
+      const { data, error } = await supabase
+        .from("lessons")
+        .select("id, lesson_date, start_time, duration_minutes, hourly_rate, rate, billing_status, students(student_name)")
+        .eq("coach_id", coachId)
+        .gte("lesson_date", start.toLocaleDateString("en-CA"))
+        .lte("lesson_date", end.toLocaleDateString("en-CA"))
+        .order("lesson_date", { ascending: true })
+        .limit(150);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!coachId,
+  });
+
+  const { data: assistantInvoices = [] } = useQuery({
+    queryKey: ["assistant-invoices", coachId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("invoices")
+        .select("id, invoice_number, status, total, issue_date, students(student_name)")
+        .eq("coach_id", coachId)
+        .order("issue_date", { ascending: false })
+        .limit(50);
       if (error) throw error;
       return data ?? [];
     },
@@ -136,14 +187,28 @@ export default function AiAssistant() {
 
   function buildContext() {
     return {
-      // Local wall-clock time with the local UTC offset already baked in, so
-      // the assistant never has to convert UTC -> local itself (that's what
-      // caused "tomorrow" to land a day late near midnight UTC).
       now: localISOWithOffset(),
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       students: coachStudents.map((link: any) => link.students?.student_name).filter(Boolean),
       defaultHourlyRate: coachRatesData?.default_hourly_rate ?? null,
       defaultLessonDuration: settings.defaultLessonDuration,
+      lessons: assistantLessons.map((l: any) => ({
+        id: l.id,
+        student_name: l.students?.student_name,
+        date: l.lesson_date,
+        time: l.start_time,
+        duration_min: l.duration_minutes,
+        rate: l.rate,
+        billing_status: l.billing_status,
+      })),
+      invoices: assistantInvoices.map((i: any) => ({
+        id: i.id,
+        invoice_number: i.invoice_number,
+        student_name: i.students?.student_name,
+        status: i.status,
+        total: i.total,
+        issue_date: i.issue_date,
+      })),
     };
   }
 
@@ -339,27 +404,215 @@ export default function AiAssistant() {
     return { noLessons: false, total, count: lessons.length, invoiceNumber };
   }
 
+  async function updateLessonFromDraft(data: any): Promise<string> {
+    if (!coachId) throw new Error("Not signed in.");
+
+    const { data: existing, error: fetchError } = await supabase
+      .from("lessons")
+      .select("*")
+      .eq("id", data.lesson_id)
+      .eq("coach_id", coachId)
+      .single();
+    if (fetchError || !existing) throw new Error("Could not find that lesson.");
+
+    let lessonDate = existing.lesson_date;
+    let startTime = existing.start_time;
+    if (data.start) {
+      const startDate = new Date(data.start);
+      if (Number.isNaN(startDate.getTime())) throw new Error("Could not understand the new lesson time.");
+      lessonDate = startDate.toLocaleDateString("en-CA");
+      startTime = startDate.toTimeString().slice(0, 5);
+    }
+
+    const durationMinutes =
+      data.duration_min !== undefined ? Math.max(1, Math.round(Number(data.duration_min))) : existing.duration_minutes;
+    const hourlyRate = data.rate !== undefined ? Number(data.rate) : Number(existing.hourly_rate || 0);
+    const rate = parseFloat(((hourlyRate * durationMinutes) / 60).toFixed(2));
+
+    const { error } = await supabase
+      .from("lessons")
+      .update({
+        lesson_date: lessonDate,
+        start_time: startTime,
+        duration_minutes: durationMinutes,
+        lesson_type: data.lesson_type !== undefined ? data.lesson_type || null : existing.lesson_type,
+        hourly_rate: hourlyRate,
+        rate,
+        notes: data.notes !== undefined ? data.notes || null : existing.notes,
+      })
+      .eq("id", data.lesson_id)
+      .eq("coach_id", coachId);
+    if (error) throw new Error(error.message);
+
+    queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
+    queryClient.invalidateQueries({ queryKey: ["assistant-lessons", coachId] });
+
+    return "Lesson updated.";
+  }
+
+  // Mirrors Dashboard.tsx's cleanupInvoicesAfterLessonDelete + handleDeleteLesson exactly:
+  // for every invoice this lesson is attached to, either delete the invoice
+  // (if it has no other lessons left) or recompute its total/status from the
+  // remaining lessons, then delete the lesson itself.
+  async function deleteLessonFromDraft(data: any): Promise<string> {
+    if (!coachId) throw new Error("Not signed in.");
+    const lessonId = data.lesson_id;
+
+    const { data: invoiceLinks, error: linksError } = await supabase
+      .from("invoice_lessons")
+      .select("invoice_id")
+      .eq("lesson_id", lessonId);
+    if (linksError) throw new Error(linksError.message);
+
+    for (const link of invoiceLinks || []) {
+      const { data: remaining, error: remainingError } = await supabase
+        .from("invoice_lessons")
+        .select("lesson_id, lessons(rate, billing_status)")
+        .eq("invoice_id", link.invoice_id)
+        .neq("lesson_id", lessonId);
+      if (remainingError) throw new Error(remainingError.message);
+
+      if (!remaining || remaining.length === 0) {
+        await supabase.from("invoices").delete().eq("id", link.invoice_id);
+      } else {
+        const total = remaining.reduce((sum: number, r: any) => sum + Number(r.lessons?.rate || 0), 0);
+        const statuses = remaining.map((r: any) => r.lessons?.billing_status || "unbilled");
+        const status = statuses.every((s: string) => s === "paid")
+          ? "paid"
+          : statuses.every((s: string) => s === "billed")
+          ? "billed"
+          : statuses.some((s: string) => s === "unbilled")
+          ? "unbilled"
+          : "billed";
+        await supabase.from("invoices").update({ subtotal: total, total, status }).eq("id", link.invoice_id);
+      }
+    }
+
+    const { error } = await supabase.from("lessons").delete().eq("id", lessonId).eq("coach_id", coachId);
+    if (error) throw new Error(error.message);
+
+    queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
+    queryClient.invalidateQueries({ queryKey: ["invoices", coachId] });
+    queryClient.invalidateQueries({ queryKey: ["assistant-lessons", coachId] });
+    queryClient.invalidateQueries({ queryKey: ["assistant-invoices", coachId] });
+
+    return "Lesson deleted.";
+  }
+
+  async function deleteInvoiceFromDraft(data: any): Promise<string> {
+    if (!coachId) throw new Error("Not signed in.");
+
+    const { error } = await supabase.from("invoices").delete().eq("id", data.invoice_id).eq("coach_id", coachId);
+    if (error) throw new Error(error.message);
+
+    queryClient.invalidateQueries({ queryKey: ["invoices", coachId] });
+    queryClient.invalidateQueries({ queryKey: ["assistant-invoices", coachId] });
+
+    return "Invoice deleted.";
+  }
+
+  // Mirrors Invoices.tsx's quickUpdateInvoiceStatus: updates the invoice's
+  // status and syncs the same status onto every lesson attached to it.
+  async function updateInvoiceStatusFromDraft(data: any): Promise<string> {
+    if (!coachId) throw new Error("Not signed in.");
+
+    const { error } = await supabase
+      .from("invoices")
+      .update({ status: data.status })
+      .eq("id", data.invoice_id)
+      .eq("coach_id", coachId);
+    if (error) throw new Error(error.message);
+
+    const { data: links } = await supabase.from("invoice_lessons").select("lesson_id").eq("invoice_id", data.invoice_id);
+    const lessonIds = (links || []).map((l: any) => l.lesson_id);
+    if (lessonIds.length > 0) {
+      await supabase.from("lessons").update({ billing_status: data.status }).in("id", lessonIds);
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["invoices", coachId] });
+    queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
+    queryClient.invalidateQueries({ queryKey: ["assistant-invoices", coachId] });
+    queryClient.invalidateQueries({ queryKey: ["assistant-lessons", coachId] });
+
+    return `Invoice marked as ${data.status}.`;
+  }
+
+  async function updateStudentFromDraft(data: any): Promise<string> {
+    if (!coachId) throw new Error("Not signed in.");
+
+    const link = coachStudents.find(
+      (l: any) => l.students?.student_name?.trim().toLowerCase() === String(data.student_name).trim().toLowerCase()
+    );
+    if (!link) throw new Error(`Could not find a student named "${data.student_name}".`);
+
+    const updates: Record<string, any> = {};
+    if (data.new_name) updates.student_name = String(data.new_name).trim();
+    if (data.email !== undefined) updates.email = data.email || null;
+    if (data.phone_number !== undefined) updates.phone_number = data.phone_number || null;
+    if (data.parent_name !== undefined) updates.parent_name = data.parent_name || null;
+    if (data.parent_email !== undefined) updates.parent_email = data.parent_email || null;
+    if (data.parent_phone !== undefined) updates.parent_phone = data.parent_phone || null;
+    if (data.notes !== undefined) updates.notes = data.notes || null;
+
+    const { error } = await supabase.from("students").update(updates).eq("id", link.students.id);
+    if (error) throw new Error(error.message);
+
+    queryClient.invalidateQueries({ queryKey: ["coach-students", coachId] });
+
+    return `${data.student_name} updated.`;
+  }
+
   async function handleConfirm() {
     if (!draft || confirming) return;
     setConfirming(true);
     setErrorMsg("");
 
     try {
-      if (draft.kind === "create_lesson") {
-        const summary = await createLessonFromDraft(draft.data);
-        pushAssistantConfirmation(`✅ ${summary}`);
-      } else {
-        const result = await createInvoiceFromDraft(draft.data);
-        if (result.noLessons) {
-          pushAssistantConfirmation(
-            `I couldn't find any unbilled lessons for ${draft.data.student_name} between ${draft.data.range_start} and ${draft.data.range_end}, so no invoice was created.`
-          );
-        } else {
-          pushAssistantConfirmation(
-            `✅ Invoice ${result.invoiceNumber} created for ${draft.data.student_name} — ${result.count} lesson${
-              result.count === 1 ? "" : "s"
-            }, $${Number(result.total).toFixed(2)} total.`
-          );
+      switch (draft.kind) {
+        case "create_lesson": {
+          const summary = await createLessonFromDraft(draft.data);
+          pushAssistantConfirmation(`✅ ${summary}`);
+          break;
+        }
+        case "create_invoice": {
+          const result = await createInvoiceFromDraft(draft.data);
+          if (result.noLessons) {
+            pushAssistantConfirmation(
+              `I couldn't find any unbilled lessons for ${draft.data.student_name} between ${draft.data.range_start} and ${draft.data.range_end}, so no invoice was created.`
+            );
+          } else {
+            pushAssistantConfirmation(
+              `✅ Invoice ${result.invoiceNumber} created for ${draft.data.student_name} — ${result.count} lesson${
+                result.count === 1 ? "" : "s"
+              }, $${Number(result.total).toFixed(2)} total.`
+            );
+          }
+          break;
+        }
+        case "update_lesson": {
+          const summary = await updateLessonFromDraft(draft.data);
+          pushAssistantConfirmation(`✅ ${summary}`);
+          break;
+        }
+        case "delete_lesson": {
+          const summary = await deleteLessonFromDraft(draft.data);
+          pushAssistantConfirmation(`✅ ${summary}`);
+          break;
+        }
+        case "update_invoice_status": {
+          const summary = await updateInvoiceStatusFromDraft(draft.data);
+          pushAssistantConfirmation(`✅ ${summary}`);
+          break;
+        }
+        case "delete_invoice": {
+          const summary = await deleteInvoiceFromDraft(draft.data);
+          pushAssistantConfirmation(`✅ ${summary}`);
+          break;
+        }
+        case "update_student": {
+          const summary = await updateStudentFromDraft(draft.data);
+          pushAssistantConfirmation(`✅ ${summary}`);
+          break;
         }
       }
       setDraft(null);
@@ -380,6 +633,144 @@ export default function AiAssistant() {
   function handleCancelDraft() {
     setDraft(null);
     setEditing(false);
+  }
+
+  function findAssistantLesson(id: string) {
+    return assistantLessons.find((l: any) => l.id === id);
+  }
+
+  function findAssistantInvoice(id: string) {
+    return assistantInvoices.find((i: any) => i.id === id);
+  }
+
+  function formatDraftDateTime(start: string) {
+    const d = new Date(start);
+    return Number.isNaN(d.getTime())
+      ? start
+      : d.toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+  }
+
+  function renderDraftBody(d: Draft) {
+    switch (d.kind) {
+      case "create_lesson":
+        return (
+          <>
+            <h3>New Lesson</h3>
+            <p className="ai-assistant-draft-name">{d.data.student_name}</p>
+            <p>{formatDraftDateTime(d.data.start)}</p>
+            <p>
+              {d.data.duration_min} min
+              {d.data.rate ? ` • $${Number(d.data.rate)}/hr` : " • default rate"}
+            </p>
+            {d.data.lesson_type && <p>{d.data.lesson_type}</p>}
+            {d.data.notes && <p className="ai-assistant-draft-notes">{d.data.notes}</p>}
+          </>
+        );
+
+      case "create_invoice":
+        return (
+          <>
+            <h3>New Invoice</h3>
+            <p className="ai-assistant-draft-name">{d.data.student_name}</p>
+            <p>
+              {d.data.range_start} – {d.data.range_end}
+            </p>
+            <p className="ai-assistant-draft-notes">
+              Bills all of this student's unbilled lessons in that range.
+            </p>
+          </>
+        );
+
+      case "update_lesson": {
+        const lesson = findAssistantLesson(d.data.lesson_id);
+        return (
+          <>
+            <h3>Update Lesson</h3>
+            <p className="ai-assistant-draft-name">{lesson?.student_name || "Lesson"}</p>
+            {lesson && (
+              <p>
+                Currently {lesson.date} at {lesson.time}
+              </p>
+            )}
+            {d.data.start && <p>New time: {formatDraftDateTime(d.data.start)}</p>}
+            {d.data.duration_min !== undefined && <p>New duration: {d.data.duration_min} min</p>}
+            {d.data.rate !== undefined && <p>New rate: ${Number(d.data.rate)}/hr</p>}
+            {d.data.lesson_type && <p>{d.data.lesson_type}</p>}
+            {d.data.notes && <p className="ai-assistant-draft-notes">{d.data.notes}</p>}
+          </>
+        );
+      }
+
+      case "delete_lesson": {
+        const lesson = findAssistantLesson(d.data.lesson_id);
+        return (
+          <>
+            <h3>Delete Lesson</h3>
+            <p className="ai-assistant-draft-name">{lesson?.student_name || "This lesson"}</p>
+            {lesson && (
+              <p>
+                {lesson.date} at {lesson.time}
+              </p>
+            )}
+            <p className="ai-assistant-draft-notes">
+              This can't be undone. If it's already on an invoice, that invoice's total is
+              recalculated (or removed if this was its only lesson).
+            </p>
+          </>
+        );
+      }
+
+      case "update_invoice_status": {
+        const invoice = findAssistantInvoice(d.data.invoice_id);
+        return (
+          <>
+            <h3>Update Invoice</h3>
+            <p className="ai-assistant-draft-name">
+              {invoice?.invoice_number || "Invoice"}
+              {invoice?.student_name ? ` — ${invoice.student_name}` : ""}
+            </p>
+            <p>
+              Mark as <strong>{d.data.status}</strong>
+            </p>
+          </>
+        );
+      }
+
+      case "delete_invoice": {
+        const invoice = findAssistantInvoice(d.data.invoice_id);
+        return (
+          <>
+            <h3>Delete Invoice</h3>
+            <p className="ai-assistant-draft-name">
+              {invoice?.invoice_number || "This invoice"}
+              {invoice?.student_name ? ` — ${invoice.student_name}` : ""}
+            </p>
+            <p className="ai-assistant-draft-notes">
+              This can't be undone. The underlying lessons stay in place but won't be billed
+              under this invoice anymore.
+            </p>
+          </>
+        );
+      }
+
+      case "update_student":
+        return (
+          <>
+            <h3>Update Student</h3>
+            <p className="ai-assistant-draft-name">{d.data.student_name}</p>
+            {d.data.new_name && <p>New name: {d.data.new_name}</p>}
+            {d.data.email !== undefined && <p>Email: {d.data.email || "—"}</p>}
+            {d.data.phone_number !== undefined && <p>Phone: {d.data.phone_number || "—"}</p>}
+            {d.data.parent_name !== undefined && <p>Parent: {d.data.parent_name || "—"}</p>}
+            {d.data.parent_email !== undefined && <p>Parent email: {d.data.parent_email || "—"}</p>}
+            {d.data.parent_phone !== undefined && <p>Parent phone: {d.data.parent_phone || "—"}</p>}
+            {d.data.notes && <p className="ai-assistant-draft-notes">{d.data.notes}</p>}
+          </>
+        );
+
+      default:
+        return null;
+    }
   }
 
   const loading = identityLoading;
@@ -420,40 +811,12 @@ export default function AiAssistant() {
         )}
 
         {draft && (
-          <div className="ai-assistant-draft-card">
-            {draft.kind === "create_lesson" ? (
-              <>
-                <h3>New Lesson</h3>
-                <p className="ai-assistant-draft-name">{draft.data.student_name}</p>
-                <p>
-                  {Number.isNaN(new Date(draft.data.start).getTime())
-                    ? draft.data.start
-                    : new Date(draft.data.start).toLocaleString([], {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      })}
-                </p>
-                <p>
-                  {draft.data.duration_min} min
-                  {draft.data.rate ? ` • $${Number(draft.data.rate)}/hr` : " • default rate"}
-                </p>
-                {draft.data.lesson_type && <p>{draft.data.lesson_type}</p>}
-                {draft.data.notes && (
-                  <p className="ai-assistant-draft-notes">{draft.data.notes}</p>
-                )}
-              </>
-            ) : (
-              <>
-                <h3>New Invoice</h3>
-                <p className="ai-assistant-draft-name">{draft.data.student_name}</p>
-                <p>
-                  {draft.data.range_start} – {draft.data.range_end}
-                </p>
-                <p className="ai-assistant-draft-notes">
-                  Bills all of this student's unbilled lessons in that range.
-                </p>
-              </>
-            )}
+          <div
+            className={`ai-assistant-draft-card${
+              DESTRUCTIVE_KINDS.includes(draft.kind) ? " destructive" : ""
+            }`}
+          >
+            {renderDraftBody(draft)}
 
             <div className="ai-assistant-draft-actions">
               <button
@@ -474,11 +837,14 @@ export default function AiAssistant() {
               </button>
               <button
                 type="button"
-                className="ai-assistant-draft-confirm"
+                className={`ai-assistant-draft-confirm${
+                  DESTRUCTIVE_KINDS.includes(draft.kind) ? " destructive" : ""
+                }`}
                 onClick={handleConfirm}
                 disabled={confirming}
               >
-                <FaCheck /> {confirming ? "Saving..." : "Confirm"}
+                <FaCheck />{" "}
+                {confirming ? "Saving..." : DESTRUCTIVE_KINDS.includes(draft.kind) ? "Delete" : "Confirm"}
               </button>
             </div>
           </div>

@@ -125,6 +125,14 @@
   color: var(--primary-purple);
 }
 
+.ai-assistant-draft-card.destructive {
+  border-color: #fecaca;
+}
+
+.ai-assistant-draft-card.destructive h3 {
+  color: #dc2626;
+}
+
 .ai-assistant-draft-card p {
   margin: 4px 0;
   font-size: 14px;
@@ -179,6 +187,10 @@
   flex: 1.4;
   background: var(--primary-purple);
   color: white;
+}
+
+.ai-assistant-draft-confirm.destructive {
+  background: #e74040;
 }
 
 .ai-assistant-error {

@@ -28,6 +28,7 @@ import "../RecurringLessons/RecurringLessons.css"
 const RECURRING_DAYS = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
 const RECURRING_DAY_LABELS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 const RECURRING_MAX_MONTHS = 12;
+const PRESET_EVENT_COLORS = ["#3b33d9", "#f59e0b", "#3b82f6", "#22c55e", "#dc2626"];
 
 function generateOccurrences(
   startDate: string,
@@ -68,6 +69,17 @@ function Lessons() {
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [showAddLesson, setShowAddLesson] = useState(false);
   const [lessons, setLessons] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
+
+  // Event form states
+  const [showAddEvent, setShowAddEvent] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<any>(null);
+  const [eventTitle, setEventTitle] = useState("");
+  const [eventStartDate, setEventStartDate] = useState("");
+  const [eventEndDate, setEventEndDate] = useState("");
+  const [eventColor, setEventColor] = useState(PRESET_EVENT_COLORS[0]);
+  const [eventNotes, setEventNotes] = useState("");
+  const [isSavingEvent, setIsSavingEvent] = useState(false);
 
   // Form States
   const [studentName, setStudentName] = useState("");
@@ -163,6 +175,22 @@ function Lessons() {
 
   useEffect(() => { if (lessonsData) { setLessons(lessonsData); setLessonsLoading(false); } }, [lessonsData]);
   useEffect(() => { if (!coachId && !identityLoading) window.location.href = "/login"; }, [coachId, identityLoading]);
+
+  const { data: eventsData } = useQuery({
+    queryKey: ["events", coachId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("events")
+        .select("*")
+        .eq("coach_id", coachId)
+        .order("start_date", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!coachId,
+  });
+
+  useEffect(() => { if (eventsData) setEvents(eventsData); }, [eventsData]);
 
   const loading = identityLoading || lessonsQueryLoading;
 
@@ -868,6 +896,91 @@ function Lessons() {
     setShowAddLesson(true);
   }
 
+  function resetEventForm() {
+    setEditingEvent(null);
+    setEventTitle("");
+    setEventStartDate("");
+    setEventEndDate("");
+    setEventColor(PRESET_EVENT_COLORS[0]);
+    setEventNotes("");
+  }
+
+  function openAddEvent() {
+    resetEventForm();
+    setEventStartDate(selectedCalendarDate);
+    setEventEndDate(selectedCalendarDate);
+    setShowAddEvent(true);
+  }
+
+  function openEditEvent(ev: any) {
+    setEditingEvent(ev);
+    setEventTitle(ev.title);
+    setEventStartDate(ev.start_date);
+    setEventEndDate(ev.end_date);
+    setEventColor(ev.color);
+    setEventNotes(ev.notes || "");
+    setShowAddEvent(true);
+  }
+
+  function closeAddEvent() {
+    setShowAddEvent(false);
+    resetEventForm();
+  }
+
+  async function handleSaveEvent(e: React.FormEvent) {
+    e.preventDefault();
+    if (!coachId) return;
+
+    if (eventEndDate < eventStartDate) {
+      alert("End date can't be before the start date.");
+      return;
+    }
+
+    setIsSavingEvent(true);
+
+    const payload = {
+      coach_id: coachId,
+      title: eventTitle.trim(),
+      start_date: eventStartDate,
+      end_date: eventEndDate,
+      color: eventColor,
+      notes: eventNotes.trim() || null,
+    };
+
+    const { error } = editingEvent
+      ? await supabase.from("events").update(payload).eq("id", editingEvent.id).eq("coach_id", coachId)
+      : await supabase.from("events").insert(payload);
+
+    setIsSavingEvent(false);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["events", coachId] });
+    closeAddEvent();
+  }
+
+  async function handleDeleteEvent() {
+    if (!coachId || !editingEvent) return;
+    setIsSavingEvent(true);
+    const { error } = await supabase
+      .from("events")
+      .delete()
+      .eq("id", editingEvent.id)
+      .eq("coach_id", coachId);
+    setIsSavingEvent(false);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["events", coachId] });
+    closeAddEvent();
+  }
+
   async function syncInvoiceStatusFromLesson(lessonId: string) {
     const { data: invoiceLinks, error: linkError } = await supabase
       .from("invoice_lessons")
@@ -1074,6 +1187,7 @@ function Lessons() {
         dayNumber: date.getDate(),
         isCurrentMonth: date.getMonth() === month,
         lessons: lessons.filter((lesson) => lesson.lesson_date === full),
+        events: events.filter((ev) => full >= ev.start_date && full <= ev.end_date),
       };
     });
   }
@@ -1100,6 +1214,27 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const selectedCalendarLessons = lessons.filter(
     (lesson) => lesson.lesson_date === selectedCalendarDate
   );
+
+  const selectedCalendarEvents = events.filter(
+    (ev) => selectedCalendarDate >= ev.start_date && selectedCalendarDate <= ev.end_date
+  );
+
+  function eventDayTint(hex: string) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return {
+      background: `linear-gradient(135deg, rgba(${r}, ${g}, ${b}, 0.22), rgba(${r}, ${g}, ${b}, 0.06))`,
+    };
+  }
+
+  function formatEventDateRange(start: string, end: string) {
+    const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+    const startLabel = new Date(`${start}T00:00:00`).toLocaleDateString("en-US", opts);
+    if (start === end) return startLabel;
+    const endLabel = new Date(`${end}T00:00:00`).toLocaleDateString("en-US", opts);
+    return `${startLabel} - ${endLabel}`;
+  }
 
   const calendarMonthLabel = new Date(
     `${selectedCalendarDate}T00:00:00`
@@ -1276,6 +1411,12 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                     </button>
                   </div>
 
+                  <div className="calendar-add-event-row">
+                    <button type="button" className="calendar-add-event-btn" onClick={openAddEvent}>
+                      <FaPlus /> Multi-Day Event
+                    </button>
+                  </div>
+
                   <div className="calendar-days">
                     {calendarWeekLabels.map((day) => (
                       <span key={day}>{day}</span>
@@ -1291,6 +1432,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                           className={`calendar-day-card ${
                             selectedCalendarDate === day.full ? "active" : ""
                           } ${!day.isCurrentMonth ? "muted" : ""}`}
+                          style={day.events.length > 0 ? eventDayTint(day.events[0].color) : undefined}
                           onClick={() => setSelectedCalendarDate(day.full)}
                         >
                           <strong>{day.dayNumber}</strong>
@@ -1364,6 +1506,22 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                       </button>
                     )}
                   </div>
+
+                  {selectedCalendarEvents.map((ev) => (
+                    <div
+                      key={ev.id}
+                      className="calendar-event-banner"
+                      style={{ borderColor: ev.color }}
+                      onClick={() => openEditEvent(ev)}
+                    >
+                      <span className="calendar-event-dot" style={{ background: ev.color }} />
+                      <div>
+                        <strong>{ev.title}</strong>
+                        <span>{formatEventDateRange(ev.start_date, ev.end_date)}</span>
+                      </div>
+                    </div>
+                  ))}
+
                   {selectedCalendarLessons.length === 0 ? (
                       <p className="empty-lessons">No lessons for this day.</p>
                     ) : (
@@ -1442,6 +1600,21 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                       <FaChevronRight />
                     </button>
                   </div>
+
+                  {selectedCalendarEvents.map((ev) => (
+                    <div
+                      key={ev.id}
+                      className="calendar-event-banner"
+                      style={{ borderColor: ev.color }}
+                      onClick={() => openEditEvent(ev)}
+                    >
+                      <span className="calendar-event-dot" style={{ background: ev.color }} />
+                      <div>
+                        <strong>{ev.title}</strong>
+                        <span>{formatEventDateRange(ev.start_date, ev.end_date)}</span>
+                      </div>
+                    </div>
+                  ))}
 
                   {selectedCalendarLessons.length === 0 ? (
                     <div className="lessons-list-empty">
@@ -1742,6 +1915,96 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
               <button type="submit" className="save-lesson-btn" disabled={isSaving}>
                 {isSaving ? "Saving..." : isRecurring ? "Create Recurring Lesson" : "Save Lesson"}
               </button>
+            </form>
+          </div>
+        </div>
+      )}
+      {showAddEvent && (
+        <div className="add-lesson-overlay" onClick={closeAddEvent}>
+          <div className="add-lesson-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="add-lesson-header">
+              <h2>{editingEvent ? "Edit Multi-Day Event" : "Add Multi-Day Event"}</h2>
+              <button type="button" onClick={closeAddEvent}>
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEvent} autoComplete="off" className="add-lesson-form">
+              <div className="input-block">
+                <label htmlFor="eventTitle">Title</label>
+                <input
+                  id="eventTitle"
+                  type="text"
+                  placeholder="Regional Championship"
+                  value={eventTitle}
+                  onChange={(e) => setEventTitle(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="input-block">
+                <label htmlFor="eventStartDate">Start Date</label>
+                <input
+                  id="eventStartDate"
+                  type="date"
+                  value={eventStartDate}
+                  onChange={(e) => setEventStartDate(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="input-block">
+                <label htmlFor="eventEndDate">End Date</label>
+                <input
+                  id="eventEndDate"
+                  type="date"
+                  value={eventEndDate}
+                  onChange={(e) => setEventEndDate(e.target.value)}
+                  min={eventStartDate || undefined}
+                  required
+                />
+              </div>
+
+              <div className="input-block">
+                <label>Color</label>
+                <div className="event-color-row">
+                  {PRESET_EVENT_COLORS.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      className={`event-color-swatch ${eventColor === color ? "active" : ""}`}
+                      style={{ background: color }}
+                      onClick={() => setEventColor(color)}
+                      aria-label={color}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="input-block">
+                <label htmlFor="eventNotes">Notes</label>
+                <textarea
+                  id="eventNotes"
+                  placeholder="Optional notes"
+                  value={eventNotes}
+                  onChange={(e) => setEventNotes(e.target.value)}
+                />
+              </div>
+
+              <button type="submit" className="save-lesson-btn" disabled={isSavingEvent}>
+                {isSavingEvent ? "Saving..." : "Save Event"}
+              </button>
+
+              {editingEvent && (
+                <button
+                  type="button"
+                  className="delete-lesson-btn"
+                  disabled={isSavingEvent}
+                  onClick={handleDeleteEvent}
+                >
+                  <FaTrash /> Delete Event
+                </button>
+              )}
             </form>
           </div>
         </div>

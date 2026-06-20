@@ -600,7 +600,7 @@
   border: 1px solid var(--border);
   border-radius: 22px;
   padding: 14px;
-  margin-bottom: 18px;
+  margin-bottom: 15px;
   display: grid;
   grid-template-columns: 38px 38px 1fr 38px 38px;
   gap: 8px;
@@ -655,6 +655,7 @@
 }
 
 .calendar-day-card {
+  position: relative;
   aspect-ratio: 1 / 1;
   width: 100%;
   min-width: 0;
@@ -703,6 +704,77 @@
 
 .purple-dot {
   background: var(--primary-purple);
+}
+
+.calendar-add-event-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
+.calendar-add-event-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary-purple);
+  cursor: pointer;
+}
+
+.calendar-event-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary-purple);
+  border-radius: 14px;
+  padding: 10px 14px;
+  margin: 0 0 10px;
+  cursor: pointer;
+}
+
+.calendar-event-banner strong {
+  display: block;
+  font-size: 14px;
+  color: var(--main-text);
+}
+
+.calendar-event-banner span {
+  font-size: 12px;
+  color: var(--secondary-text);
+}
+
+.calendar-event-dot {
+  width: 8px;
+  height: 8px;
+  min-width: 8px;
+  border-radius: 50%;
+}
+
+.event-color-row {
+  display: flex;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.event-color-swatch {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.event-color-swatch.active {
+  border-color: var(--main-text);
 }
 
 /* ── Calendar pro overlay ── */

@@ -45,6 +45,45 @@
   cursor: pointer;
 }
 
+/* ── Calendar picker: "create new" emphasized over the existing-calendars list ── */
+
+.gc-calendar-create-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  height: 50px;
+  margin-bottom: 4px;
+  border: none;
+  border-radius: 14px;
+  background: var(--primary-purple);
+  color: white;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.gc-picker-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--secondary-text);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.gc-picker-divider::before,
+.gc-picker-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
 .gc-calendar-option {
   display: flex;
   align-items: center;
@@ -62,11 +101,37 @@
   cursor: pointer;
 }
 
-.gc-calendar-option:last-child {
-  margin-bottom: 0;
+.gc-picker-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
 }
 
+.gc-picker-footer .gc-disconnect-btn {
+  flex: none;
+  height: 46px;
+}
+
+.gc-cancel-picker-btn {
+  width: 100%;
+  height: 44px;
+  margin: 0;
+  border: none;
+  border-radius: 14px;
+  background: var(--input-bg);
+  color: var(--secondary-text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ── Connected card ── */
+
 .gc-connected-row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -86,14 +151,32 @@
   font-size: 18px;
 }
 
-.gc-connected-row {
-  position: relative;
+.gc-connected-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.gc-connected-info strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--main-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gc-connected-info span {
+  font-size: 13px;
+  color: var(--secondary-text);
 }
 
 .gc-change-calendar-btn {
-  margin-left: auto;
-  height: 32px;
-  padding: 0 14px;
+  flex-shrink: 0;
+  width: auto;
+  margin: 0;
+  height: 30px;
+  padding: 0 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--input-bg);
@@ -103,40 +186,20 @@
   cursor: pointer;
 }
 
-.gc-cancel-picker-btn {
-  width: 100%;
-  height: 44px;
-  margin-top: 4px;
-  border: none;
-  border-radius: 14px;
-  background: var(--input-bg);
-  color: var(--secondary-text);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.gc-connected-row strong {
-  display: block;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--main-text);
-}
-
-.gc-connected-row span {
-  font-size: 13px;
-  color: var(--secondary-text);
-}
-
 .gc-toggle-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 48px;
   align-items: center;
-  justify-content: space-between;
-  padding: 10px 0;
+  margin: 0 -20px;
+  padding: 12px 20px;
   border-top: 1px solid var(--border);
   font-size: 14px;
   font-weight: 600;
   color: var(--main-text);
+}
+
+.gc-toggle-row .lesson-recurring-toggle-btn {
+  justify-self: end;
 }
 
 .gc-action-row {
@@ -148,6 +211,7 @@
 .gc-sync-btn,
 .gc-disconnect-btn {
   flex: 1;
+  width: 100%;
   height: 46px;
   border: none;
   border-radius: 14px;
@@ -172,8 +236,8 @@
 }
 
 .gc-disconnect-btn {
-  background: var(--input-bg);
-  color: var(--secondary-text);
+  background: #fee2e2;
+  color: #dc2626;
 }
 
 .gc-spin {
@@ -185,9 +249,75 @@
   to { transform: rotate(360deg); }
 }
 
+.gc-force-resync-link {
+  width: 100%;
+  border: none;
+  background: none;
+  color: var(--secondary-text);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .gc-section-title {
   font-size: 16px;
   font-weight: 700;
   color: var(--main-text);
   margin: 8px 0 14px;
+}
+
+/* .rl-body has no flex gap, and these cards are rendered as plain stacked
+   siblings here (unlike AiAssistant.tsx, where the parent's flex gap already
+   spaces them) - add the gap explicitly, scoped to this page. */
+.rl-body .ai-assistant-draft-card {
+  margin-bottom: 14px;
+}
+
+/* ── Pending import cards: student/rate row ──
+   These inputs live inside .ai-assistant-draft-card, which isn't nested in a
+   <form>, so the global `form > .input-block > input` rule never applies -
+   style them explicitly instead. */
+
+.gc-import-form-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.gc-import-student-block {
+  flex: 1.6;
+  min-width: 0;
+}
+
+.gc-import-rate-block {
+  flex: 1;
+  min-width: 0;
+}
+
+.ai-assistant-draft-card .input-block label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--secondary-text);
+  margin-bottom: 6px;
+}
+
+.ai-assistant-draft-card .input-block input {
+  width: 100%;
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  outline: none;
+  font-size: 15px;
+  font-weight: 400;
+  padding: 0 14px;
+  box-sizing: border-box;
+  font-family: inherit;
+  color: var(--main-text);
+}
+
+.ai-assistant-draft-card .input-block input:focus {
+  background: var(--border);
 }

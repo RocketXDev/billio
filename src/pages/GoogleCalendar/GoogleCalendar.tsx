@@ -7,6 +7,7 @@ import {
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
+import { useSettings } from "../../hooks/useSettings";
 import "../RecurringLessons/RecurringLessons.css";
 import "../AiAssistant/AiAssistant.css";
 import "../Lessons/Lessons.css";
@@ -26,6 +27,7 @@ export default function GoogleCalendar() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { coachId, identityLoading } = useCoachIdentity();
+  const { settings } = useSettings();
   const queryClient = useQueryClient();
 
   const [status, setStatus] = useState<GoogleStatus | null>(null);
@@ -44,6 +46,9 @@ export default function GoogleCalendar() {
   const [studentChoice, setStudentChoice] = useState<Record<string, string>>({});
   const [studentNameInput, setStudentNameInput] = useState<Record<string, string>>({});
   const [colorChoice, setColorChoice] = useState<Record<string, string>>({});
+  const [rateChoice, setRateChoice] = useState<Record<string, string>>({});
+
+  const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
 
   const { data: coachStudents = [] } = useQuery({
     queryKey: ["coach-students", coachId],
@@ -66,7 +71,8 @@ export default function GoogleCalendar() {
         .select("*")
         .eq("coach_id", coachId)
         .eq("status", "pending")
-        .order("starts_at", { ascending: true });
+        .order("start_date", { ascending: true })
+        .order("start_time", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data ?? [];
     },
@@ -140,7 +146,8 @@ export default function GoogleCalendar() {
     setChoosingCalendar(true);
     setErrorMsg("");
     try {
-      await callFunction("choose-calendar", choice);
+      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      await callFunction("choose-calendar", { ...choice, timeZone });
       setCalendarChoices(null);
       await loadStatus();
     } catch (err: any) {
@@ -160,11 +167,12 @@ export default function GoogleCalendar() {
     }
   }
 
-  async function handleSyncNow() {
+  async function handleSyncNow(fullResync = false) {
     setSyncing(true);
     setErrorMsg("");
     try {
-      await callFunction("pull");
+      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      await callFunction("pull", { timeZone, fullResync });
       await loadStatus();
       queryClient.invalidateQueries({ queryKey: ["google-pending-imports", coachId] });
       queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
@@ -189,10 +197,11 @@ export default function GoogleCalendar() {
   }
 
   async function handleDisconnect() {
-    if (!confirm("Disconnect Google Calendar? Your synced lessons and events stay in Billio, but they'll stop syncing.")) return;
+    setShowDisconnectConfirm(false);
     setDisconnecting(true);
     try {
       await callFunction("disconnect");
+      setCalendarChoices(null);
       await loadStatus();
       queryClient.invalidateQueries({ queryKey: ["google-pending-imports", coachId] });
     } catch (err: any) {
@@ -212,7 +221,7 @@ export default function GoogleCalendar() {
           alert("Please choose or create a student first.");
           return;
         }
-        await callFunction("approve-import", { importId: imp.id, studentId });
+        await callFunction("approve-import", { importId: imp.id, studentId, hourlyRate: rateChoice[imp.id] || null });
       } else {
         await callFunction("approve-import", { importId: imp.id, color: colorChoice[imp.id] || PRESET_EVENT_COLORS[0] });
       }
@@ -257,13 +266,27 @@ export default function GoogleCalendar() {
     return newStudent.id;
   }
 
-  function formatDateTime(iso: string, isAllDay: boolean) {
-    if (isAllDay) {
-      return new Date(iso.slice(0, 10) + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  function formatTime(hoursStr: string, minutesStr: string) {
+    const hours = Number(hoursStr);
+    const minutes = Number(minutesStr);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return `${hoursStr}:${minutesStr}`;
+
+    if (settings.timeFormat === "24h") {
+      return `${hoursStr.padStart(2, "0")}:${minutesStr.padStart(2, "0")}`;
     }
-    const date = iso.slice(0, 10);
-    const time = iso.slice(11, 16);
-    return `${new Date(date + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric" })} at ${time}`;
+
+    const period = hours >= 12 ? "PM" : "AM";
+    const displayHours = hours % 12 === 0 ? 12 : hours % 12;
+    return `${displayHours}:${minutesStr.padStart(2, "0")} ${period}`;
+  }
+
+  function formatImportDateTime(imp: any) {
+    if (imp.kind === "event") {
+      return new Date(imp.start_date + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+    }
+    const [hoursStr, minutesStr] = (imp.start_time || "00:00").split(":");
+    const dateLabel = new Date(imp.start_date + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric" });
+    return `${dateLabel} at ${formatTime(hoursStr, minutesStr)}`;
   }
 
   if (identityLoading || loadingStatus || connecting) {
@@ -298,35 +321,53 @@ export default function GoogleCalendar() {
           <div className="gc-card">
             <h3>Choose a calendar</h3>
             <p>Sync your lessons and events to a new calendar, or pick one you already have.</p>
+
             <button
               type="button"
-              className="gc-calendar-option"
+              className="gc-calendar-create-btn"
               disabled={choosingCalendar}
               onClick={() => handleChooseCalendar({ createNew: true })}
             >
               <FaGoogle /> Create "My Billio Calendar"
             </button>
-            {calendarChoices.map((cal) => (
-              <button
-                key={cal.id}
-                type="button"
-                className="gc-calendar-option"
-                disabled={choosingCalendar}
-                onClick={() => handleChooseCalendar({ createNew: false, calendarId: cal.id, calendarName: cal.summary })}
-              >
-                {cal.summary}
-              </button>
-            ))}
-            {status?.connected && (
-              <button
-                type="button"
-                className="gc-cancel-picker-btn"
-                disabled={choosingCalendar}
-                onClick={() => setCalendarChoices(null)}
-              >
-                Cancel
-              </button>
+
+            {calendarChoices.length > 0 && (
+              <>
+                <div className="gc-picker-divider">or pick an existing calendar</div>
+                {calendarChoices.map((cal) => (
+                  <button
+                    key={cal.id}
+                    type="button"
+                    className="gc-calendar-option"
+                    disabled={choosingCalendar}
+                    onClick={() => handleChooseCalendar({ createNew: false, calendarId: cal.id, calendarName: cal.summary })}
+                  >
+                    {cal.summary}
+                  </button>
+                ))}
+              </>
             )}
+
+            <div className="gc-picker-footer">
+              {status?.connected && (
+                <button
+                  type="button"
+                  className="gc-cancel-picker-btn"
+                  disabled={choosingCalendar}
+                  onClick={() => setCalendarChoices(null)}
+                >
+                  Cancel
+                </button>
+              )}
+              <button
+                type="button"
+                className="gc-disconnect-btn"
+                disabled={disconnecting}
+                onClick={() => setShowDisconnectConfirm(true)}
+              >
+                {disconnecting ? "Disconnecting..." : "Disconnect Google Calendar"}
+              </button>
+            </div>
           </div>
         ) : !status?.connected ? (
           <div className="gc-card gc-connect-card">
@@ -342,7 +383,7 @@ export default function GoogleCalendar() {
             <div className="gc-card">
               <div className="gc-connected-row">
                 <div className="gc-connected-icon"><FaGoogle /></div>
-                <div>
+                <div className="gc-connected-info">
                   <strong>{status.calendarName}</strong>
                   <span>
                     {status.lastSyncedAt
@@ -377,13 +418,14 @@ export default function GoogleCalendar() {
               </div>
 
               <div className="gc-action-row">
-                <button type="button" className="gc-sync-btn" disabled={syncing} onClick={handleSyncNow}>
+                <button type="button" className="gc-sync-btn" disabled={syncing} onClick={() => handleSyncNow()}>
                   <FaSync className={syncing ? "gc-spin" : ""} /> {syncing ? "Syncing..." : "Sync Now"}
                 </button>
-                <button type="button" className="gc-disconnect-btn" disabled={disconnecting} onClick={handleDisconnect}>
-                  {disconnecting ? "Disconnecting..." : "Disconnect"}
-                </button>
               </div>
+
+              <button type="button" className="gc-force-resync-link" disabled={syncing} onClick={() => handleSyncNow(true)}>
+                Times look wrong? Force a full resync
+              </button>
             </div>
 
             <h2 className="gc-section-title">Pending Review ({pendingImports.length})</h2>
@@ -404,38 +446,53 @@ export default function GoogleCalendar() {
                 return (
                   <div key={imp.id} className="ai-assistant-draft-card">
                     <h3>{imp.title}</h3>
-                    <p>{formatDateTime(imp.starts_at, imp.is_all_day)}</p>
+                    <p>{formatImportDateTime(imp)}</p>
                     {imp.description && <p className="ai-assistant-draft-notes">{imp.description}</p>}
 
                     {imp.kind === "lesson" ? (
-                      <div className="input-block student-search-block" style={{ marginTop: 10 }}>
-                        <label>Student</label>
-                        <input
-                          type="text"
-                          value={studentChoice[imp.id] ? coachStudents.find((l: any) => l.student_id === studentChoice[imp.id])?.students?.student_name || "" : studentNameInput[imp.id] || ""}
-                          onChange={(e) => {
-                            setStudentNameInput((prev) => ({ ...prev, [imp.id]: e.target.value }));
-                            setStudentChoice((prev) => ({ ...prev, [imp.id]: "" }));
-                          }}
-                          placeholder="Search or add a student"
-                        />
-                        {matches.length > 0 && !studentChoice[imp.id] && (
-                          <div className="student-suggestions">
-                            {matches.map((link: any) => (
-                              <button
-                                key={link.student_id}
-                                type="button"
-                                className="student-suggestion"
-                                onClick={() => {
-                                  setStudentChoice((prev) => ({ ...prev, [imp.id]: link.student_id }));
-                                  setStudentNameInput((prev) => ({ ...prev, [imp.id]: link.students.student_name }));
-                                }}
-                              >
-                                {link.students.student_name}
-                              </button>
-                            ))}
-                          </div>
-                        )}
+                      <div className="gc-import-form-row" style={{ marginTop: 10 }}>
+                        <div className="input-block student-search-block gc-import-student-block">
+                          <label>Student</label>
+                          <input
+                            type="text"
+                            value={studentChoice[imp.id] ? coachStudents.find((l: any) => l.student_id === studentChoice[imp.id])?.students?.student_name || "" : studentNameInput[imp.id] || ""}
+                            onChange={(e) => {
+                              setStudentNameInput((prev) => ({ ...prev, [imp.id]: e.target.value }));
+                              setStudentChoice((prev) => ({ ...prev, [imp.id]: "" }));
+                            }}
+                            placeholder="Search or add a student"
+                          />
+                          {matches.length > 0 && !studentChoice[imp.id] && (
+                            <div className="student-suggestions">
+                              {matches.map((link: any) => (
+                                <button
+                                  key={link.student_id}
+                                  type="button"
+                                  className="student-suggestion"
+                                  onClick={() => {
+                                    setStudentChoice((prev) => ({ ...prev, [imp.id]: link.student_id }));
+                                    setStudentNameInput((prev) => ({ ...prev, [imp.id]: link.students.student_name }));
+                                  }}
+                                >
+                                  {link.students.student_name}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="input-block gc-import-rate-block">
+                          <label>Rate</label>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={rateChoice[imp.id] ? `$${rateChoice[imp.id]}` : ""}
+                            onChange={(e) =>
+                              setRateChoice((prev) => ({ ...prev, [imp.id]: e.target.value.replace(/[^0-9.]/g, "") }))
+                            }
+                            placeholder="$60"
+                          />
+                        </div>
                       </div>
                     ) : (
                       <div className="event-color-row" style={{ marginTop: 10 }}>
@@ -487,6 +544,26 @@ export default function GoogleCalendar() {
           </>
         )}
       </div>
+
+      {showDisconnectConfirm && (
+        <div className="billio-confirm-overlay" onClick={() => setShowDisconnectConfirm(false)}>
+          <div className="billio-confirm-card" onClick={(e) => e.stopPropagation()}>
+            <div className="billio-confirm-icon" style={{ background: "#eef2ff", color: "#3b33d9" }}>
+              <FaGoogle />
+            </div>
+            <h2>Disconnect Google Calendar?</h2>
+            <p>Your synced lessons and events stay in Billio, but they'll stop syncing.</p>
+            <div className="billio-confirm-actions">
+              <button type="button" className="billio-cancel-btn" onClick={() => setShowDisconnectConfirm(false)}>
+                Cancel
+              </button>
+              <button type="button" className="billio-danger-btn" disabled={disconnecting} onClick={handleDisconnect}>
+                {disconnecting ? "Disconnecting..." : "Disconnect"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <nav className="bottom-nav">
         <div className="nav-item" onClick={() => navigate("/dashboard")}><FaHome /><span>Dashboard</span></div>

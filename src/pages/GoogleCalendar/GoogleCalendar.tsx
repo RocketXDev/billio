@@ -129,7 +129,7 @@ export default function GoogleCalendar() {
       redirect_uri: redirectUri,
       response_type: "code",
       access_type: "offline",
-      prompt: "consent",
+      prompt: "select_account consent",
       scope: "https://www.googleapis.com/auth/calendar",
     });
     window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;

@@ -28,6 +28,7 @@ import About from "./pages/About/About";
 import Settings from "./pages/Settings/Settings";
 import MarkInvoicePaid from "./pages/MarkInvoicePaid/MarkInvoicePaid";
 import RecurringLessons from "./pages/RecurringLessons/RecurringLessons";
+import GroupLessons from "./pages/GroupLessons/GroupLessons";
 import EarningsDashboard from "./pages/EarningsDashboard/EarningsDashboard";
 import PdfInvoice from "./pages/PdfInvoice/PdfInvoice";
 
@@ -157,15 +158,26 @@ function App() {
         }
       />
 
-      <Route 
-        path="/recurring-lessons" 
+      <Route
+        path="/recurring-lessons"
         element={
           <ProtectedRoute>
             <DesktopLayout>
               <RecurringLessons />
             </DesktopLayout>
           </ProtectedRoute>
-        } 
+        }
+      />
+
+      <Route
+        path="/group-lessons"
+        element={
+          <ProtectedRoute>
+            <DesktopLayout>
+              <GroupLessons />
+            </DesktopLayout>
+          </ProtectedRoute>
+        }
       />
 
       <Route 

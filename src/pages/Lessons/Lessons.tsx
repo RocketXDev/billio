@@ -107,6 +107,12 @@ function Lessons() {
   const [recurringDays, setRecurringDays] = useState<string[]>([]);
   const [recurringEndDate, setRecurringEndDate] = useState("");
 
+  // Group lesson states (add form)
+  const [isGroup, setIsGroup] = useState(false);
+  const [groupStudents, setGroupStudents] = useState<{ id: string | null; name: string }[]>([]);
+  const [groupStudentInput, setGroupStudentInput] = useState("");
+  const [billingMode, setBillingMode] = useState<"per_student" | "split_total">("per_student");
+
   // Edit series states
   const [editSeriesMode, setEditSeriesMode] = useState(false);
   const [seriesData, setSeriesData] = useState<any>(null);
@@ -307,15 +313,184 @@ function Lessons() {
     setIsRecurring((prev) => !prev);
   }
 
+  async function handleCreateGroupLesson() {
+    if (!coachId) return;
+
+    if (groupStudents.length === 0) {
+      alert("Please add at least one student.");
+      return;
+    }
+    if (!hourlyRate) {
+      alert("Please enter a rate.");
+      return;
+    }
+    if (isRecurring) {
+      if (recurringDays.length === 0) { alert("Please select at least one day."); return; }
+      if (!recurringEndDate) { alert("Please select an end date."); return; }
+      if (recurringEndDate <= lessonDate) { alert("End date must be after start date."); return; }
+    }
+
+    const { data: existingLinks, error: existingStudentError } = await supabase
+      .from("coach_students")
+      .select(`
+        student_id,
+        students (
+          id,
+          student_name
+        )
+      `)
+      .eq("coach_id", coachId);
+
+    if (existingStudentError) {
+      console.log("Student lookup error:", existingStudentError);
+      return;
+    }
+
+    const resolvedStudentIds: string[] = [];
+
+    for (const entry of groupStudents) {
+      if (entry.id) {
+        resolvedStudentIds.push(entry.id);
+        continue;
+      }
+
+      const existingLink = existingLinks?.find(
+        (link: any) =>
+          link.students?.student_name?.trim().toLowerCase() === entry.name.toLowerCase()
+      );
+
+      if (existingLink) {
+        resolvedStudentIds.push(existingLink.student_id);
+        continue;
+      }
+
+      const { data: newStudent, error: newStudentError } = await supabase
+        .from("students")
+        .insert({ student_name: entry.name, active: true })
+        .select()
+        .single();
+
+      if (newStudentError || !newStudent) {
+        console.log("Student create error:", newStudentError);
+        return;
+      }
+
+      const { error: linkError } = await supabase
+        .from("coach_students")
+        .insert({ coach_id: coachId, student_id: newStudent.id });
+
+      if (linkError) {
+        console.log("Coach-student link error:", linkError);
+        return;
+      }
+
+      resolvedStudentIds.push(newStudent.id);
+    }
+
+    const groupPayload = {
+      coach_id: coachId,
+      title: lessonType || null,
+      start_time: startTime,
+      duration_minutes: Number(durationMinutes),
+      lesson_type: lessonType || null,
+      billing_mode: billingMode,
+      rate_amount: Number(hourlyRate),
+      frequency: isRecurring ? recurringFrequency : "once",
+      days_of_week: isRecurring ? recurringDays : [],
+      start_date: lessonDate,
+      end_date: isRecurring ? recurringEndDate : null,
+      notes: notes || null,
+      active: true,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data: newGroup, error: groupError } = await supabase
+      .from("group_lessons")
+      .insert(groupPayload)
+      .select()
+      .single();
+
+    if (groupError || !newGroup) {
+      console.log("Group lesson create error:", groupError);
+      return;
+    }
+
+    const rosterRows = resolvedStudentIds.map((studentId) => ({
+      group_lesson_id: newGroup.id,
+      student_id: studentId,
+    }));
+    const { error: rosterError } = await supabase.from("group_lesson_students").insert(rosterRows);
+    if (rosterError) console.log("Group roster insert error:", rosterError);
+
+    const occurrences = isRecurring
+      ? generateOccurrences(lessonDate, recurringEndDate, recurringFrequency, recurringDays)
+      : [lessonDate];
+
+    const studentCount = resolvedStudentIds.length;
+    const perStudentRate =
+      billingMode === "split_total"
+        ? Number((Number(hourlyRate) / studentCount).toFixed(2))
+        : Number(hourlyRate) * (Number(durationMinutes) / 60);
+
+    const lessonRows = occurrences.flatMap((date) =>
+      resolvedStudentIds.map((studentId) => ({
+        coach_id: coachId,
+        student_id: studentId,
+        lesson_date: date,
+        start_time: startTime,
+        duration_minutes: Number(durationMinutes),
+        lesson_type: lessonType || null,
+        hourly_rate: billingMode === "per_student" ? Number(hourlyRate) : null,
+        rate: perStudentRate,
+        billing_status: "unbilled",
+        notes: notes || null,
+        is_recurring: isRecurring,
+        group_lesson_id: newGroup.id,
+      }))
+    );
+
+    const { error: lessonsError } = await supabase.from("lessons").insert(lessonRows);
+    if (lessonsError) {
+      console.log("Group lessons insert error:", lessonsError);
+      return;
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
+    queryClient.invalidateQueries({ queryKey: ["coach-students", coachId] });
+    queryClient.invalidateQueries({ queryKey: ["group-lessons", coachId] });
+  }
+
   async function handleCreateLesson(e: any) {
     e.preventDefault();
 
-    if (isSaving) return; 
+    if (isSaving) return;
     setIsSaving(true);
 
     try {
 
       if (!coachId) return;
+
+      if (isGroup) {
+        await handleCreateGroupLesson();
+        setStudentName("");
+        setSelectedStudentId(null);
+        setLessonDate("");
+        setStartTime("");
+        setDurationMinutes(String(settings.defaultLessonDuration));
+        setLessonType("");
+        setHourlyRate("");
+        setNotes("");
+        setIsRecurring(false);
+        setRecurringFrequency("weekly");
+        setRecurringDays([]);
+        setRecurringEndDate("");
+        setIsGroup(false);
+        setGroupStudents([]);
+        setGroupStudentInput("");
+        setBillingMode("per_student");
+        setShowAddLesson(false);
+        return;
+      }
 
       const cleanStudentName = studentName.trim();
 
@@ -867,6 +1042,38 @@ function Lessons() {
             .includes(studentName.trim().toLowerCase())
         )
       : [];
+
+  const groupStudentMatches =
+    groupStudentInput.trim().length > 0
+      ? coachStudents.filter(
+          (link: any) =>
+            link.students?.student_name
+              ?.toLowerCase()
+              .includes(groupStudentInput.trim().toLowerCase()) &&
+            !groupStudents.some((s) => s.id === link.student_id)
+        )
+      : [];
+
+  function addGroupStudent(entry: { id: string | null; name: string }) {
+    const cleanName = entry.name.trim();
+    if (!cleanName) return;
+    if (groupStudents.some((s) => s.name.toLowerCase() === cleanName.toLowerCase())) return;
+    setGroupStudents((prev) => [...prev, { id: entry.id, name: cleanName }]);
+    setGroupStudentInput("");
+  }
+
+  function removeGroupStudent(name: string) {
+    setGroupStudents((prev) => prev.filter((s) => s.name !== name));
+  }
+
+  function handleToggleGroup() {
+    if (isGroup) {
+      setGroupStudents([]);
+      setGroupStudentInput("");
+      setBillingMode("per_student");
+    }
+    setIsGroup((prev) => !prev);
+  }
 
   async function loadCoachStudents() {
     if (!coachId) return;
@@ -1706,43 +1913,121 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
             </div>
 
             <form onSubmit={handleCreateLesson} autoComplete="off" className="add-lesson-form">
-              <div className="input-block student-search-block">
-                <label htmlFor="studentName">Student Name</label>
-
-                <input
-                  id="studentName"
-                  type="text"
-                  value={studentName}
-                  onChange={(e) => {
-                    setStudentName(e.target.value);
-                    setSelectedStudentId(null);
-                  }}
-                  placeholder="Enter student name"
-                  required
-                  autoComplete="new-password"
-                  autoCorrect="off"
-                  autoCapitalize="words"
-                  spellCheck={false}
-                />
-
-                {studentMatches.length > 0 && !selectedStudentId && (
-                  <div className="student-suggestions">
-                    {studentMatches.map((link: any) => (
-                      <button
-                        key={link.student_id}
-                        type="button"
-                        className="student-suggestion"
-                        onClick={() => {
-                          setStudentName(link.students.student_name);
-                          setSelectedStudentId(link.student_id);
-                        }}
-                      >
-                        {link.students.student_name}
-                      </button>
-                    ))}
-                  </div>
-                )}
+              <div className="lesson-recurring-toggle-row">
+                <div className="lesson-recurring-toggle-label">
+                  <FaUsers className="lesson-recurring-icon" />
+                  <span>Make Group</span>
+                </div>
+                <button
+                  type="button"
+                  className={`lesson-recurring-toggle-btn ${isGroup ? "active" : ""}`}
+                  onClick={handleToggleGroup}
+                >
+                  <span className="lesson-recurring-toggle-knob" />
+                </button>
               </div>
+
+              {isGroup ? (
+                <div className="input-block student-search-block">
+                  <label htmlFor="groupStudentInput">Students</label>
+
+                  {groupStudents.length > 0 && (
+                    <div className="group-student-chips">
+                      {groupStudents.map((s) => (
+                        <span key={s.name} className="group-student-chip">
+                          {s.name}
+                          {!s.id && <em>(new)</em>}
+                          <button type="button" onClick={() => removeGroupStudent(s.name)}>
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="group-student-add-row">
+                    <input
+                      id="groupStudentInput"
+                      type="text"
+                      value={groupStudentInput}
+                      onChange={(e) => setGroupStudentInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addGroupStudent({ id: null, name: groupStudentInput });
+                        }
+                      }}
+                      placeholder="Search or add a student"
+                      autoComplete="new-password"
+                      autoCorrect="off"
+                      autoCapitalize="words"
+                      spellCheck={false}
+                    />
+                    <button
+                      type="button"
+                      className="group-student-add-btn"
+                      onClick={() => addGroupStudent({ id: null, name: groupStudentInput })}
+                    >
+                      <FaPlus />
+                    </button>
+                  </div>
+
+                  {groupStudentMatches.length > 0 && (
+                    <div className="student-suggestions">
+                      {groupStudentMatches.map((link: any) => (
+                        <button
+                          key={link.student_id}
+                          type="button"
+                          className="student-suggestion"
+                          onClick={() =>
+                            addGroupStudent({ id: link.student_id, name: link.students.student_name })
+                          }
+                        >
+                          {link.students.student_name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="input-block student-search-block">
+                  <label htmlFor="studentName">Student Name</label>
+
+                  <input
+                    id="studentName"
+                    type="text"
+                    value={studentName}
+                    onChange={(e) => {
+                      setStudentName(e.target.value);
+                      setSelectedStudentId(null);
+                    }}
+                    placeholder="Enter student name"
+                    required
+                    autoComplete="new-password"
+                    autoCorrect="off"
+                    autoCapitalize="words"
+                    spellCheck={false}
+                  />
+
+                  {studentMatches.length > 0 && !selectedStudentId && (
+                    <div className="student-suggestions">
+                      {studentMatches.map((link: any) => (
+                        <button
+                          key={link.student_id}
+                          type="button"
+                          className="student-suggestion"
+                          onClick={() => {
+                            setStudentName(link.students.student_name);
+                            setSelectedStudentId(link.student_id);
+                          }}
+                        >
+                          {link.students.student_name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="input-block">
                 <label htmlFor="lessonDate">Lesson Date</label>
@@ -1792,8 +2077,36 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                 />
               </div>
 
+              {isGroup && (
+                <div className="input-block">
+                  <label>Billing</label>
+                  <div className="rl-chip-group">
+                    <button
+                      type="button"
+                      className={`rl-chip${billingMode === "per_student" ? " active" : ""}`}
+                      onClick={() => setBillingMode("per_student")}
+                    >
+                      Charge each student
+                    </button>
+                    <button
+                      type="button"
+                      className={`rl-chip${billingMode === "split_total" ? " active" : ""}`}
+                      onClick={() => setBillingMode("split_total")}
+                    >
+                      Split total rate
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="input-block">
-                <label htmlFor="hourlyRate">Hourly Rate</label>
+                <label htmlFor="hourlyRate">
+                  {isGroup
+                    ? billingMode === "split_total"
+                      ? `Total Rate (split across ${groupStudents.length || "N"} students)`
+                      : "Rate Per Student"
+                    : "Hourly Rate"}
+                </label>
                 {rateOptions.length > 0 && (
                   <div className="rate-options-row">
                     {visibleRates.map((rate, index) => (
@@ -1913,7 +2226,13 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
               )}
 
               <button type="submit" className="save-lesson-btn" disabled={isSaving}>
-                {isSaving ? "Saving..." : isRecurring ? "Create Recurring Lesson" : "Save Lesson"}
+                {isSaving
+                  ? "Saving..."
+                  : isGroup
+                  ? "Create Group Lesson"
+                  : isRecurring
+                  ? "Create Recurring Lesson"
+                  : "Save Lesson"}
               </button>
             </form>
           </div>
@@ -2018,6 +2337,11 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                 {editingLesson.is_recurring && (
                   <span className="edit-lesson-recurring-badge">
                     <FaRedoAlt /> Recurring
+                  </span>
+                )}
+                {editingLesson.group_lesson_id && (
+                  <span className="edit-lesson-recurring-badge">
+                    <FaUsers /> Group Lesson
                   </span>
                 )}
               </div>

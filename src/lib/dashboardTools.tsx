@@ -1,4 +1,4 @@
-import { FaChartLine, FaClock, FaFilePdf, FaRedoAlt, FaRobot } from "react-icons/fa";
+import { FaChartLine, FaClock, FaFilePdf, FaRedoAlt, FaRobot, FaUserFriends } from "react-icons/fa";
 
 export interface DashboardTool {
   slug: string;
@@ -14,6 +14,13 @@ export const DASHBOARD_TOOLS: DashboardTool[] = [
     icon: <FaRedoAlt />,
     title: "Recurring Lessons",
     desc: "Schedule repeating lessons for students automatically.",
+    free: true,
+  },
+  {
+    slug: "group-lessons",
+    icon: <FaUserFriends />,
+    title: "Group Lessons",
+    desc: "Schedule one lesson for multiple students at once.",
     free: true,
   },
   {

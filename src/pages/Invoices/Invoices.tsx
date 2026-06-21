@@ -559,7 +559,11 @@ function Invoices() {
       setEditInvoiceLessons([]);
       setEditSelectedLessonIds([]);
     } else {
-      const lessons = data?.map((row: any) => row.lessons) || [];
+      const lessons = (data?.map((row: any) => row.lessons) || []).sort(
+        (a: any, b: any) =>
+          a.lesson_date.localeCompare(b.lesson_date) ||
+          (a.start_time || "").localeCompare(b.start_time || "")
+      );
 
       setEditInvoiceLessons(lessons);
       setEditSelectedLessonIds(data?.map((row: any) => row.lesson_id) || []);

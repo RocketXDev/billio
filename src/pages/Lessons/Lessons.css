@@ -1078,6 +1078,88 @@
   color: var(--primary-purple);
 }
 
+/* Group lesson — multi-student picker */
+
+.group-student-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.group-student-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #eef2ff;
+  color: var(--primary-purple);
+  border-radius: 999px;
+  padding: 6px 6px 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.group-student-chip em {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--secondary-text);
+  font-size: 11px;
+}
+
+.group-student-chip button {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(59, 51, 217, 0.12);
+  color: var(--primary-purple);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.group-student-add-row {
+  display: flex;
+  gap: 8px;
+}
+
+.group-student-add-row input {
+  flex: 1;
+  min-width: 0;
+  height: 50px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background-color: var(--input-bg);
+  outline: none;
+  font-size: 16px;
+  font-weight: 400;
+  padding: 15px;
+  box-sizing: border-box;
+  font-family: inherit;
+  color: var(--main-text);
+}
+
+.group-student-add-row input:focus {
+  background-color: var(--border);
+}
+
+.group-student-add-btn {
+  width: 50px;
+  height: 50px;
+  flex-shrink: 0;
+  margin: 0;
+  border: none;
+  border-radius: 14px;
+  background: var(--primary-purple);
+  color: white;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
 /* Form inputs */
 
 .add-lesson-form input,

@@ -29,6 +29,7 @@ import Settings from "./pages/Settings/Settings";
 import MarkInvoicePaid from "./pages/MarkInvoicePaid/MarkInvoicePaid";
 import RecurringLessons from "./pages/RecurringLessons/RecurringLessons";
 import GroupLessons from "./pages/GroupLessons/GroupLessons";
+import GoogleCalendar from "./pages/GoogleCalendar/GoogleCalendar";
 import EarningsDashboard from "./pages/EarningsDashboard/EarningsDashboard";
 import PdfInvoice from "./pages/PdfInvoice/PdfInvoice";
 
@@ -175,6 +176,17 @@ function App() {
           <ProtectedRoute>
             <DesktopLayout>
               <GroupLessons />
+            </DesktopLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/google-calendar"
+        element={
+          <ProtectedRoute>
+            <DesktopLayout>
+              <GoogleCalendar />
             </DesktopLayout>
           </ProtectedRoute>
         }

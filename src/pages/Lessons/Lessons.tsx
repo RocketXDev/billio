@@ -66,6 +66,18 @@ function Lessons() {
   const { coachId, identityLoading } = useCoachIdentity();
   const { settings } = useSettings();
   const queryClient = useQueryClient();
+
+  // Fire-and-forget push to Google Calendar (no-op if not connected) - never
+  // blocks or surfaces errors, since a sync hiccup must not affect saving the
+  // actual lesson/event.
+  function syncToGoogle(kind: "lesson" | "event", ids: (string | undefined)[]) {
+    const cleanIds = ids.filter(Boolean) as string[];
+    if (cleanIds.length === 0) return;
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    supabase.functions.invoke("google-calendar", { body: { action: "push", kind, ids: cleanIds, timeZone } })
+      .catch((err) => console.log("Google Calendar sync error:", err));
+  }
+
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [showAddLesson, setShowAddLesson] = useState(false);
   const [lessons, setLessons] = useState<any[]>([]);
@@ -449,11 +461,14 @@ function Lessons() {
       }))
     );
 
-    const { error: lessonsError } = await supabase.from("lessons").insert(lessonRows);
+    const { data: insertedLessons, error: lessonsError } = await supabase
+      .from("lessons").insert(lessonRows).select("id");
     if (lessonsError) {
       console.log("Group lessons insert error:", lessonsError);
       return;
     }
+
+    syncToGoogle("lesson", (insertedLessons || []).map((l: any) => l.id));
 
     queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
     queryClient.invalidateQueries({ queryKey: ["coach-students", coachId] });
@@ -607,8 +622,10 @@ function Lessons() {
             recurring_series_id: newSeries.id,
             recurring_occurrence_date: date,
           }));
-          const { error: lessonError } = await supabase.from("lessons").insert(lessonRows);
+          const { data: insertedLessons, error: lessonError } = await supabase
+            .from("lessons").insert(lessonRows).select("id");
           if (lessonError) console.log("Recurring lesson insert error:", lessonError);
+          else syncToGoogle("lesson", (insertedLessons || []).map((l: any) => l.id));
         }
 
         queryClient.invalidateQueries({ queryKey: ["recurring-lessons", coachId] });
@@ -645,6 +662,7 @@ function Lessons() {
         }
 
         setLessons((prev) => [...prev, lessonData]);
+        syncToGoogle("lesson", [lessonData.id]);
         queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
       }
 
@@ -806,7 +824,8 @@ function Lessons() {
             recurring_occurrence_date: date,
             notes: notes || null,
           }));
-          await supabase.from("lessons").insert(lessonRows);
+          const { data: insertedLessons } = await supabase.from("lessons").insert(lessonRows).select("id");
+          syncToGoogle("lesson", (insertedLessons || []).map((l: any) => l.id));
         }
 
         queryClient.invalidateQueries({ queryKey: ["recurring-lessons", coachId] });
@@ -862,6 +881,7 @@ function Lessons() {
         const occurrences = generateOccurrences(lessonDate, recurringEndDate, recurringFrequency, recurringDays)
           .filter((d) => d !== lessonDate);
 
+        const pushIds = [editingLesson.id];
         if (occurrences.length > 0) {
           const lessonRows = occurrences.map((date) => ({
             coach_id: coachId,
@@ -878,8 +898,10 @@ function Lessons() {
             recurring_series_id: newSeries.id,
             recurring_occurrence_date: date,
           }));
-          await supabase.from("lessons").insert(lessonRows);
+          const { data: insertedLessons } = await supabase.from("lessons").insert(lessonRows).select("id");
+          pushIds.push(...(insertedLessons || []).map((l: any) => l.id));
         }
+        syncToGoogle("lesson", pushIds);
 
         queryClient.invalidateQueries({ queryKey: ["recurring-lessons", coachId] });
         queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
@@ -913,6 +935,7 @@ function Lessons() {
       }
 
       setLessons((prev) => prev.map((lesson) => (lesson.id === editingLesson.id ? data : lesson)));
+      syncToGoogle("lesson", [data.id]);
       queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
       await syncInvoiceStatusFromLesson(editingLesson.id);
       closeEditLesson();
@@ -943,6 +966,7 @@ function Lessons() {
       }
 
       setLessons((prev) => prev.filter((lesson) => lesson.id !== lessonId));
+      syncToGoogle("lesson", [lessonId]);
       queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
       setShowEditLesson(false);
 
@@ -957,11 +981,17 @@ function Lessons() {
     setIsDeletingSeries(true);
     try {
       await supabase.from("recurring_lessons").update({ active: false }).eq("id", seriesData.id);
+      const { data: toDelete } = await supabase.from("lessons")
+        .select("id")
+        .eq("recurring_series_id", seriesData.id)
+        .eq("billing_status", "unbilled")
+        .gte("lesson_date", new Date().toLocaleDateString("en-CA"));
       await supabase.from("lessons")
         .delete()
         .eq("recurring_series_id", seriesData.id)
         .eq("billing_status", "unbilled")
         .gte("lesson_date", new Date().toLocaleDateString("en-CA"));
+      syncToGoogle("lesson", (toDelete || []).map((l: any) => l.id));
       queryClient.invalidateQueries({ queryKey: ["recurring-lessons", coachId] });
       queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
       setShowDeleteSeriesModal(false);
@@ -1154,9 +1184,9 @@ function Lessons() {
       notes: eventNotes.trim() || null,
     };
 
-    const { error } = editingEvent
-      ? await supabase.from("events").update(payload).eq("id", editingEvent.id).eq("coach_id", coachId)
-      : await supabase.from("events").insert(payload);
+    const { data: savedEvent, error } = editingEvent
+      ? await supabase.from("events").update(payload).eq("id", editingEvent.id).eq("coach_id", coachId).select("id").single()
+      : await supabase.from("events").insert(payload).select("id").single();
 
     setIsSavingEvent(false);
 
@@ -1165,6 +1195,7 @@ function Lessons() {
       return;
     }
 
+    syncToGoogle("event", [savedEvent?.id]);
     queryClient.invalidateQueries({ queryKey: ["events", coachId] });
     closeAddEvent();
   }
@@ -1172,10 +1203,11 @@ function Lessons() {
   async function handleDeleteEvent() {
     if (!coachId || !editingEvent) return;
     setIsSavingEvent(true);
+    const deletedEventId = editingEvent.id;
     const { error } = await supabase
       .from("events")
       .delete()
-      .eq("id", editingEvent.id)
+      .eq("id", deletedEventId)
       .eq("coach_id", coachId);
     setIsSavingEvent(false);
 
@@ -1184,6 +1216,7 @@ function Lessons() {
       return;
     }
 
+    syncToGoogle("event", [deletedEventId]);
     queryClient.invalidateQueries({ queryKey: ["events", coachId] });
     closeAddEvent();
   }

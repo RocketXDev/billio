@@ -1,4 +1,4 @@
-import { FaChartLine, FaClock, FaFilePdf, FaRedoAlt, FaRobot, FaUserFriends } from "react-icons/fa";
+import { FaChartLine, FaClock, FaFilePdf, FaGoogle, FaRedoAlt, FaRobot, FaUserFriends } from "react-icons/fa";
 
 export interface DashboardTool {
   slug: string;
@@ -49,6 +49,13 @@ export const DASHBOARD_TOOLS: DashboardTool[] = [
     icon: <FaRobot />,
     title: "AI Assistant",
     desc: "Create lessons and invoices by chatting or speaking naturally.",
+    free: false,
+  },
+  {
+    slug: "google-calendar",
+    icon: <FaGoogle />,
+    title: "Google Calendar Sync",
+    desc: "Two-way sync your lessons and events with Google Calendar.",
     free: false,
   },
 ];

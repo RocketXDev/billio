@@ -113,6 +113,7 @@ export default function GoogleCalendar() {
           setErrorMsg(err.message);
         } finally {
           setConnecting(false);
+          setLoadingStatus(false);
           setSearchParams({}, { replace: true });
         }
       })();
@@ -146,6 +147,16 @@ export default function GoogleCalendar() {
       setErrorMsg(err.message);
     } finally {
       setChoosingCalendar(false);
+    }
+  }
+
+  async function handleOpenCalendarPicker() {
+    setErrorMsg("");
+    try {
+      const data = await callFunction("list-calendars");
+      setCalendarChoices(data.calendars || []);
+    } catch (err: any) {
+      setErrorMsg(err.message);
     }
   }
 
@@ -270,7 +281,7 @@ export default function GoogleCalendar() {
     <div className="rl-page gc-page">
       <div className="rl-header">
         <div className="rl-header-top">
-          <button type="button" className="up-back-btn" onClick={() => navigate(-1)}>
+          <button type="button" className="up-back-btn" onClick={() => navigate("/more")}>
             <FaArrowLeft />
           </button>
           <img src="/logo.png" alt="Billio" className="about-logo" />
@@ -306,6 +317,16 @@ export default function GoogleCalendar() {
                 {cal.summary}
               </button>
             ))}
+            {status?.connected && (
+              <button
+                type="button"
+                className="gc-cancel-picker-btn"
+                disabled={choosingCalendar}
+                onClick={() => setCalendarChoices(null)}
+              >
+                Cancel
+              </button>
+            )}
           </div>
         ) : !status?.connected ? (
           <div className="gc-card gc-connect-card">
@@ -329,6 +350,9 @@ export default function GoogleCalendar() {
                       : "Not synced yet"}
                   </span>
                 </div>
+                <button type="button" className="gc-change-calendar-btn" onClick={handleOpenCalendarPicker}>
+                  Change
+                </button>
               </div>
 
               <div className="gc-toggle-row">

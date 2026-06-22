@@ -251,6 +251,7 @@
 
 .gc-force-resync-link {
   width: 100%;
+  margin-top: 0px;
   border: none;
   background: none;
   color: var(--secondary-text);

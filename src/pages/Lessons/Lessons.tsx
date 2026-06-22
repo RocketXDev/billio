@@ -1459,13 +1459,27 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     (ev) => selectedCalendarDate >= ev.start_date && selectedCalendarDate <= ev.end_date
   );
 
-  function eventDayTint(hex: string) {
+  function hexToRgba(hex: string, alpha: number) {
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);
-    return {
-      background: `linear-gradient(135deg, rgba(${r}, ${g}, ${b}, 0.22), rgba(${r}, ${g}, ${b}, 0.06))`,
-    };
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  function eventDayTint(colors: string[]) {
+    if (colors.length <= 1) {
+      const c = colors[0];
+      return { background: `linear-gradient(135deg, ${hexToRgba(c, 0.22)}, ${hexToRgba(c, 0.06)})` };
+    }
+
+    const shown = colors.slice(0, 3);
+    const stripeWidth = 100 / shown.length;
+    const stops: string[] = [];
+    shown.forEach((c, i) => {
+      const rgba = hexToRgba(c, 0.22);
+      stops.push(`${rgba} ${i * stripeWidth}%`, `${rgba} ${(i + 1) * stripeWidth}%`);
+    });
+    return { background: `linear-gradient(90deg, ${stops.join(", ")})` };
   }
 
   function formatEventDateRange(start: string, end: string) {
@@ -1672,7 +1686,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                           className={`calendar-day-card ${
                             selectedCalendarDate === day.full ? "active" : ""
                           } ${!day.isCurrentMonth ? "muted" : ""}`}
-                          style={day.events.length > 0 ? eventDayTint(day.events[0].color) : undefined}
+                          style={day.events.length > 0 ? eventDayTint(day.events.map((e: any) => e.color)) : undefined}
                           onClick={() => setSelectedCalendarDate(day.full)}
                         >
                           <strong>{day.dayNumber}</strong>
@@ -1681,6 +1695,10 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                             <>
                               <div className="calendar-lesson-dot purple-dot" />
                             </>
+                          )}
+
+                          {day.events.length > 3 && (
+                            <span className="calendar-event-overflow">+{day.events.length - 3}</span>
                           )}
                         </button>
                       ))}

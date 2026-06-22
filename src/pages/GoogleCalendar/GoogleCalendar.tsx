@@ -50,7 +50,7 @@ export default function GoogleCalendar() {
 
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
 
-  const { data: coachStudents = [] } = useQuery({
+  const { data: coachStudents = [] } = useQuery<any[]>({
     queryKey: ["coach-students", coachId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -130,7 +130,7 @@ export default function GoogleCalendar() {
 
   function handleConnect() {
     const redirectUri = `${window.location.origin}/google-calendar`;
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    const clientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID || "").trim();
     const params = new URLSearchParams({
       client_id: clientId,
       redirect_uri: redirectUri,
@@ -322,14 +322,20 @@ export default function GoogleCalendar() {
             <h3>Choose a calendar</h3>
             <p>Sync your lessons and events to a new calendar, or pick one you already have.</p>
 
-            <button
-              type="button"
-              className="gc-calendar-create-btn"
-              disabled={choosingCalendar}
-              onClick={() => handleChooseCalendar({ createNew: true })}
-            >
-              <FaGoogle /> Create "My Billio Calendar"
-            </button>
+            {calendarChoices.some((cal) => cal.summary === "My Billio Calendar") ? (
+              <p className="gc-existing-calendar-note">
+                You already have a "My Billio Calendar" — pick it below instead of creating another one.
+              </p>
+            ) : (
+              <button
+                type="button"
+                className="gc-calendar-create-btn"
+                disabled={choosingCalendar}
+                onClick={() => handleChooseCalendar({ createNew: true })}
+              >
+                <FaGoogle /> Create "My Billio Calendar"
+              </button>
+            )}
 
             {calendarChoices.length > 0 && (
               <>

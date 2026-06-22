@@ -146,6 +146,11 @@
   pointer-events: none;
 }
 
+.more-card-coming-soon {
+  pointer-events: auto;
+  cursor: help;
+}
+
 .more-icon-locked {
   background: var(--input-bg);
   color: var(--secondary-text);

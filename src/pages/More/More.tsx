@@ -134,9 +134,25 @@ export default function More() {
       <section className="more-section">
         <h2>Coaching Tools</h2>
         <div className="more-grid">
-          {DASHBOARD_TOOLS.map(({ slug, icon, title, desc, free }) => {
+          {DASHBOARD_TOOLS.map(({ slug, icon, title, desc, free, comingSoon, comingSoonReason }) => {
             const locked = !free && !isPro;
             const isPinned = pinned.includes(slug);
+
+            if (comingSoon) {
+              return (
+                <div
+                  key={slug}
+                  className="more-card more-card-locked more-card-coming-soon"
+                  title={comingSoonReason || "Currently unavailable."}
+                >
+                  <div className="more-icon more-icon-locked">{icon}</div>
+                  <div><h3>{title}</h3><p>{desc}</p></div>
+                  <span className="pro-only-bubble" style={{ position: "static", transform: "none" }}>
+                    Currently unavailable
+                  </span>
+                </div>
+              );
+            }
 
             const pinBtn = isPro && (
               <button

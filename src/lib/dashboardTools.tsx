@@ -6,6 +6,8 @@ export interface DashboardTool {
   title: string;
   desc: string;
   free: boolean;
+  comingSoon?: boolean;
+  comingSoonReason?: string;
 }
 
 export const DASHBOARD_TOOLS: DashboardTool[] = [
@@ -57,6 +59,8 @@ export const DASHBOARD_TOOLS: DashboardTool[] = [
     title: "Google Calendar Sync",
     desc: "Two-way sync your lessons and events with Google Calendar.",
     free: false,
+    comingSoon: true,
+    comingSoonReason: "Currently unavailable — pending Google approval.",
   },
 ];
 

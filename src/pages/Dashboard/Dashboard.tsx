@@ -926,7 +926,7 @@ function Dashboard() {
   function openEditLesson(lesson: any) {
     setEditingLesson(lesson);
 
-    setStudentName(lesson.students?.student_name || "");
+    setStudentName(lesson.students?.student_name || lesson.student_name || "");
     setLessonDate(lesson.lesson_date || "");
     setStartTime(lesson.start_time?.slice(0, 5) || "");
     setDurationMinutes(String(lesson.duration_minutes || "30"));
@@ -1439,6 +1439,7 @@ function Dashboard() {
                   <div className="lesson-info">
                     <strong>
                       {lesson.students?.student_name ||
+                        lesson.student_name ||
                         "Student"}
                     </strong>
 
@@ -1484,13 +1485,13 @@ function Dashboard() {
           {recentInvoices.map((invoice) => (
             <div key={invoice.id} className="invoice-card">
               <div className="invoice-avatar">
-                {invoice.students?.student_name
-                  ? invoice.students.student_name.charAt(0).toUpperCase()
+                {(invoice.students?.student_name || invoice.student_name)
+                  ? (invoice.students?.student_name || invoice.student_name).charAt(0).toUpperCase()
                   : "I"}
               </div>
 
               <div className="invoice-info">
-                <strong>{invoice.students?.student_name || "Student"}</strong>
+                <strong>{invoice.students?.student_name || invoice.student_name || "Student"}</strong>
                 <span className="invoice-info-number">{invoice.invoice_number || "Invoice"}</span>
                 <span className="invoice-info-price">{formatMoney(invoice.total)}</span>
               </div>

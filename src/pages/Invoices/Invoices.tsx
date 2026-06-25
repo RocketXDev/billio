@@ -870,7 +870,7 @@ function Invoices() {
     .filter((inv) => {
       if (logSearch.trim()) {
         const q = logSearch.trim().toLowerCase();
-        const name = (inv.students?.student_name || "").toLowerCase();
+        const name = (inv.students?.student_name || inv.student_name || "").toLowerCase();
         const number = (inv.invoice_number || "").toLowerCase();
         if (!name.includes(q) && !number.includes(q)) return false;
       }
@@ -1174,11 +1174,11 @@ function Invoices() {
                     {currentInvoices.map((invoice) => (
                       <div key={invoice.id} className="invoices-row" style={{ cursor: "pointer" }} onClick={() => openInvoiceDetailView(invoice)}>
                         <div className="invoices-avatar">
-                          {invoice.students?.student_name ? invoice.students.student_name.charAt(0).toUpperCase() : "I"}
+                          {(invoice.students?.student_name || invoice.student_name) ? (invoice.students?.student_name || invoice.student_name).charAt(0).toUpperCase() : "I"}
                         </div>
                         <div className="invoices-info">
                           <strong>{invoice.invoice_number || "Invoice"}</strong>
-                          <span>{invoice.students?.student_name || "Student"} • {formatMoney(invoice.total)}</span>
+                          <span>{invoice.students?.student_name || invoice.student_name || "Student"} • {formatMoney(invoice.total)}</span>
                           <button type="button"
                             className={`invoice-status-pill ${invoice.status || "unbilled"}`}
                             onClick={(e) => { e.stopPropagation(); quickUpdateInvoiceStatus(invoice); }}
@@ -1215,11 +1215,11 @@ function Invoices() {
                     {billedInvoices.map((invoice) => (
                       <div key={invoice.id} className="invoices-row" style={{ cursor: "pointer" }} onClick={() => openInvoiceDetailView(invoice)}>
                         <div className="invoices-avatar" style={{ background: "#dbeafe", color: "#2563eb" }}>
-                          {invoice.students?.student_name ? invoice.students.student_name.charAt(0).toUpperCase() : "I"}
+                          {(invoice.students?.student_name || invoice.student_name) ? (invoice.students?.student_name || invoice.student_name).charAt(0).toUpperCase() : "I"}
                         </div>
                         <div className="invoices-info">
                           <strong>{invoice.invoice_number || "Invoice"}</strong>
-                          <span>{invoice.students?.student_name || "Student"} • {formatMoney(invoice.total)}</span>
+                          <span>{invoice.students?.student_name || invoice.student_name || "Student"} • {formatMoney(invoice.total)}</span>
                           <span>
                             <button type="button"
                               className={`invoice-status-pill ${invoice.status || "unbilled"}`}
@@ -1322,11 +1322,11 @@ function Invoices() {
                                       {week.invoices.map((invoice: any) => (
                                         <div key={invoice.id} className="invoices-row past-invoice-row" style={{ cursor: "pointer" }} onClick={() => openInvoiceDetailView(invoice)}>
                                           <div className="invoices-avatar">
-                                            {invoice.students?.student_name ? invoice.students.student_name.charAt(0).toUpperCase() : "I"}
+                                            {(invoice.students?.student_name || invoice.student_name) ? (invoice.students?.student_name || invoice.student_name).charAt(0).toUpperCase() : "I"}
                                           </div>
                                           <div className="invoices-info">
                                             <strong>{invoice.invoice_number || "Invoice"}</strong>
-                                            <span>{invoice.students?.student_name || "Student"} • {formatMoney(invoice.total)}</span>
+                                            <span>{invoice.students?.student_name || invoice.student_name || "Student"} • {formatMoney(invoice.total)}</span>
                                             <button type="button"
                                               className={`invoice-status-pill ${(invoice.status || "unbilled").trim().toLowerCase()}`}
                                               onClick={(e) => { e.stopPropagation(); quickUpdateInvoiceStatus(invoice); }}
@@ -1953,11 +1953,11 @@ function Invoices() {
                       onClick={() => { setShowSentLog(false); openInvoiceDetailView(invoice); }}
                     >
                       <div className="invoices-avatar" style={{ background: "#dbeafe", color: "#2563eb" }}>
-                        {invoice.students?.student_name ? invoice.students.student_name.charAt(0).toUpperCase() : "I"}
+                        {(invoice.students?.student_name || invoice.student_name) ? (invoice.students?.student_name || invoice.student_name).charAt(0).toUpperCase() : "I"}
                       </div>
                       <div className="invoices-info">
                         <strong>{invoice.invoice_number || "Invoice"}</strong>
-                        <span>{invoice.students?.student_name || "Student"} • {formatMoney(invoice.total)}</span>
+                        <span>{invoice.students?.student_name || invoice.student_name || "Student"} • {formatMoney(invoice.total)}</span>
                         <span className="invoice-log-meta">
                           <span className={`invoice-log-method ${invoice.delivery_method || "email"}`}>
                             {deliveryLabel(invoice.delivery_method || "email")}

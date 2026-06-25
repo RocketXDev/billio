@@ -195,7 +195,7 @@ export default function AiAssistant() {
       defaultLessonDuration: settings.defaultLessonDuration,
       lessons: assistantLessons.map((l: any) => ({
         id: l.id,
-        student_name: l.students?.student_name,
+        student_name: l.students?.student_name || l.student_name,
         date: l.lesson_date,
         time: l.start_time,
         duration_min: l.duration_minutes,
@@ -205,7 +205,7 @@ export default function AiAssistant() {
       invoices: assistantInvoices.map((i: any) => ({
         id: i.id,
         invoice_number: i.invoice_number,
-        student_name: i.students?.student_name,
+        student_name: i.students?.student_name || i.student_name,
         status: i.status,
         total: i.total,
         issue_date: i.issue_date,
@@ -728,7 +728,7 @@ export default function AiAssistant() {
     if (!l) return undefined;
     return {
       id: l.id,
-      student_name: l.students?.student_name,
+      student_name: l.students?.student_name || l.student_name,
       date: l.lesson_date,
       time: l.start_time,
       duration_min: l.duration_minutes,
@@ -743,7 +743,7 @@ export default function AiAssistant() {
     return {
       id: i.id,
       invoice_number: i.invoice_number,
-      student_name: i.students?.student_name,
+      student_name: i.students?.student_name || i.student_name,
       status: i.status,
       total: i.total,
       issue_date: i.issue_date,

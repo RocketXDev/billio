@@ -54,8 +54,8 @@ function DesktopLayout({ children }: Props) {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("full_name, avatar_url")
-        .eq("id", user.id)
+        .select("id, full_name, avatar_url")
+        .eq("user_id", user.id)
         .single();
 
       if (profile) {
@@ -72,10 +72,12 @@ function DesktopLayout({ children }: Props) {
         );
       }
 
+      if (!profile) return;
+
       const { data: notifData } = await supabase
         .from("notifications")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("profile_id", profile.id)
         .order("created_at", { ascending: false });
 
       if (notifData) setNotifications(notifData);

@@ -736,58 +736,37 @@ function Students() {
     closeEditStudent();
   }
 
-  async function handlePermanentDeleteStudent(studentId: string) {
+  async function handlePermanentDeleteStudent(studentId: string, studentName: string) {
 
     if (!coachId) return;
 
-    if (isDeleting) return; 
+    if (isDeleting) return;
     setIsDeleting(true);
 
     try {
 
-      const { data: studentInvoices, error: invoiceFetchError } = await supabase
-      .from("invoices")
-      .select("id")
-      .eq("coach_id", coachId)
-      .eq("student_id", studentId);
-
-      if (invoiceFetchError) {
-        console.log("Fetch student invoices error:", invoiceFetchError);
-        return;
-      }
-
-      const invoiceIds = studentInvoices?.map((invoice) => invoice.id) || [];
-
-      if (invoiceIds.length > 0) {
-        const { error: invoiceLessonsError } = await supabase
-          .from("invoice_lessons")
-          .delete()
-          .in("invoice_id", invoiceIds);
-
-        if (invoiceLessonsError) {
-          console.log("Delete invoice lessons error:", invoiceLessonsError);
-          return;
-        }
-
-        const { error: invoicesError } = await supabase
-          .from("invoices")
-          .delete()
-          .in("id", invoiceIds);
-
-        if (invoicesError) {
-          console.log("Delete invoices error:", invoicesError);
-          return;
-        }
-      }
-
-      const { error: lessonsError } = await supabase
+      // Snapshot the name onto their existing lessons/invoices before the
+      // students row is gone, so historical records stay readable without
+      // needing to keep a "ghost" student row alive just for the join.
+      const { error: lessonsNameError } = await supabase
         .from("lessons")
-        .delete()
+        .update({ student_name: studentName })
         .eq("coach_id", coachId)
         .eq("student_id", studentId);
 
-      if (lessonsError) {
-        console.log("Delete lessons error:", lessonsError);
+      if (lessonsNameError) {
+        console.log("Snapshot student name onto lessons error:", lessonsNameError);
+        return;
+      }
+
+      const { error: invoicesNameError } = await supabase
+        .from("invoices")
+        .update({ student_name: studentName })
+        .eq("coach_id", coachId)
+        .eq("student_id", studentId);
+
+      if (invoicesNameError) {
+        console.log("Snapshot student name onto invoices error:", invoicesNameError);
         return;
       }
 
@@ -816,6 +795,9 @@ function Students() {
         prev.filter((link: any) => link.student_id !== studentId)
       );
       queryClient.invalidateQueries({ queryKey: ["students", coachId] });
+      queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
+      queryClient.invalidateQueries({ queryKey: ["invoices", coachId] });
+      queryClient.invalidateQueries({ queryKey: ["coach-students", coachId] });
 
     } finally {
       setIsDeleting(false);
@@ -1847,8 +1829,8 @@ function Students() {
 
             <p>
               This will permanently delete{" "}
-              <strong>{studentToDelete.student_name}</strong>, including all lessons,
-              invoices, and invoice links. This cannot be undone.
+              <strong>{studentToDelete.student_name}</strong>'s profile and contact info.
+              Their existing lessons and invoices are kept for your records. This cannot be undone.
             </p>
 
             <div className="billio-confirm-actions">
@@ -1865,7 +1847,7 @@ function Students() {
                 className="billio-danger-btn"
                 disabled={isDeleting}
                 onClick={() => {
-                  handlePermanentDeleteStudent(studentToDelete.id);
+                  handlePermanentDeleteStudent(studentToDelete.id, studentToDelete.student_name);
                   setStudentToDelete(null);
                 }}
               >

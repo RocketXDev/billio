@@ -719,7 +719,7 @@ function Lessons() {
 
   async function openEditLesson(lesson: any) {
     setEditingLesson(lesson);
-    setStudentName(lesson.students?.student_name || "");
+    setStudentName(lesson.students?.student_name || lesson.student_name || "");
     setLessonDate(lesson.lesson_date || "");
     setStartTime(lesson.start_time?.slice(0, 5) || "");
     setDurationMinutes(String(lesson.duration_minutes || "30"));
@@ -1795,7 +1795,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
                           <div>
                             <strong>
-                              {lesson.students?.student_name || "Student"} •{" "}
+                              {lesson.students?.student_name || lesson.student_name || "Student"} •{" "}
                               {formatTime(lesson.start_time)}
                             </strong>
                             <span>
@@ -1895,7 +1895,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                           </div>
 
                           <div className="lesson-page-info">
-                            <strong>{lesson.students?.student_name || "Student"}</strong>
+                            <strong>{lesson.students?.student_name || lesson.student_name || "Student"}</strong>
                             <span>${formatMoney(lesson.rate)}{lesson.lesson_type ? ` • ${lesson.lesson_type}` : ""}</span>
                           </div>
 
@@ -2711,7 +2711,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
           <div className="add-lesson-sheet" onClick={(e) => e.stopPropagation()}>
             <div className="add-lesson-header">
               <div>
-                <h2>{viewingLesson.students?.student_name || "Lesson"}</h2>
+                <h2>{viewingLesson.students?.student_name || viewingLesson.student_name || "Lesson"}</h2>
                 <span className="lesson-view-date">
                   {new Date(`${viewingLesson.lesson_date}T00:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
                 </span>
@@ -2831,7 +2831,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                       <span>{new Date(`${lesson.lesson_date}T00:00:00`).getFullYear()}</span>
                     </div>
                     <div className="lesson-history-info">
-                      <strong>{lesson.students?.student_name || "Student"}</strong>
+                      <strong>{lesson.students?.student_name || lesson.student_name || "Student"}</strong>
                       <span>{formatTime(lesson.start_time)} · {lesson.duration_minutes} min · ${formatMoney(lesson.rate)}</span>
                     </div>
                     <span className={`lesson-billing-pill ${lesson.billing_status || "unbilled"}`}>

@@ -1548,7 +1548,7 @@ function Invoices() {
 
                         <div className="invoice-lessons-picker">
                           {invoiceLessons.map((lesson) => {
-                            const billingStatus = lesson.status || "unbilled";
+                            const billingStatus = lesson.billing_status || "unbilled";
 
                             return (
                               <button

@@ -984,12 +984,18 @@ function Invoices() {
       return null;
     }
 
-    await supabase
+    const { error: invoiceUpdateError } = await supabase
       .from("invoices")
       .update({ pdf_path: filePath, pdf_generated_at: new Date().toISOString() })
       .eq("id", invoice.id);
 
+    if (invoiceUpdateError) {
+      console.log("Invoice pdf_path save error:", invoiceUpdateError);
+      return null;
+    }
+
     queryClient.invalidateQueries({ queryKey: ["invoices", coachId] });
+    queryClient.invalidateQueries({ queryKey: ["auto-generated-pdf-invoices", coachId] });
 
     return filePath;
   }

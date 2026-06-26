@@ -921,8 +921,8 @@ function Invoices() {
     (invoice) => invoice.status === "paid"
   );
 
-  async function maybeGenerateInvoicePdf(invoice: any) {
-    if (!isPro || !coachId || !invoice.student_id) return;
+  async function maybeGenerateInvoicePdf(invoice: any): Promise<string | null> {
+    if (!isPro || !coachId || !invoice.student_id) return null;
 
     const { data: link } = await supabase
       .from("coach_students")
@@ -931,8 +931,10 @@ function Invoices() {
       .eq("student_id", invoice.student_id)
       .maybeSingle();
 
-    if (!link?.auto_generate_pdf) return;
-    if (link.invoice_delivery_method !== "email" && link.invoice_delivery_method !== "both") return;
+    if (!link?.auto_generate_pdf) return null;
+    // "auto" and "both" can both still resolve to an email being sent server-side -
+    // only a pure "text" preference can never involve an email to attach this to.
+    if (link.invoice_delivery_method === "text") return null;
 
     const { data: lessonRows, error: lessonsError } = await supabase
       .from("invoice_lessons")
@@ -941,7 +943,7 @@ function Invoices() {
 
     if (lessonsError) {
       console.log("Load invoice lessons for PDF error:", lessonsError);
-      return;
+      return null;
     }
 
     const lessons = (lessonRows || [])
@@ -979,7 +981,7 @@ function Invoices() {
 
     if (uploadError) {
       console.log("Invoice PDF upload error:", uploadError);
-      return;
+      return null;
     }
 
     const { data: urlData } = supabase.storage.from("invoice-pdfs").getPublicUrl(filePath);
@@ -990,6 +992,8 @@ function Invoices() {
       .eq("id", invoice.id);
 
     queryClient.invalidateQueries({ queryKey: ["invoices", coachId] });
+
+    return urlData.publicUrl;
   }
 
   async function sendInvoice(invoice: any) {
@@ -1000,8 +1004,9 @@ function Invoices() {
     setSendError("");
     setSendSuccessRecipient("");
 
+    let pdfUrl: string | null = null;
     try {
-      await maybeGenerateInvoicePdf(invoice);
+      pdfUrl = await maybeGenerateInvoicePdf(invoice);
     } catch (err) {
       console.log("Auto-generate PDF error:", err);
       // Never block sending the invoice on a PDF generation failure.
@@ -1010,7 +1015,7 @@ function Invoices() {
     const { data, error } = await supabase.functions.invoke(
       "send-single-invoice",
       {
-        body: { invoiceId },
+        body: { invoiceId, pdfUrl },
       }
     );
 

@@ -24,12 +24,13 @@ import { supabase } from "../../lib/supabaseClient";
 import { usePlan } from "../../hooks/usePlan";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import { useSettings } from "../../hooks/useSettings";
+import { generateInvoicePdf } from "../../lib/generateInvoicePdf";
 import "./Invoices.css"
 
 function Invoices() {
   const navigate = useNavigate();
   const { isPro } = usePlan();
-  const { coachId, identityLoading } = useCoachIdentity();
+  const { coachId, userId, fullName, identityLoading } = useCoachIdentity();
   const { settings } = useSettings();
   const queryClient = useQueryClient();
 
@@ -920,12 +921,91 @@ function Invoices() {
     (invoice) => invoice.status === "paid"
   );
 
-  async function sendInvoice(invoiceId: string) {
+  async function maybeGenerateInvoicePdf(invoice: any) {
+    if (!isPro || !coachId || !invoice.student_id) return;
+
+    const { data: link } = await supabase
+      .from("coach_students")
+      .select("invoice_delivery_method, auto_generate_pdf")
+      .eq("coach_id", coachId)
+      .eq("student_id", invoice.student_id)
+      .maybeSingle();
+
+    if (!link?.auto_generate_pdf) return;
+    if (link.invoice_delivery_method !== "email" && link.invoice_delivery_method !== "both") return;
+
+    const { data: lessonRows, error: lessonsError } = await supabase
+      .from("invoice_lessons")
+      .select("lessons(lesson_date, start_time, duration_minutes, hourly_rate, rate)")
+      .eq("invoice_id", invoice.id);
+
+    if (lessonsError) {
+      console.log("Load invoice lessons for PDF error:", lessonsError);
+      return;
+    }
+
+    const lessons = (lessonRows || [])
+      .map((row: any) => row.lessons)
+      .filter(Boolean)
+      .sort((a: any, b: any) =>
+        a.lesson_date.localeCompare(b.lesson_date) || (a.start_time || "").localeCompare(b.start_time || "")
+      );
+
+    const { data: brand } = await supabase
+      .from("invoice_brand_settings")
+      .select("business_name, accent_color, logo_url, footer_note")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    const studentName = invoice.students?.student_name || invoice.student_name || "Student";
+
+    const pdfBlob = await generateInvoicePdf({
+      businessName: brand?.business_name || fullName || "Invoice",
+      accentColor: brand?.accent_color || "#3b33d9",
+      logoUrl: brand?.logo_url || undefined,
+      footerNote: brand?.footer_note || undefined,
+      studentName,
+      invoiceNumber: invoice.invoice_number,
+      issueDate: invoice.issue_date,
+      dueDate: invoice.due_date,
+      lessons,
+      total: invoice.total,
+    });
+
+    const filePath = `${coachId}/${invoice.id}.pdf`;
+    const { error: uploadError } = await supabase.storage
+      .from("invoice-pdfs")
+      .upload(filePath, pdfBlob, { contentType: "application/pdf", upsert: true });
+
+    if (uploadError) {
+      console.log("Invoice PDF upload error:", uploadError);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage.from("invoice-pdfs").getPublicUrl(filePath);
+
+    await supabase
+      .from("invoices")
+      .update({ pdf_url: urlData.publicUrl, pdf_generated_at: new Date().toISOString() })
+      .eq("id", invoice.id);
+
+    queryClient.invalidateQueries({ queryKey: ["invoices", coachId] });
+  }
+
+  async function sendInvoice(invoice: any) {
+    const invoiceId = invoice.id;
     if (sendingInvoiceId) return;
 
     setSendingInvoiceId(invoiceId);
     setSendError("");
     setSendSuccessRecipient("");
+
+    try {
+      await maybeGenerateInvoicePdf(invoice);
+    } catch (err) {
+      console.log("Auto-generate PDF error:", err);
+      // Never block sending the invoice on a PDF generation failure.
+    }
 
     const { data, error } = await supabase.functions.invoke(
       "send-single-invoice",
@@ -1193,7 +1273,7 @@ function Invoices() {
                           </button>
                           <button type="button" className="invoice-send-btn"
                             disabled={sendingInvoiceId === invoice.id}
-                            onClick={(e) => { e.stopPropagation(); sendInvoice(invoice.id); }}>
+                            onClick={(e) => { e.stopPropagation(); sendInvoice(invoice); }}>
                             {sendingInvoiceId === invoice.id ? "..." : <FaPaperPlane />}
                           </button>
                         </div>

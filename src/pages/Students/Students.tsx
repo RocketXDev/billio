@@ -69,6 +69,7 @@ function Students() {
 
   const [invoiceContactTarget, setInvoiceContactTarget] = useState("auto");
   const [invoiceDeliveryMethod, setInvoiceDeliveryMethod] = useState("auto");
+  const [autoGeneratePdf, setAutoGeneratePdf] = useState(false);
 
   // Loading
   const [isSaving, setIsSaving] = useState(false);
@@ -111,7 +112,7 @@ function Students() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("coach_students")
-        .select(`student_id, invoice_contact_target, invoice_delivery_method,
+        .select(`student_id, invoice_contact_target, invoice_delivery_method, auto_generate_pdf,
           students(id, student_name, email, phone_number, parent_name, parent_email,
                    parent_phone, active, notes, created_at, sms_consent)`)
         .eq("coach_id", coachId);
@@ -238,6 +239,7 @@ function Students() {
           student_id: newStudent.id,
           invoice_contact_target: invoiceContactTarget,
           invoice_delivery_method: invoiceDeliveryMethod,
+          auto_generate_pdf: isPro && (invoiceDeliveryMethod === "email" || invoiceDeliveryMethod === "both") ? autoGeneratePdf : false,
         });
 
       if (linkError) {
@@ -251,6 +253,7 @@ function Students() {
           student_id: newStudent.id,
           invoice_contact_target: invoiceContactTarget,
           invoice_delivery_method: invoiceDeliveryMethod,
+          auto_generate_pdf: isPro && (invoiceDeliveryMethod === "email" || invoiceDeliveryMethod === "both") ? autoGeneratePdf : false,
           students: newStudent,
         },
       ]);
@@ -279,6 +282,7 @@ function Students() {
     setNotes(student?.notes || "");
     setInvoiceContactTarget(link.invoice_contact_target || "auto");
     setInvoiceDeliveryMethod(link.invoice_delivery_method || "auto");
+    setAutoGeneratePdf(link.auto_generate_pdf || false);
     setSmsConsent(link.students?.sms_consent || false);
 
     setShowEditStudent(true);
@@ -347,6 +351,7 @@ function Students() {
     setEditingStudent(null);
     setInvoiceContactTarget("auto");
     setInvoiceDeliveryMethod("auto");
+    setAutoGeneratePdf(false);
     setSmsConsent(false);
   }
 
@@ -492,6 +497,7 @@ function Students() {
         .update({
           invoice_contact_target: invoiceContactTarget,
           invoice_delivery_method: invoiceDeliveryMethod,
+          auto_generate_pdf: isPro && (invoiceDeliveryMethod === "email" || invoiceDeliveryMethod === "both") ? autoGeneratePdf : false,
         })
         .eq("coach_id", coachId)
         .eq("student_id", editingStudent.id);
@@ -508,6 +514,7 @@ function Students() {
                 ...link,
                 invoice_contact_target: invoiceContactTarget,
                 invoice_delivery_method: invoiceDeliveryMethod,
+                auto_generate_pdf: isPro && (invoiceDeliveryMethod === "email" || invoiceDeliveryMethod === "both") ? autoGeneratePdf : false,
                 students: updatedStudent,
               }
             : link
@@ -1326,6 +1333,27 @@ function Students() {
                         );
                       })}
                     </div>
+
+                    {(invoiceDeliveryMethod === "email" || invoiceDeliveryMethod === "both") && (
+                      <div className="lesson-recurring-toggle-row" style={{ marginTop: 20 }}>
+                        <div className="lesson-recurring-toggle-label">
+                          <span>Auto-generate PDF invoice</span>
+                        </div>
+                        {isPro ? (
+                          <button
+                            type="button"
+                            className={`lesson-recurring-toggle-btn ${autoGeneratePdf ? "active" : ""}`}
+                            onClick={() => setAutoGeneratePdf((prev) => !prev)}
+                          >
+                            <span className="lesson-recurring-toggle-knob" />
+                          </button>
+                        ) : (
+                          <span className="pro-only-bubble" style={{ position: "static", transform: "none" }}>
+                            <FaLock style={{ fontSize: 8 }} /> Pro only
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1554,6 +1582,27 @@ function Students() {
                         );
                       })}
                     </div>
+
+                    {(invoiceDeliveryMethod === "email" || invoiceDeliveryMethod === "both") && (
+                      <div className="lesson-recurring-toggle-row" style={{ marginTop: 20 }}>
+                        <div className="lesson-recurring-toggle-label">
+                          <span>Auto-generate PDF invoice</span>
+                        </div>
+                        {isPro ? (
+                          <button
+                            type="button"
+                            className={`lesson-recurring-toggle-btn ${autoGeneratePdf ? "active" : ""}`}
+                            onClick={() => setAutoGeneratePdf((prev) => !prev)}
+                          >
+                            <span className="lesson-recurring-toggle-knob" />
+                          </button>
+                        ) : (
+                          <span className="pro-only-bubble" style={{ position: "static", transform: "none" }}>
+                            <FaLock style={{ fontSize: 8 }} /> Pro only
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 

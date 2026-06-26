@@ -4,7 +4,7 @@
   display: none;
 }
 
-/* ── Recurring toggle in Add Lesson form (shared by Lessons + Dashboard) ── */
+/* ── Recurring toggle in Add Lesson form (shared by Lessons + Dashboard + Students) ── */
 
 .lesson-recurring-toggle-row {
   display: flex;
@@ -12,6 +12,7 @@
   justify-content: space-between;
   padding: 4px 0;
   gap: 8px;
+  width: 100%;
 }
 
 .lesson-recurring-toggle-label {
@@ -39,6 +40,7 @@
   transition: background 0.22s ease;
   padding: 0;
   flex-shrink: 0;
+  margin: 0px;
 }
 
 .lesson-recurring-toggle-btn.active {

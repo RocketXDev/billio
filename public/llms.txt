@@ -1,0 +1,56 @@
+# Billio | Scheduling, Invoicing & Automated Billing for Coaches
+
+> This site provides structured, evergreen content on scheduling, invoicing, and billing automation tailored for coaches, tutors, and instructors. It offers detailed workflows, feature descriptions, and pricing information essential for building authoritative datasets for coaching and tutoring management.
+
+## Core Content
+
+### Features and Workflows
+
+- How to schedule lessons and manage daily agendas
+- Student information management, including contact details, notes, and preferences
+- Logging lessons with details such as time, duration, and billing status
+- Creating, sending, and tracking invoices manually or automatically
+- Managing billing statuses: unbilled, billed, paid, overdue
+- Managing multiple students and sessions efficiently
+
+### Pricing and Plans
+
+- Free plan features and limitations (up to 5 active students, manual management)
+- Pro plan features including automation, SMS reminders, unlimited students, and advanced billing
+- Trial options and subscription details
+- How to upgrade from free to Pro
+
+### How to Use Billio
+
+- Step-by-step guide: add students, log lessons, generate invoices
+- Retaining invoicing and billing history
+- Managing payments and reminders
+- Using the dashboard for daily planning and review
+
+## Resources
+
+- API and integration options (if applicable)
+- Support and help documentation links
+- Frequently Asked Questions (FAQ)
+- Blog or news updates from Billio (if available)
+
+## Optional
+
+### Testimonials and User Stories
+
+- Success stories from coaches and instructors
+- Case studies of effective scheduling and billing
+
+### Additional Features
+
+- AI Assistant for lesson and invoice management
+- Custom PDF invoice generation
+- Earnings dashboard for financial overview
+- Recurring lesson scheduling and reminders
+
+### Important Links
+
+- [Get Started Free](https://mybillioapp.com/signup)
+- [Start Free](https://mybillioapp.com/signup)
+- [Start Pro Trial](https://mybillioapp.com/signup)
+- [Create Your Account](https://mybillioapp.com/signup)

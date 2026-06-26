@@ -984,16 +984,14 @@ function Invoices() {
       return null;
     }
 
-    const { data: urlData } = supabase.storage.from("invoice-pdfs").getPublicUrl(filePath);
-
     await supabase
       .from("invoices")
-      .update({ pdf_url: urlData.publicUrl, pdf_generated_at: new Date().toISOString() })
+      .update({ pdf_path: filePath, pdf_generated_at: new Date().toISOString() })
       .eq("id", invoice.id);
 
     queryClient.invalidateQueries({ queryKey: ["invoices", coachId] });
 
-    return urlData.publicUrl;
+    return filePath;
   }
 
   async function sendInvoice(invoice: any) {
@@ -1004,9 +1002,9 @@ function Invoices() {
     setSendError("");
     setSendSuccessRecipient("");
 
-    let pdfUrl: string | null = null;
+    let pdfPath: string | null = null;
     try {
-      pdfUrl = await maybeGenerateInvoicePdf(invoice);
+      pdfPath = await maybeGenerateInvoicePdf(invoice);
     } catch (err) {
       console.log("Auto-generate PDF error:", err);
       // Never block sending the invoice on a PDF generation failure.
@@ -1015,7 +1013,7 @@ function Invoices() {
     const { data, error } = await supabase.functions.invoke(
       "send-single-invoice",
       {
-        body: { invoiceId, pdfUrl },
+        body: { invoiceId, pdfPath },
       }
     );
 

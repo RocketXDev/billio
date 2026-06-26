@@ -366,18 +366,26 @@
 }
 
 .pdfinv-auto-view-link {
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   height: 44px;
-  margin-top: 14px;
+  margin: 14px 0 0;
+  border: none;
   border-radius: 14px;
   background: var(--primary-purple);
   color: white;
   font-size: 14px;
   font-weight: 600;
   text-decoration: none;
+  cursor: pointer;
+}
+
+.pdfinv-auto-view-link:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .pdfinv-card h3 {

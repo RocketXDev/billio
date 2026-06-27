@@ -1,7 +1,7 @@
 import '../Login/Login.css';
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaEye, FaEyeSlash, FaCheckCircle } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
 import { PROFESSIONS } from "../../lib/professions";
 
@@ -46,7 +46,7 @@ function Signup() {
 
     return (
         <>
-            <div className="mb">
+            <div className="mb mb-reverse">
                 <div className="mb-wrapper">
                     <img className="mb-logo" src="/logo.png" alt="Billio logo" />
 
@@ -128,6 +128,20 @@ function Signup() {
 
                     <div className="mb-signup">
                     Already have an account? <Link to="/login">Login</Link>
+                    </div>
+                </div>
+
+                <div className="mb-desktop-aside">
+                    <div className="mb-desktop-aside-inner">
+                        <img src="/logo-white.png" alt="Billio" className="mb-desktop-logo" />
+                        <span className="mb-desktop-badge">Built for coaches, tutors &amp; more</span>
+                        <h2>Billing made simple.</h2>
+                        <p>Join coaches, tutors, instructors, and more who run their practice on Billio.</p>
+                        <ul className="mb-desktop-points">
+                            <li><span className="mb-desktop-point-icon"><FaCheckCircle /></span> Free plan, no credit card required</li>
+                            <li><span className="mb-desktop-point-icon"><FaCheckCircle /></span> 30-day Pro trial on signup</li>
+                            <li><span className="mb-desktop-point-icon"><FaCheckCircle /></span> Set up your profile in minutes</li>
+                        </ul>
                     </div>
                 </div>
             </div>

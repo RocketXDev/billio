@@ -1,7 +1,7 @@
 import { useState} from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaEye, FaEyeSlash, FaCheckCircle } from "react-icons/fa";
 import "./Login.css"
 
 function Login() {
@@ -41,6 +41,19 @@ function Login() {
     return (
         <>
             <div className="mb">
+                <div className="mb-desktop-aside">
+                    <div className="mb-desktop-aside-inner">
+                        <img src="/logo-white.png" alt="Billio" className="mb-desktop-logo" />
+                        <span className="mb-desktop-badge">Built for coaches, tutors &amp; more</span>
+                        <h2>Welcome back.</h2>
+                        <p>Pick up right where you left off — your students, lessons, and invoices are exactly how you left them.</p>
+                        <ul className="mb-desktop-points">
+                            <li><span className="mb-desktop-point-icon"><FaCheckCircle /></span> Schedule lessons in seconds</li>
+                            <li><span className="mb-desktop-point-icon"><FaCheckCircle /></span> Send branded invoices automatically</li>
+                            <li><span className="mb-desktop-point-icon"><FaCheckCircle /></span> Track earnings in one dashboard</li>
+                        </ul>
+                    </div>
+                </div>
                 <div className="mb-wrapper">
                     <img className="mb-logo" src="./logo.png" alt="" />
                     <div className="mb-form">

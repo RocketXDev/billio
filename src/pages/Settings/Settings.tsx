@@ -79,7 +79,11 @@ export default function Settings() {
     enabled: !!coachId,
   });
 
-  const loading = identityLoading || settingsLoading;
+  // Gate on the data actually being present, not just `isLoading` — react-query
+  // reports `isLoading: false` while the query is still `enabled: false` (i.e.
+  // before coachId resolves), which would otherwise let the form flash with
+  // default values before the real settings arrive.
+  const loading = identityLoading || !coachId || settingsLoading || settingsData === undefined;
 
   useEffect(() => {
     if (!coachId && !identityLoading) navigate("/login");

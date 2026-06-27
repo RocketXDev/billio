@@ -62,7 +62,12 @@ function Profile() {
     enabled: !!coachId && !!profileId,
   });
 
-  const loading = identityLoading || profileDataLoading;
+  // Gate on the data actually being present, not just `isLoading` — react-query
+  // reports `isLoading: false` while the query is still `enabled: false` (i.e.
+  // before coachId/profileId resolve), which would otherwise let the form
+  // render with blank fields before the real profile arrives.
+  const loading =
+    identityLoading || !coachId || !profileId || profileDataLoading || profileCoachData === undefined;
 
   useEffect(() => {
     if (!coachId && !identityLoading) navigate("/login");

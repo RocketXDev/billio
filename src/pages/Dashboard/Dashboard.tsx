@@ -183,7 +183,7 @@ function Dashboard() {
   const { isPro } = usePlan();
   const { settings } = useSettings();
   const term = useLessonTerm();
-  const { pinned, quickToolsPosition, setQuickToolsPosition } = useDashboardWidgets();
+  const { pinned, quickToolsPosition, setQuickToolsPosition, widgetsLoading } = useDashboardWidgets();
   const [quickToolsDragging, setQuickToolsDragging] = useState(false);
   const dndSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -194,7 +194,7 @@ function Dashboard() {
 
   const queryClient = useQueryClient();
 
-  const { data: lessons = [] } = useQuery({
+  const { data: lessonsData } = useQuery({
     queryKey: ["lessons", coachId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -208,8 +208,9 @@ function Dashboard() {
     },
     enabled: !!coachId,
   });
+  const lessons = lessonsData ?? [];
 
-  const { data: coachStudents = [] } = useQuery({
+  const { data: coachStudentsData } = useQuery({
     queryKey: ["coach-students", coachId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -221,8 +222,9 @@ function Dashboard() {
     },
     enabled: !!coachId,
   });
+  const coachStudents = coachStudentsData ?? [];
 
-  const { data: invoices = [] } = useQuery({
+  const { data: invoicesData } = useQuery({
     queryKey: ["invoices", coachId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -235,6 +237,18 @@ function Dashboard() {
     },
     enabled: !!coachId,
   });
+  const invoices = invoicesData ?? [];
+
+  // `loading` only covers the initial profile/coach bootstrap — once it flips
+  // false, coachId is set and these three queries become enabled, but they
+  // still need a beat to actually fetch. Wait for them too so stat cards and
+  // the lesson list don't render empty before the real data arrives.
+  const dataLoading =
+    loading ||
+    lessonsData === undefined ||
+    coachStudentsData === undefined ||
+    invoicesData === undefined ||
+    widgetsLoading;
 
   const { data: coachRatesData } = useQuery({
     queryKey: ["coach-rates", coachId],
@@ -341,7 +355,7 @@ function Dashboard() {
   }, [location.search]);
 
   useEffect(() => {
-    if (loading || showOnboarding) return;
+    if (dataLoading || showOnboarding) return;
 
     const seen = localStorage.getItem("billio_dashboard_tutorial_seen");
 
@@ -352,7 +366,7 @@ function Dashboard() {
 
       return () => clearTimeout(timer);
     }
-  }, [loading, showOnboarding]);
+  }, [dataLoading, showOnboarding]);
 
   useEffect(() => {
     if (showDashboardTutorial && dashboardTutorialStep === 1 && addLessonCardRef.current) {
@@ -1284,7 +1298,7 @@ function Dashboard() {
     return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
   }
 
-  if (loading) {
+  if (dataLoading) {
     return (
       <div className="loading-screen">
         <div className="billio-loader">

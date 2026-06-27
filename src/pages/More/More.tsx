@@ -27,7 +27,7 @@ import { useLessonTerm } from "../../hooks/useLessonTerm";
 export default function More() {
   const navigate = useNavigate();
   const { isPro, isFree, planLoading } = usePlan();
-  const { pinned, togglePinned } = useDashboardWidgets();
+  const { pinned, togglePinned, widgetsLoading } = useDashboardWidgets();
   const term = useLessonTerm();
   const DASHBOARD_TOOLS = getDashboardTools(term);
 
@@ -108,7 +108,7 @@ export default function More() {
     }
   }
 
-  if (planLoading) {
+  if (planLoading || widgetsLoading) {
     return (
       <div className="loading-screen">
         <div className="billio-loader">

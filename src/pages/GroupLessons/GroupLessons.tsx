@@ -106,7 +106,7 @@ export default function GroupLessons() {
     enabled: !!coachId,
   });
 
-  const { data: coachStudents = [], isLoading: studentsLoading } = useQuery({
+  const { data: coachStudentsData, isLoading: studentsLoading } = useQuery({
     queryKey: ["coach-students", coachId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -118,8 +118,9 @@ export default function GroupLessons() {
     },
     enabled: !!coachId,
   });
+  const coachStudents = coachStudentsData ?? [];
 
-  const { data: groups = [], isLoading: groupsLoading } = useQuery({
+  const { data: groupsData, isLoading: groupsLoading } = useQuery({
     queryKey: ["group-lessons", coachId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -133,6 +134,7 @@ export default function GroupLessons() {
     },
     enabled: !!coachId,
   });
+  const groups = groupsData ?? [];
 
   const rateOptions: any[] = [];
   if (coachRatesData?.default_hourly_rate) {
@@ -152,7 +154,12 @@ export default function GroupLessons() {
     }
   }, [coachRatesData]);
 
-  const loading = identityLoading || studentsLoading || groupsLoading;
+  // Gate on the data actually being present, not just `isLoading` — react-query
+  // reports `isLoading: false` while a query is still `enabled: false` (i.e.
+  // before coachId resolves), which would otherwise let the list render empty
+  // before groups actually arrive.
+  const loading =
+    identityLoading || !coachId || studentsLoading || groupsLoading || groupsData === undefined;
 
   const groupStudentMatches =
     groupStudentInput.trim().length > 0

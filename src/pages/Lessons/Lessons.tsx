@@ -146,7 +146,6 @@ function Lessons() {
   const [isDeletingSeries, setIsDeletingSeries] = useState(false);
   const [showDeleteSeriesModal, setShowDeleteSeriesModal] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
-  const [lessonsLoading, setLessonsLoading] = useState(false);
 
   // Lessons tutorial
   const [showLessonsTutorial, setShowLessonsTutorial] = useState(false);
@@ -193,7 +192,7 @@ function Lessons() {
     enabled: !!coachId,
   });
 
-  useEffect(() => { if (lessonsData) { setLessons(lessonsData); setLessonsLoading(false); } }, [lessonsData]);
+  useEffect(() => { if (lessonsData) setLessons(lessonsData); }, [lessonsData]);
   useEffect(() => { if (!coachId && !identityLoading) window.location.href = "/login"; }, [coachId, identityLoading]);
 
   const { data: eventsData } = useQuery({
@@ -212,7 +211,11 @@ function Lessons() {
 
   useEffect(() => { if (eventsData) setEvents(eventsData); }, [eventsData]);
 
-  const loading = identityLoading || lessonsQueryLoading;
+  // Gate on the data actually being present, not just `isLoading` — react-query
+  // reports `isLoading: false` while the query is still `enabled: false` (i.e.
+  // before coachId resolves), which would otherwise let the list render empty
+  // before lessons actually arrive.
+  const loading = identityLoading || !coachId || lessonsQueryLoading || lessonsData === undefined;
 
   useEffect(() => {
     if (!loading) {
@@ -1639,7 +1642,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                 List
             </button>
             </div>
-            {lessonsLoading ? (
+            {loading ? (
               <div className="lessons-loading-card">
                 <div className="billio-mini-spinner"></div>
                 <p>Loading {term.lowerPlural}...</p>

@@ -60,7 +60,11 @@ export function useDashboardWidgets() {
   return {
     pinned: widgets.pinned,
     quickToolsPosition: widgets.quickToolsPosition,
-    widgetsLoading: identityLoading || isLoading,
+    // `isLoading` alone reports false while the query is still `enabled:
+    // false` (i.e. before coachId resolves) — check for the data itself too,
+    // otherwise `pinned` would render as its empty-array default before the
+    // coach's actual saved selection arrives.
+    widgetsLoading: identityLoading || !coachId || isLoading || data === undefined,
     togglePinned,
     setQuickToolsPosition,
   };

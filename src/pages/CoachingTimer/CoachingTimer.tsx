@@ -85,6 +85,10 @@ export default function CoachingTimer() {
     }
   }, [coachId]);
 
+  useEffect(() => {
+    if (!coachId && !identityLoading) navigate("/login");
+  }, [coachId, identityLoading]);
+
   const timerRestoring = identityLoading || (!!coachId && !timerRestored);
 
   useEffect(() => {
@@ -246,6 +250,21 @@ export default function CoachingTimer() {
       : [];
 
   const progress = Math.min(elapsedMs / MAX_TIMER_MS, 1);
+
+  // Gate on the rate/student data actually being present so the rate chips
+  // and student picker don't render empty before they load in.
+  const pageLoading = identityLoading || !coachId || coachRatesData === undefined;
+
+  if (pageLoading) {
+    return (
+      <div className="loading-screen">
+        <div className="billio-loader">
+          <div className="billio-loader-glow" />
+          <img className="billio-loader-logo" src="/logo.png" alt="Billio" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="timer-page">

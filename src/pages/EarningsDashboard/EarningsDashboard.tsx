@@ -19,7 +19,7 @@ export default function EarningsDashboard() {
 
   useEffect(() => { if (!coachId && !identityLoading) navigate("/login"); }, [coachId, identityLoading]);
 
-  const { data: lessons = [], isLoading: lessonsLoading } = useQuery({
+  const { data: lessonsData, isLoading: lessonsLoading } = useQuery({
     queryKey: ["lessons", coachId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -33,8 +33,9 @@ export default function EarningsDashboard() {
     },
     enabled: !!coachId,
   });
+  const lessons = lessonsData ?? [];
 
-  const { data: invoices = [], isLoading: invoicesLoading } = useQuery({
+  const { data: invoicesData, isLoading: invoicesLoading } = useQuery({
     queryKey: ["invoices", coachId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -47,8 +48,15 @@ export default function EarningsDashboard() {
     },
     enabled: !!coachId,
   });
+  const invoices = invoicesData ?? [];
 
-  const loading = identityLoading || lessonsLoading || invoicesLoading;
+  // Gate on the data actually being present, not just `isLoading` — react-query
+  // reports `isLoading: false` while a query is still `enabled: false` (i.e.
+  // before coachId resolves), which would otherwise let stats render as zero
+  // before the real numbers arrive.
+  const loading =
+    identityLoading || !coachId || lessonsLoading || invoicesLoading ||
+    lessonsData === undefined || invoicesData === undefined;
 
   const now = new Date();
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);

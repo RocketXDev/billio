@@ -99,7 +99,7 @@ export default function RecurringLessons() {
     enabled: !!coachId,
   });
 
-  const { data: coachStudents = [], isLoading: studentsLoading } = useQuery({
+  const { data: coachStudentsData, isLoading: studentsLoading } = useQuery({
     queryKey: ["coach-students", coachId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -111,8 +111,9 @@ export default function RecurringLessons() {
     },
     enabled: !!coachId,
   });
+  const coachStudents = coachStudentsData ?? [];
 
-  const { data: series = [], isLoading: seriesLoading } = useQuery({
+  const { data: seriesData, isLoading: seriesLoading } = useQuery({
     queryKey: ["recurring-lessons", coachId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -126,6 +127,7 @@ export default function RecurringLessons() {
     },
     enabled: !!coachId,
   });
+  const series = seriesData ?? [];
 
   const rateOptions: any[] = [];
   if (coachRatesData?.default_hourly_rate) {
@@ -145,7 +147,12 @@ export default function RecurringLessons() {
     }
   }, [coachRatesData]);
 
-  const loading = identityLoading || studentsLoading || seriesLoading;
+  // Gate on the data actually being present, not just `isLoading` — react-query
+  // reports `isLoading: false` while a query is still `enabled: false` (i.e.
+  // before coachId resolves), which would otherwise let the list render empty
+  // before the series actually arrive.
+  const loading =
+    identityLoading || !coachId || studentsLoading || seriesLoading || seriesData === undefined;
 
   // Student autocomplete — same as Dashboard.tsx
   const studentMatches =

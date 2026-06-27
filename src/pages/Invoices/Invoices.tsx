@@ -162,7 +162,11 @@ function Invoices() {
     if (!coachId && !identityLoading) navigate("/login");
   }, [coachId, identityLoading]);
 
-  const loading = identityLoading || invoicesLoading;
+  // Gate on the data actually being present, not just `isLoading` — react-query
+  // reports `isLoading: false` while the query is still `enabled: false` (i.e.
+  // before coachId resolves), which would otherwise let the list render empty
+  // before invoices actually arrive.
+  const loading = identityLoading || !coachId || invoicesLoading || invoicesData === undefined;
 
   useEffect(() => {
     if (coachId && selectedStudentId && rangeStart && rangeEnd) {

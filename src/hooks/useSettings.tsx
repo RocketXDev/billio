@@ -49,6 +49,10 @@ export function useSettings() {
           lessonTermPlural: data.lesson_term_plural || "Lessons",
         }
       : DEFAULTS,
-    settingsLoading: identityLoading || isLoading,
+    // `isLoading` alone reports false while the query is still `enabled:
+    // false` (i.e. before coachId resolves) — check for the data itself too,
+    // so consumers that gate on this don't briefly render fallback defaults
+    // (e.g. "Lesson") before the coach's real saved settings arrive.
+    settingsLoading: identityLoading || !coachId || isLoading || data === undefined,
   };
 }

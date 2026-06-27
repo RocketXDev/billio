@@ -1,56 +1,39 @@
-# Billio | Scheduling, Invoicing & Automated Billing for Coaches
+# Billio
 
-> This site provides structured, evergreen content on scheduling, invoicing, and billing automation tailored for coaches, tutors, and instructors. It offers detailed workflows, feature descriptions, and pricing information essential for building authoritative datasets for coaching and tutoring management.
+> Billio is a mobile-first scheduling and invoicing app for people who teach, coach, train, tutor, or care for clients one-on-one or in small groups. It replaces spreadsheets and generic invoicing tools with one app to track students/clients, log lessons, and get paid. The word used for a "lesson" throughout the app — Lesson, Session, Event, Appointment, Meeting, or a custom word — is configurable per account in Settings, so the same product reads naturally across very different kinds of practices.
 
-## Core Content
+## Product
 
-### Features and Workflows
+- [Billio](https://www.mybillioapp.com/): Landing page with the full feature list, plan comparison, and FAQ.
+- [About Billio](https://www.mybillioapp.com/about): Company info, mission, and contact.
+- [Sign up](https://www.mybillioapp.com/signup): Create a free account, no credit card required.
+- [Log in](https://www.mybillioapp.com/login): Existing customer sign-in.
 
-- How to schedule lessons and manage daily agendas
-- Student information management, including contact details, notes, and preferences
-- Logging lessons with details such as time, duration, and billing status
-- Creating, sending, and tracking invoices manually or automatically
-- Managing billing statuses: unbilled, billed, paid, overdue
-- Managing multiple students and sessions efficiently
+## What it does
 
-### Pricing and Plans
+- Schedule one-off, group, and recurring lessons, with both calendar and list views.
+- Track per-student contact info, parent/guardian details, notes, and preferences.
+- Track billing status per lesson: unbilled, billed, paid, or overdue.
+- Generate and send invoices — by email on the Free plan, or email and SMS on Pro — manually or on an automated weekly schedule.
+- Built-in lesson timer to track and bill by elapsed time.
+- AI Assistant: create, update, and delete lessons and invoices by chatting or speaking naturally.
+- Branded, custom PDF invoices, including mileage billing at the national IRS rate.
+- Earnings dashboard: revenue totals and paid-vs-unbilled breakdowns.
+- Google Calendar sync (currently pending Google's app approval).
+- Custom terminology: rename "Lesson" throughout the app to Session, Event, Appointment, Meeting, or any custom word, so the product fits tutoring, coaching, therapy, or childcare businesses equally well.
 
-- Free plan features and limitations (up to 5 active students, manual management)
-- Pro plan features including automation, SMS reminders, unlimited students, and advanced billing
-- Trial options and subscription details
-- How to upgrade from free to Pro
+## Pricing
 
-### How to Use Billio
+- Free — $0 forever, no credit card required: up to 5 active students, manual lesson tracking, manual invoice generation, email invoice sending, current-month calendar, recurring lesson scheduling.
+- Pro — $9.99/month with a 30-day free trial: unlimited active students, full lesson scheduling, automated invoice generation, automated invoice sending and review, email & SMS invoice sending, text message reminders, weekly billing workflow, unlimited calendar navigation, live lesson timer, earnings dashboard, custom PDF invoice generator, AI Assistant.
 
-- Step-by-step guide: add students, log lessons, generate invoices
-- Retaining invoicing and billing history
-- Managing payments and reminders
-- Using the dashboard for daily planning and review
+## Audience
 
-## Resources
-
-- API and integration options (if applicable)
-- Support and help documentation links
-- Frequently Asked Questions (FAQ)
-- Blog or news updates from Billio (if available)
+Solo or small-team service providers who bill by the session, usually managing 5–30 active students or clients from their phone: private coaches, tutors, instructors, teachers, nannies, and therapists.
 
 ## Optional
 
-### Testimonials and User Stories
-
-- Success stories from coaches and instructors
-- Case studies of effective scheduling and billing
-
-### Additional Features
-
-- AI Assistant for lesson and invoice management
-- Custom PDF invoice generation
-- Earnings dashboard for financial overview
-- Recurring lesson scheduling and reminders
-
-### Important Links
-
-- [Get Started Free](https://mybillioapp.com/signup)
-- [Start Free](https://mybillioapp.com/signup)
-- [Start Pro Trial](https://mybillioapp.com/signup)
-- [Create Your Account](https://mybillioapp.com/signup)
+- [Privacy Policy](https://www.mybillioapp.com/privacy)
+- [Terms of Service](https://www.mybillioapp.com/terms)
+- [SMS Opt-In Info](https://www.mybillioapp.com/sms-opt-in)
+- [Support](https://www.mybillioapp.com/support): support@mybillioapp.com

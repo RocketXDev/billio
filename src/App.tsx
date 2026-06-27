@@ -1,4 +1,5 @@
-import {Routes, Route, Navigate} from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import Login from './pages/Login/Login';
 import Signup from './pages/Signup/Signup';
 import Dashboard from './pages/Dashboard/Dashboard';
@@ -33,7 +34,29 @@ import GoogleCalendar from "./pages/GoogleCalendar/GoogleCalendar";
 import EarningsDashboard from "./pages/EarningsDashboard/EarningsDashboard";
 import PdfInvoice from "./pages/PdfInvoice/PdfInvoice";
 
+const SITE_URL = "https://www.mybillioapp.com";
+
 function App() {
+  const location = useLocation();
+
+  // This is a client-rendered SPA with one index.html for every route, so
+  // there's no per-page canonical tag from the server. Keep a single
+  // <link rel="canonical"> in <head> in sync with the current path instead —
+  // a static one in index.html would point every route at "/", which is
+  // worse than having none (Google would treat every other page as a
+  // duplicate of the homepage).
+  useEffect(() => {
+    const path = location.pathname === "/" ? "/" : location.pathname.replace(/\/+$/, "");
+    const canonicalUrl = `${SITE_URL}${path}`;
+
+    let link = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!link) {
+      link = document.createElement("link");
+      link.setAttribute("rel", "canonical");
+      document.head.appendChild(link);
+    }
+    link.setAttribute("href", canonicalUrl);
+  }, [location.pathname]);
 
   return (
     <Routes>

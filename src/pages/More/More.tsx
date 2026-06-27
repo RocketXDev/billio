@@ -37,41 +37,25 @@ export default function More() {
     {
       icon: "✨",
       title: "More Tools & Settings",
-      text: "This page gives you quick access to extra Billio tools, account options, and support links.",
-      bullets: [
-        `Use it when you need tools that do not fit directly into ${term.plural}, Students, or Invoices.`,
-        "Some tools are included for everyone, while advanced tools may require Pro.",
-      ],
+      text: `This page gives you quick access to extra Billio tools, account options, and support links — things that don't fit directly into ${term.plural}, Students, or Invoices. Some tools are free; others need Pro.`,
       target: "none",
     },
     {
       icon: "🛠️",
       title: "Coaching Tools",
-      text: "This section is for extra features that help you manage your coaching work faster.",
-      bullets: [
-        `Recurring ${term.plural} helps you schedule repeating ${term.lowerPlural} automatically.`,
-        `${term.singular} Timer and advanced summaries are available here when enabled for your plan.`,
-      ],
+      text: `Extra features to manage your work faster: Recurring and Group ${term.lowerPlural} for repeating or multi-student scheduling, an Earnings Dashboard and live ${term.lower} Timer, branded PDF Invoices, and an AI Assistant that can create ${term.lowerPlural} and invoices just by chatting.`,
       target: "coaching",
     },
     {
       icon: "👤",
       title: "Account Options",
-      text: "This section helps you manage your Billio account, subscription, profile, and settings.",
-      bullets: [
-        "Upgrade to Pro or review your subscription from here.",
-        "Settings and Profile let you adjust your account details.",
-      ],
+      text: "Manage your Billio account here — upgrade to Pro or review your subscription, and adjust your profile or app settings.",
       target: "account",
     },
     {
       icon: "💬",
       title: "Help & Information",
-      text: "This section gives you access to support and important Billio information.",
-      bullets: [
-        "Use Support if you need help with the app.",
-        "About Billio, Privacy Policy, and other pages live here.",
-      ],
+      text: "Find support and important info here — contact Support if you need help, or visit About Billio, Privacy Policy, and other pages.",
       target: "help",
     },
   ];
@@ -249,12 +233,6 @@ export default function More() {
             <div className="more-tutorial-icon-wrap">{currentMoreTutorialStep.icon}</div>
             <h2 className="more-tutorial-title">{currentMoreTutorialStep.title}</h2>
             <p className="more-tutorial-text">{currentMoreTutorialStep.text}</p>
-
-            <ul className="more-tutorial-list">
-              {currentMoreTutorialStep.bullets.map((bullet) => (
-                <li key={bullet}>{bullet}</li>
-              ))}
-            </ul>
 
             <div className="more-tutorial-dots">
               {moreTutorialSteps.map((_, index) => (

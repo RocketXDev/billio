@@ -249,7 +249,9 @@
   margin: 0;
 }
 
-.preview-top h3 {
+.preview-top-count {
+  display: block;
+  font-family: 'Space Grotesk', sans-serif;
   color: var(--main-text);
   font-size: 22px;
   font-weight: 700;

@@ -245,7 +245,8 @@
     margin-bottom: 22px;
   }
 
-  .mb-desktop-aside-inner h2 {
+  .mb-desktop-aside-inner .mb-desktop-heading {
+    font-family: 'Space Grotesk', sans-serif;
     color: #ffffff;
     font-size: 46px;
     font-weight: 700;
@@ -381,7 +382,7 @@
     max-width: 520px;
   }
 
-  .mb-desktop-aside-inner h2 {
+  .mb-desktop-aside-inner .mb-desktop-heading {
     font-size: 54px;
   }
 

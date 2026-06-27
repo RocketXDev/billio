@@ -1513,56 +1513,31 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
       icon: "📘",
       title: `Welcome to ${term.plural}`,
       text:
-        `This page is where you manage every ${term.lower} you teach. You can add ${term.lowerPlural}, check your schedule, update billing status, and open ${term.lowerPlural} when you need to make changes.`,
-      bullets: [
-        "Use Calendar mode for planning by date",
-        `Use List view for a full timeline of ${term.lowerPlural}`,
-        `Tap a billing status to quickly move a ${term.lower} from unbilled to billed to paid`,
-      ],
+        `Manage every ${term.lower} you teach here — add ${term.lowerPlural}, check your schedule, and tap a billing status to cycle it from unbilled to billed to paid. Switch between Calendar and List views anytime.`,
     },
     {
       icon: "📅",
       title: "Calendar mode",
       text:
-        `Calendar is the default view because it is the fastest way to see which days already have ${term.lowerPlural} scheduled.`,
-      bullets: [
-        "Switch between Calendar and List from this control",
-        "Calendar helps you plan around specific dates",
-        `List is helpful when you want to review many ${term.lowerPlural} at once`,
-      ],
+        `Calendar is the default view — the fastest way to see which days already have ${term.lowerPlural} scheduled. Switch to List view from this control when you want to review many ${term.lowerPlural} at once.`,
     },
     {
       icon: "🗓️",
       title: "Monthly calendar",
       text:
-        `The calendar shows the selected month. Days with ${term.lowerPlural} have a small purple dot, and tapping a day updates the ${term.lower} details below.`,
-      bullets: [
-        "Use the arrows to move by month or year",
-        "Tap a day to select it",
-        "Free users can use the current month; Pro unlocks unlimited calendar navigation",
-      ],
+        `The calendar shows the selected month — days with ${term.lowerPlural} get a small purple dot, and tapping a day updates the details below. Free plans can browse the current month; Pro unlocks unlimited calendar navigation.`,
     },
     {
       icon: "📌",
       title: "Selected day details",
       text:
-        `This card shows the ${term.lowerPlural} for the day you selected on the calendar.`,
-      bullets: [
-        `Tap + here to add a ${term.lower} for the selected date`,
-        `Tap a ${term.lower} status to update billing quickly`,
-        `Tap the edit icon to open the full ${term.lower} editor`,
-      ],
+        `This card shows the ${term.lowerPlural} for your selected day. Tap + to add one, tap a status to update billing, or use the edit icon to open the full ${term.lower} editor.`,
     },
     {
       icon: "📋",
       title: "List view",
       text:
-        `List view groups your ${term.lowerPlural} into Current, Upcoming, and Past sections so you can review everything in order.`,
-      bullets: [
-        `Great for checking older ${term.lowerPlural}`,
-        `Quickly see each ${term.lower}'s rate and billing status`,
-        `Use the edit icon when a ${term.lower} needs changes`,
-      ],
+        `List view groups your ${term.lowerPlural} into Current, Upcoming, and Past, so you can review everything in order — rate and billing status included. Use the edit icon whenever a ${term.lower} needs changes.`,
     },
   ];
 
@@ -2912,12 +2887,6 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
             <p className="lessons-tutorial-text">
               {currentLessonsTutorial.text}
             </p>
-
-            <ul className="lessons-tutorial-list">
-              {currentLessonsTutorial.bullets.map((bullet) => (
-                <li key={bullet}>{bullet}</li>
-              ))}
-            </ul>
 
             <div className="lessons-tutorial-dots">
               {lessonsTutorialSteps.map((_, index) => (

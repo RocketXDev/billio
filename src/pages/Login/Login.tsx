@@ -45,7 +45,7 @@ function Login() {
                     <div className="mb-desktop-aside-inner">
                         <img src="/logo-white.png" alt="Billio" className="mb-desktop-logo" />
                         <span className="mb-desktop-badge">Built for coaches, tutors &amp; more</span>
-                        <h2>Welcome back.</h2>
+                        <p className="mb-desktop-heading">Welcome back.</p>
                         <p>Pick up right where you left off — your students, lessons, and invoices are exactly how you left them.</p>
                         <ul className="mb-desktop-points">
                             <li><span className="mb-desktop-point-icon"><FaCheckCircle /></span> Schedule lessons in seconds</li>
@@ -55,7 +55,7 @@ function Login() {
                     </div>
                 </div>
                 <div className="mb-wrapper">
-                    <img className="mb-logo" src="./logo.png" alt="" />
+                    <img className="mb-logo" src="./logo.png" alt="Billio" />
                     <div className="mb-form">
                         <img className="mb-form-logo" 
                             alt="Login Illustration" 

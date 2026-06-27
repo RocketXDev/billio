@@ -130,7 +130,7 @@ export default function LandingPage() {
               <div className="preview-top">
                 <div>
                   <p>Today's Schedule</p>
-                  <h3>3 Lessons</h3>
+                  <strong className="preview-top-count">3 Lessons</strong>
                 </div>
                 <button><FaPlus /></button>
               </div>

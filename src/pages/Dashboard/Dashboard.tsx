@@ -289,43 +289,22 @@ function Dashboard() {
     {
       icon: "👋",
       title: "Welcome to your Dashboard",
-      text: `This is your home base in Billio. It gives you a quick snapshot of ${term.lowerPlural}, earnings, invoices, and anything that needs your attention.`,
-      items: [
-        "Use this page when you want a fast overview",
-        `Jump into ${term.lowerPlural}, students, invoices, or settings`,
-        "Check notifications from the bell icon",
-      ],
+      text: `This is your home base — a quick snapshot of ${term.lowerPlural}, earnings, and invoices. Jump straight into ${term.lowerPlural}, students, invoices, or settings, and check the bell icon for notifications.`,
     },
     {
       icon: "➕",
       title: `Add ${term.lowerPlural} quickly`,
-      text: `The Add ${term.singular} card lets you log a ${term.lower} without going to another page. Billio uses those ${term.lowerPlural} to calculate earnings and prepare billing later.`,
-      items: [
-        "Choose or create a student",
-        "Set date, time, duration, and rate",
-        "Save notes for your records",
-        "Highlighted areas are preview only during the tutorial",
-      ],
+      text: `The Add ${term.singular} card logs a ${term.lower} — student, date, time, duration, rate, and notes — right from this page, so Billio can calculate earnings and prepare billing automatically. This area is just a preview during the tutorial.`,
     },
     {
       icon: "📊",
       title: "Understand your stats",
-      text: `The Today and This Week cards summarize what is happening right now, so you do not have to manually count ${term.lowerPlural} or totals.`,
-      items: [
-        `Today shows ${term.lowerPlural}, earned amount, and upcoming ${term.lowerPlural}`,
-        `This Week shows earnings, ${term.lower} count, unbilled ${term.lowerPlural}, and pending invoices`,
-        `Use View ${term.lowerPlural} when you need the full schedule`,
-      ],
+      text: `The Today and This Week cards summarize what's happening — ${term.lowerPlural}, earnings, unbilled items, and pending invoices — without manual counting. Tap View ${term.lowerPlural} for the full schedule.`,
     },
     {
       icon: "🧾",
       title: `Track upcoming ${term.lowerPlural} and invoices`,
-      text: `The lower sections show what is coming up today and your most recent invoices, so you can follow up faster.`,
-      items: [
-        `Upcoming shows today’s remaining ${term.lowerPlural}`,
-        `Tap the arrow to edit a dashboard ${term.lower}`,
-        "Recent Invoices gives a quick billing preview",
-      ],
+      text: `The sections below show today's remaining ${term.lowerPlural} and your most recent invoices, so you can follow up faster. Tap the arrow to edit a ${term.lower}, or open Recent Invoices for a quick billing preview.`,
     },
   ];
 
@@ -2372,12 +2351,6 @@ function Dashboard() {
             <p className="dashboard-tutorial-text">
               {dashboardTutorialSteps[dashboardTutorialStep].text}
             </p>
-
-            <ul className="dashboard-tutorial-list">
-              {dashboardTutorialSteps[dashboardTutorialStep].items.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
 
             <div className="dashboard-tutorial-dots">
               {dashboardTutorialSteps.map((_, index) => (

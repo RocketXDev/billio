@@ -6,6 +6,7 @@
 
 - [Billio](https://www.mybillioapp.com/): Landing page with the full feature list, plan comparison, and FAQ.
 - [About Billio](https://www.mybillioapp.com/about): Company info, mission, and contact.
+- [Blog](https://www.mybillioapp.com/blog): Scheduling, billing, and admin advice for coaches, tutors, instructors, and other independent service providers.
 - [Sign up](https://www.mybillioapp.com/signup): Create a free account, no credit card required.
 - [Log in](https://www.mybillioapp.com/login): Existing customer sign-in.
 

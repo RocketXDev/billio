@@ -2575,13 +2575,9 @@ function Students() {
                 <h2 className="students-tutorial-title">Welcome to Students</h2>
                 <p className="students-tutorial-text">
                   This page keeps your active and archived students organized in one place.
-                  Open a student to view their lesson history, invoice history, and saved details.
+                  Track contact and parent info, billing preferences, and each student's full
+                  lesson and invoice history — archive anytime without losing it.
                 </p>
-                <ul className="students-tutorial-list">
-                  <li>Track each student you coach or teach</li>
-                  <li>Keep contact and parent information ready for billing</li>
-                  <li>Archive students without losing their history</li>
-                </ul>
                 <div className="students-tutorial-dots">
                   <span className="students-tutorial-dot students-tutorial-dot-active" />
                   <span className="students-tutorial-dot" />
@@ -2605,14 +2601,10 @@ function Students() {
                 </div>
                 <h2 className="students-tutorial-title">Add a student</h2>
                 <p className="students-tutorial-text">
-                  Use the <strong>+ button</strong> to add a new student profile.
-                  You can save contact info, parent info, notes, SMS consent, and invoice preferences.
+                  Use the <strong>+ button</strong> to add one student, or the upload icon next
+                  to it to import a whole roster from a CSV file. Free plans can keep up to 5
+                  active students; Pro is unlimited.
                 </p>
-                <ul className="students-tutorial-list">
-                  <li>Free users can keep up to 5 active students</li>
-                  <li>Pro users can add unlimited active students</li>
-                  <li>Highlighted areas are preview only during the tutorial</li>
-                </ul>
                 <div className="students-tutorial-dots">
                   <span className="students-tutorial-dot" />
                   <span className="students-tutorial-dot students-tutorial-dot-active" />
@@ -2633,14 +2625,10 @@ function Students() {
                 <div className="students-tutorial-icon-wrap">📋</div>
                 <h2 className="students-tutorial-title">Student list</h2>
                 <p className="students-tutorial-text">
-                  Your active students appear at the top. Tap a student row to open their detail sheet,
-                  or tap the edit icon to update their profile.
+                  Your active students appear at the top — tap a row to open their detail sheet
+                  with lesson and invoice history, or tap the edit icon to update contact and
+                  billing info.
                 </p>
-                <ul className="students-tutorial-list">
-                  <li>Student details show saved lessons and invoices</li>
-                  <li>Use filters inside the detail sheet to review history faster</li>
-                  <li>Edit student info when contact or billing preferences change</li>
-                </ul>
                 <div className="students-tutorial-dots">
                   <span className="students-tutorial-dot" />
                   <span className="students-tutorial-dot" />
@@ -2661,14 +2649,10 @@ function Students() {
                 <div className="students-tutorial-icon-wrap">🗂️</div>
                 <h2 className="students-tutorial-title">Archived students</h2>
                 <p className="students-tutorial-text">
-                  Archive students when you no longer teach them. This keeps your active list clean
-                  while preserving their lesson and invoice history.
+                  Archive students you no longer teach to keep your active list clean while
+                  preserving their history. Restore an archived student anytime, or permanently
+                  delete one once it's archived.
                 </p>
-                <ul className="students-tutorial-list">
-                  <li>Archived students move to the Archived Students section</li>
-                  <li>You can restore an archived student later</li>
-                  <li>Permanent delete is available only after a student is archived</li>
-                </ul>
                 <div className="students-tutorial-dots">
                   <span className="students-tutorial-dot" />
                   <span className="students-tutorial-dot" />

@@ -1280,33 +1280,6 @@
   margin: 0 0 14px;
 }
 
-.students-tutorial-list {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 14px;
-  width: 100%;
-  text-align: left;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.students-tutorial-list li {
-  font-size: 14px;
-  color: var(--secondary-text);
-  padding-left: 20px;
-  position: relative;
-  line-height: 1.4;
-}
-
-.students-tutorial-list li::before {
-  content: "•";
-  position: absolute;
-  left: 6px;
-  color: var(--primary-purple);
-  font-weight: 700;
-}
-
 .students-tutorial-dots {
   display: flex;
   gap: 7px;
@@ -1375,9 +1348,5 @@
 
   .students-tutorial-text {
     font-size: 14px;
-  }
-
-  .students-tutorial-list li {
-    font-size: 13px;
   }
 }

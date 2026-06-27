@@ -2391,13 +2391,8 @@ function Invoices() {
                   <div className="tutorial-icon-wrap">✅</div>
                   <h2 className="tutorial-title">Track Invoice Status</h2>
                   <p className="tutorial-text">
-                    Invoices are grouped into current, billed, and past invoices. You can update status, edit invoice details, and send invoices from this page.
+                    Invoices are grouped into current, billed, and past. <strong>Unbilled</strong> means still being prepared, <strong>billed</strong> means sent or awaiting payment, and <strong>paid</strong> moves it into history. Update status, edit, or send invoices right from here.
                   </p>
-                  <ul className="tutorial-list">
-                    <li><strong>Unbilled</strong> means the invoice is still being prepared.</li>
-                    <li><strong>Billed</strong> means it has been sent or is waiting for payment.</li>
-                    <li><strong>Paid</strong> moves it into your past invoice history.</li>
-                  </ul>
                   <div className="tutorial-dots">
                     {[0, 1, 2, 3, 4].map((step) => (
                       <span key={step} className={`tutorial-dot${tutorialStep === step ? " tutorial-dot-active" : ""}`} />
@@ -2420,13 +2415,8 @@ function Invoices() {
                   </div>
                   <h2 className="tutorial-title">Invoice Settings</h2>
                   <p className="tutorial-text">
-                    The <strong>⚙️ Settings icon</strong> is where invoice automation lives. Free users can still view the page, while automation controls are available for Pro users.
+                    The <strong>⚙️ Settings icon</strong> controls invoice automation — auto-generate invoices on a schedule, get reminders before sending, and enable automatic delivery. Everyone can view this page; automation controls need Pro.
                   </p>
-                  <ul className="tutorial-list">
-                    <li>Auto-generate invoices on a schedule</li>
-                    <li>Get reminders before sending</li>
-                    <li>Enable automatic invoice delivery</li>
-                  </ul>
                   <div className="tutorial-dots">
                     {[0, 1, 2, 3, 4].map((step) => (
                       <span key={step} className={`tutorial-dot${tutorialStep === step ? " tutorial-dot-active" : ""}`} />

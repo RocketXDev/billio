@@ -31,4 +31,25 @@ Disallow: /password-updated
 Disallow: /sms-opt-in
 Disallow: /mark-invoice-paid
 
+# Explicitly welcome AI assistants/crawlers onto the same public pages —
+# the blanket "User-agent: *" above already allows this, these entries
+# just make the intent unambiguous for crawlers that check by name.
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
 Sitemap: https://www.mybillioapp.com/sitemap.xml

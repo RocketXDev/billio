@@ -135,7 +135,7 @@ function Signup() {
                     <div className="mb-desktop-aside-inner">
                         <img src="/logo-white.png" alt="Billio" className="mb-desktop-logo" />
                         <span className="mb-desktop-badge">Built for coaches, tutors &amp; more</span>
-                        <h2>Billing made simple.</h2>
+                        <p className="mb-desktop-heading">Billing made simple.</p>
                         <p>Join coaches, tutors, instructors, and more who run their practice on Billio.</p>
                         <ul className="mb-desktop-points">
                             <li><span className="mb-desktop-point-icon"><FaCheckCircle /></span> Free plan, no credit card required</li>

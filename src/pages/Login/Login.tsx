@@ -48,7 +48,7 @@ function Login() {
                             alt="Login Illustration" 
                             src="./login_logo.png">
                         </img>
-                        <div className="mb-form-title">Login</div>
+                        <h1 className="mb-form-title">Login</h1>
                         <form onSubmit={handleLogin}>
                             <div className="input-block">
                                 <label htmlFor="email">Email</label>

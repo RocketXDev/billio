@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Login from './pages/Login/Login';
 import Signup from './pages/Signup/Signup';
 import Dashboard from './pages/Dashboard/Dashboard';
@@ -36,8 +36,55 @@ import PdfInvoice from "./pages/PdfInvoice/PdfInvoice";
 
 const SITE_URL = "https://www.mybillioapp.com";
 
+// Per-route <title> and meta description for public pages. This is a
+// client-rendered SPA sharing one index.html, so every route otherwise
+// inherits the same title/description ("/" keeps index.html's own, which is
+// already correct — everything else here overrides it after mount).
+const PAGE_META: Record<string, { title: string; description: string }> = {
+  "/login": {
+    title: "Login | Billio",
+    description: "Log in to your Billio account to manage students, schedule lessons, and track invoices.",
+  },
+  "/signup": {
+    title: "Sign Up Free | Billio",
+    description: "Create your free Billio account — no credit card required. Start scheduling lessons and automating invoices today.",
+  },
+  "/about": {
+    title: "About Billio | Billing Made Simple for Coaches",
+    description: "Learn about Billio, the mobile-first scheduling and invoicing app built for coaches, tutors, instructors, teachers, nannies, and therapists.",
+  },
+  "/support": {
+    title: "Support | Billio",
+    description: "Get help with Billio — contact our support team for questions about scheduling, invoicing, billing, or your account.",
+  },
+  "/privacy": {
+    title: "Privacy Policy | Billio",
+    description: "Read Billio's Privacy Policy to learn how we collect, use, and protect your information. We never sell your personal data.",
+  },
+  "/terms": {
+    title: "Terms of Service | Billio",
+    description: "Read Billio's Terms and Conditions covering use of the app, billing, and your account.",
+  },
+  "/sms-opt-in": {
+    title: "SMS Consent | Billio",
+    description: "Details on Billio's SMS messaging program, consent, and how to opt out of text message reminders.",
+  },
+};
+
 function App() {
   const location = useLocation();
+
+  // Captured once, on the very first render, before any effect below has a
+  // chance to overwrite them — these are index.html's original tags, used
+  // as the fallback for any route not in PAGE_META. og:title/og:description
+  // differ from the plain title/description in index.html, so each needs
+  // its own original value rather than reusing one for the other.
+  const defaultMetaRef = useRef({
+    title: document.title,
+    description: document.querySelector('meta[name="description"]')?.getAttribute("content") ?? "",
+    ogTitle: document.querySelector('meta[property="og:title"]')?.getAttribute("content") ?? "",
+    ogDescription: document.querySelector('meta[property="og:description"]')?.getAttribute("content") ?? "",
+  });
 
   // This is a client-rendered SPA with one index.html for every route, so
   // there's no per-page canonical tag from the server. Keep a single
@@ -56,6 +103,31 @@ function App() {
       document.head.appendChild(link);
     }
     link.setAttribute("href", canonicalUrl);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    // Unmapped routes (incl. "/") fall back to index.html's own original
+    // tags — captured once on first render, before any route here has had
+    // a chance to overwrite them, so navigating from e.g. /privacy back to
+    // "/" within the SPA (no full reload) correctly restores them instead
+    // of leaving the previous page's title/description stuck.
+    const pageMeta = PAGE_META[location.pathname];
+    const defaults = defaultMetaRef.current;
+    const title = pageMeta?.title ?? defaults.title;
+    const description = pageMeta?.description ?? defaults.description;
+    const ogTitleValue = pageMeta?.title ?? defaults.ogTitle;
+    const ogDescriptionValue = pageMeta?.description ?? defaults.ogDescription;
+
+    document.title = title;
+
+    const descTag = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+    if (descTag) descTag.setAttribute("content", description);
+
+    const ogTitle = document.querySelector<HTMLMetaElement>('meta[property="og:title"]');
+    if (ogTitle) ogTitle.setAttribute("content", ogTitleValue);
+
+    const ogDesc = document.querySelector<HTMLMetaElement>('meta[property="og:description"]');
+    if (ogDesc) ogDesc.setAttribute("content", ogDescriptionValue);
   }, [location.pathname]);
 
   return (

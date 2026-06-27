@@ -55,7 +55,7 @@ function Signup() {
                         alt="Signup illustration"
                     />
 
-                    <div className="mb-form-title">Sign Up</div>
+                    <h1 className="mb-form-title">Sign Up</h1>
 
                     <form onSubmit={handleSignup}>
                         <div className="role-toggle">

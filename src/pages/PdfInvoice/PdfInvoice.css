@@ -365,14 +365,22 @@
   color: var(--main-text);
 }
 
+.pdfinv-auto-actions {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin: 14px 0 0;
+}
+
 .pdfinv-auto-view-link {
+  flex: 1;
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   height: 44px;
-  margin: 14px 0 0;
+  margin: 0;
   border: none;
   border-radius: 14px;
   background: var(--primary-purple);
@@ -384,6 +392,26 @@
 }
 
 .pdfinv-auto-view-link:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.pdfinv-auto-download-btn {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card-bg);
+  color: var(--primary-purple);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.pdfinv-auto-download-btn:disabled {
   opacity: 0.6;
   cursor: default;
 }

@@ -907,46 +907,8 @@
     height: 180px;
   }
 
-  /* ── About (public page – no DesktopLayout sidebar) ── */
-  .about-page {
-    max-width: 860px;
-    margin: 0 auto;
-    padding: 40px 48px 60px;
-  }
-
-  .about-header {
-    padding: 0;
-  }
-
-  .about-header-top {
-    margin-bottom: 24px;
-  }
-
-  .about-hero {
-    max-width: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  .about-hero-title {
-    font-size: 40px;
-  }
-
-  .about-mission-card {
-    max-width: none;
-    margin: 28px 0 0;
-  }
-
-  .about-section {
-    max-width: none;
-    margin: 0;
-    padding: 28px 0 0;
-  }
-
-  .about-footer {
-    max-width: none;
-    margin: 36px 0 0;
-  }
+  /* About page styling now lives entirely in About.css, including its own
+     responsive breakpoints — see src/pages/About/About.css. */
 
   /* ── Legal pages (Privacy / Terms) ── */
   .legal-header {

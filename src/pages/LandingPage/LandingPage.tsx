@@ -125,6 +125,9 @@ export default function LandingPage() {
             <div className="landing-logo">
               <img src="./logo-white.png" alt="Billio" />
             </div>
+            <div className="landing-nav-links">
+              <Link to="/about" className="landing-nav-link">About</Link>
+            </div>
             <div className="landing-nav-buttons">
               <Link to="/login" className="landing-login-btn">Login</Link>
               <Link to="/signup" className="landing-register-btn">Get Started</Link>
@@ -359,6 +362,7 @@ export default function LandingPage() {
       <footer className="landing-footer">
         <img src="./logo.png" alt="Billio" className="landing-footer-logo" />
         <div className="landing-footer-links">
+          <Link to="/about">About</Link>
           <Link to="/privacy">Privacy Policy</Link>
           <Link to="/terms">Terms of Service</Link>
           <Link to="/sms-opt-in">SMS Info</Link>

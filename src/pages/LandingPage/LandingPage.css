@@ -48,6 +48,22 @@
   display: block;
 }
 
+.landing-nav-links {
+  display: none;
+}
+
+.landing-nav-link {
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 0.15s;
+}
+
+.landing-nav-link:hover {
+  color: #ffffff;
+}
+
 .landing-nav-buttons {
   display: flex;
   align-items: center;
@@ -995,6 +1011,12 @@
 
   .landing-logo {
     width: 110px;
+  }
+
+  .landing-nav-links {
+    display: flex;
+    align-items: center;
+    gap: 28px;
   }
 
   .landing-login-btn {

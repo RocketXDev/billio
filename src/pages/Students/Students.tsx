@@ -13,12 +13,19 @@ import {
   FaLock,
   FaSearch,
   FaSortAmountDown,
+  FaUpload,
+  FaCheckCircle,
+  FaExclamationCircle,
+  FaSpinner,
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
 import { usePlan } from "../../hooks/usePlan";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import { useLessonTerm } from "../../hooks/useLessonTerm";
+import { parseCsv, mapCsvHeaders, rowsToStudentRecords, type ParsedStudentRow } from "../../lib/studentCsv";
 import "./Students.css"
+
+type CsvPreviewRow = ParsedStudentRow & { status: "new" | "duplicate" | "limit" };
 
 function Students() {
   const navigate = useNavigate();
@@ -31,6 +38,14 @@ function Students() {
   const [showAddStudent, setShowAddStudent] = useState(false);
   const [showEditStudent, setShowEditStudent] = useState(false);
   const [editingStudent, setEditingStudent] = useState<any>(null);
+
+  // CSV bulk import
+  const [showImportCsv, setShowImportCsv] = useState(false);
+  const [csvFileName, setCsvFileName] = useState("");
+  const [csvError, setCsvError] = useState("");
+  const [csvPreview, setCsvPreview] = useState<CsvPreviewRow[]>([]);
+  const [isImportingCsv, setIsImportingCsv] = useState(false);
+  const [importSummary, setImportSummary] = useState("");
 
   // Students list search/sort
   const [studentSearch, setStudentSearch] = useState("");
@@ -364,6 +379,155 @@ function Students() {
   function closeAddStudent() {
     setShowAddStudent(false);
     resetStudentForm();
+  }
+
+  function resetCsvImport() {
+    setCsvFileName("");
+    setCsvError("");
+    setCsvPreview([]);
+  }
+
+  function closeImportCsv() {
+    if (isImportingCsv) return;
+    setShowImportCsv(false);
+    resetCsvImport();
+  }
+
+  async function handleCsvFileSelect(e: any) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    setCsvError("");
+    setCsvPreview([]);
+    setCsvFileName(file.name);
+
+    const text = await file.text();
+    const rows = parseCsv(text);
+
+    if (rows.length < 2) {
+      setCsvError("That file doesn't have any student rows in it.");
+      return;
+    }
+
+    const columnMap = mapCsvHeaders(rows[0]);
+    if (columnMap.name === undefined) {
+      setCsvError('Couldn\'t find a name column. Add a header like "Name" or "Student Name" to your CSV.');
+      return;
+    }
+
+    const records = rowsToStudentRecords(rows.slice(1), columnMap);
+    if (records.length === 0) {
+      setCsvError("No rows with a student name were found in that file.");
+      return;
+    }
+
+    const existingNames = new Set(
+      students.map((link: any) => (link.students?.student_name || "").trim().toLowerCase())
+    );
+    const seenInFile = new Set<string>();
+    const remainingSlots = isPro ? Infinity : Math.max(0, 5 - activeStudents.length);
+    let newCount = 0;
+
+    const preview: CsvPreviewRow[] = records.map((record) => {
+      const key = record.name.toLowerCase();
+      let status: CsvPreviewRow["status"] = "new";
+
+      if (existingNames.has(key) || seenInFile.has(key)) {
+        status = "duplicate";
+      } else if (newCount >= remainingSlots) {
+        status = "limit";
+      } else {
+        newCount++;
+      }
+
+      seenInFile.add(key);
+      return { ...record, status };
+    });
+
+    setCsvPreview(preview);
+  }
+
+  async function handleImportCsv() {
+    if (!coachId || isImportingCsv) return;
+
+    const toImport = csvPreview.filter((row) => row.status === "new");
+    if (toImport.length === 0) return;
+
+    setIsImportingCsv(true);
+
+    let successCount = 0;
+    let failCount = 0;
+    const createdLinks: any[] = [];
+
+    for (const row of toImport) {
+      const { data: newStudent, error: studentError } = await supabase
+        .from("students")
+        .insert({
+          student_name: row.name,
+          email: row.email,
+          phone_number: row.phone ? formatUSPhoneInput(row.phone) : null,
+          parent_name: row.parentName,
+          parent_email: row.parentEmail,
+          parent_phone: row.parentPhone ? formatUSPhoneInput(row.parentPhone) : null,
+          active: true,
+          notes: row.notes,
+          // A phone number in the CSV is treated as an explicit signal
+          // the coach already has consent to text that contact — no
+          // phone column/value means no SMS consent, same as manual add.
+          sms_consent: Boolean(row.phone || row.parentPhone),
+        })
+        .select()
+        .single();
+
+      if (studentError || !newStudent) {
+        failCount++;
+        continue;
+      }
+
+      const { error: linkError } = await supabase
+        .from("coach_students")
+        .insert({
+          coach_id: coachId,
+          student_id: newStudent.id,
+          invoice_contact_target: "auto",
+          invoice_delivery_method: "auto",
+          auto_generate_pdf: false,
+        });
+
+      if (linkError) {
+        failCount++;
+        continue;
+      }
+
+      successCount++;
+      createdLinks.push({
+        student_id: newStudent.id,
+        invoice_contact_target: "auto",
+        invoice_delivery_method: "auto",
+        auto_generate_pdf: false,
+        students: newStudent,
+      });
+    }
+
+    if (createdLinks.length > 0) {
+      setStudents((prev) => [...prev, ...createdLinks]);
+      queryClient.invalidateQueries({ queryKey: ["students", coachId] });
+    }
+
+    const duplicateCount = csvPreview.filter((r) => r.status === "duplicate").length;
+    const limitCount = csvPreview.filter((r) => r.status === "limit").length;
+
+    setIsImportingCsv(false);
+    setShowImportCsv(false);
+    resetCsvImport();
+
+    let summary = `Imported ${successCount} student${successCount === 1 ? "" : "s"}.`;
+    if (duplicateCount > 0) summary += ` ${duplicateCount} skipped (already exist).`;
+    if (limitCount > 0) summary += ` ${limitCount} skipped (free plan limit — upgrade to Pro to add more).`;
+    if (failCount > 0) summary += ` ${failCount} failed to import.`;
+
+    setImportSummary(summary);
   }
 
   function closeEditLesson() {
@@ -883,23 +1047,42 @@ function Students() {
             <div className="students-header-add">
               <h1>Students</h1>
 
-              <button
-                ref={addStudentBtnRef}
-                type="button"
-                aria-disabled={showStudentsTutorial}
-                className={`students-add-btn${!isPro && activeStudents.length >= 5 ? " students-add-btn-dimmed" : ""}${showStudentsTutorial && studentsTutorialStep === 1 ? " students-tutorial-highlighted" : ""}`}
-                onClick={() => {
-                  if (showStudentsTutorial) return;
+              <div className="students-header-actions">
+                <button
+                  type="button"
+                  className="students-import-btn"
+                  title="Import students from CSV"
+                  onClick={() => {
+                    if (showStudentsTutorial) return;
 
-                  if (!isPro && activeStudents.length >= 5) {
-                    setShowStudentLimitModal(true);
-                  } else {
-                    setShowAddStudent(true);
-                  }
-                }}
-              >
-                <FaPlus />
-              </button>
+                    if (!isPro && activeStudents.length >= 5) {
+                      setShowStudentLimitModal(true);
+                    } else {
+                      setShowImportCsv(true);
+                    }
+                  }}
+                >
+                  <FaUpload />
+                </button>
+
+                <button
+                  ref={addStudentBtnRef}
+                  type="button"
+                  aria-disabled={showStudentsTutorial}
+                  className={`students-add-btn${!isPro && activeStudents.length >= 5 ? " students-add-btn-dimmed" : ""}${showStudentsTutorial && studentsTutorialStep === 1 ? " students-tutorial-highlighted" : ""}`}
+                  onClick={() => {
+                    if (showStudentsTutorial) return;
+
+                    if (!isPro && activeStudents.length >= 5) {
+                      setShowStudentLimitModal(true);
+                    } else {
+                      setShowAddStudent(true);
+                    }
+                  }}
+                >
+                  <FaPlus />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1389,6 +1572,107 @@ function Students() {
           </div>
         </div>
       )}
+
+      {showImportCsv && (
+        <div className="students-add-overlay" onClick={closeImportCsv}>
+          <div className="students-add-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="students-add-header">
+              <h2>Import Students</h2>
+              <button type="button" onClick={closeImportCsv}>
+                ×
+              </button>
+            </div>
+
+            <p className="students-import-intro">
+              Upload a CSV with a column for student name — phone, email, parent info, and
+              notes are picked up automatically if your file has them, and left blank if not.
+              Students that already exist (matched by name) are skipped.
+            </p>
+
+            <label className="students-import-dropzone">
+              <FaUpload />
+              <span>{csvFileName || "Choose a CSV file"}</span>
+              <input type="file" accept=".csv,text/csv" hidden onChange={handleCsvFileSelect} />
+            </label>
+
+            {csvError && <p className="error-message">{csvError}</p>}
+
+            {csvPreview.length > 0 && (
+              <>
+                <div className="students-import-summary">
+                  <span className="students-import-summary-new">
+                    <FaCheckCircle /> {csvPreview.filter((r) => r.status === "new").length} to import
+                  </span>
+                  {csvPreview.some((r) => r.status === "duplicate") && (
+                    <span className="students-import-summary-skip">
+                      <FaExclamationCircle /> {csvPreview.filter((r) => r.status === "duplicate").length} already exist
+                    </span>
+                  )}
+                  {csvPreview.some((r) => r.status === "limit") && (
+                    <span className="students-import-summary-skip">
+                      <FaLock /> {csvPreview.filter((r) => r.status === "limit").length} over free plan limit
+                    </span>
+                  )}
+                </div>
+
+                <div className="students-import-preview">
+                  {csvPreview.map((row, i) => (
+                    <div className="students-import-row" key={`${row.name}-${i}`}>
+                      <div className="students-import-row-info">
+                        <strong>{row.name}</strong>
+                        <span>{[row.phone, row.email].filter(Boolean).join(" · ") || "No phone or email"}</span>
+                        {(row.parentName || row.parentPhone || row.parentEmail) && (
+                          <span className="students-import-row-parent">
+                            Parent: {[row.parentName, row.parentPhone, row.parentEmail].filter(Boolean).join(" · ")}
+                          </span>
+                        )}
+                      </div>
+                      {row.status === "new" && (
+                        <span className="students-import-badge students-import-badge-new">New</span>
+                      )}
+                      {row.status === "duplicate" && (
+                        <span className="students-import-badge students-import-badge-skip">Exists</span>
+                      )}
+                      {row.status === "limit" && (
+                        <span className="students-import-badge students-import-badge-skip">Plan limit</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  className="students-save-btn"
+                  disabled={isImportingCsv || csvPreview.every((r) => r.status !== "new")}
+                  onClick={handleImportCsv}
+                >
+                  {isImportingCsv ? (
+                    <FaSpinner className="students-spin" />
+                  ) : (
+                    `Import ${csvPreview.filter((r) => r.status === "new").length} Student${
+                      csvPreview.filter((r) => r.status === "new").length === 1 ? "" : "s"
+                    }`
+                  )}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {importSummary && (
+        <div className="students-success-overlay" onClick={() => setImportSummary("")}>
+          <div className="students-success-card" onClick={(e) => e.stopPropagation()}>
+            <div className="students-success-icon">✓</div>
+            <h2>Import Complete</h2>
+            <p>{importSummary}</p>
+            <button type="button" onClick={() => setImportSummary("")}>
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+
       {showEditStudent && editingStudent && (
         <div
             className="students-add-overlay"

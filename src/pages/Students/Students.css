@@ -39,6 +39,12 @@
   letter-spacing: -1px;
 }
 
+.students-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .students-add-btn {
   width: 45px;
   height: 45px;
@@ -54,6 +60,209 @@
   font-size: 18px;
   line-height: 1;
   box-shadow: 0 10px 22px rgba(79, 70, 229, 0.25);
+}
+
+.students-import-btn {
+  width: 45px;
+  height: 45px;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--primary-purple);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.students-import-btn svg {
+  /* SVGs default to inline, which leaves baseline descender space below
+     the glyph — inside a small flex-centered circle that reads as the
+     icon sitting visibly above center. Block removes that gap. */
+  display: block;
+}
+
+.students-import-intro {
+  font-size: 13.5px;
+  color: var(--secondary-text);
+  line-height: 1.55;
+  margin: 0 0 18px;
+}
+
+.students-import-dropzone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  height: 56px;
+  border: 1.5px dashed var(--border);
+  border-radius: 14px;
+  background: var(--input-bg);
+  color: var(--secondary-text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 16px;
+}
+
+.students-import-dropzone svg {
+  color: var(--primary-purple);
+}
+
+.students-import-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.students-import-summary span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+}
+
+.students-import-summary-new {
+  background: var(--accent-tint);
+  color: var(--primary-purple);
+}
+
+.students-import-summary-skip {
+  background: var(--main-bg);
+  color: var(--secondary-text);
+}
+
+.students-import-preview {
+  max-height: 240px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.students-import-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card-bg);
+}
+
+.students-import-row-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.students-import-row-info strong {
+  font-size: 13.5px;
+  color: var(--main-text);
+}
+
+.students-import-row-info span {
+  font-size: 11.5px;
+  color: var(--secondary-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.students-import-row-parent {
+  margin-top: 2px;
+}
+
+.students-import-badge {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.students-import-badge-new {
+  background: var(--accent-tint);
+  color: var(--primary-purple);
+}
+
+.students-import-badge-skip {
+  background: var(--main-bg);
+  color: var(--secondary-text);
+}
+
+.students-spin {
+  animation: studentsCsvSpin 0.8s linear infinite;
+}
+
+@keyframes studentsCsvSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.students-success-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: rgba(15, 23, 42, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.students-success-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  padding: 28px 22px;
+  text-align: center;
+}
+
+.students-success-icon {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: #dcfce7;
+  color: #16a34a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.students-success-card h2 {
+  margin: 0 0 8px;
+  color: var(--main-text);
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.students-success-card p {
+  margin: 0 0 22px;
+  color: var(--secondary-text);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.students-success-card button {
+  display: block;
+  width: 90%;
+  margin: 0 auto;
 }
 
 .students-search-bar {
@@ -406,6 +615,13 @@
 }
 
 .students-save-btn {
+  /* button defaults to inline-block, where auto left/right margins
+     resolve to 0 instead of centering — fine when this sits inside a
+     flex <form> (flex auto-margins do center on the cross axis there),
+     but not when it's a plain block child like the CSV import button.
+     Forcing block here makes the global width:90%/margin:0 auto actually
+     center it either way. */
+  display: block;
   margin-top: 6px;
 }
 

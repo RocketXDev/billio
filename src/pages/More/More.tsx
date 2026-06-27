@@ -21,12 +21,15 @@ import "./More.css";
 import { useNavigate } from "react-router-dom";
 import { usePlan } from "../../hooks/usePlan";
 import { useDashboardWidgets } from "../../hooks/useDashboardWidgets";
-import { DASHBOARD_TOOLS } from "../../lib/dashboardTools";
+import { getDashboardTools } from "../../lib/dashboardTools";
+import { useLessonTerm } from "../../hooks/useLessonTerm";
 
 export default function More() {
   const navigate = useNavigate();
   const { isPro, isFree, planLoading } = usePlan();
   const { pinned, togglePinned } = useDashboardWidgets();
+  const term = useLessonTerm();
+  const DASHBOARD_TOOLS = getDashboardTools(term);
 
   const [showMoreTutorial, setShowMoreTutorial] = useState(false);
   const [moreTutorialStep, setMoreTutorialStep] = useState(0);
@@ -36,7 +39,7 @@ export default function More() {
       title: "More Tools & Settings",
       text: "This page gives you quick access to extra Billio tools, account options, and support links.",
       bullets: [
-        "Use it when you need tools that do not fit directly into Lessons, Students, or Invoices.",
+        `Use it when you need tools that do not fit directly into ${term.plural}, Students, or Invoices.`,
         "Some tools are included for everyone, while advanced tools may require Pro.",
       ],
       target: "none",
@@ -46,8 +49,8 @@ export default function More() {
       title: "Coaching Tools",
       text: "This section is for extra features that help you manage your coaching work faster.",
       bullets: [
-        "Recurring Lessons helps you schedule repeating lessons automatically.",
-        "Lesson Timer and advanced summaries are available here when enabled for your plan.",
+        `Recurring ${term.plural} helps you schedule repeating ${term.lowerPlural} automatically.`,
+        `${term.singular} Timer and advanced summaries are available here when enabled for your plan.`,
       ],
       target: "coaching",
     },
@@ -232,7 +235,7 @@ export default function More() {
 
       <nav className="bottom-nav">
         <div className="nav-item" onClick={() => navigate("/dashboard")}><FaHome /><span>Dashboard</span></div>
-        <div className="nav-item" onClick={() => navigate("/lessons")}><FaCalendarAlt /><span>Lessons</span></div>
+        <div className="nav-item" onClick={() => navigate("/lessons")}><FaCalendarAlt /><span>{term.plural}</span></div>
         <div className="nav-item" onClick={() => navigate("/students")}><FaUsers /><span>Students</span></div>
         <div className="nav-item" onClick={() => navigate("/invoices")}><FaFileInvoiceDollar /><span>Invoices</span></div>
         <div className="nav-item active" onClick={() => navigate("/more")}><FaEllipsisH /><span>More</span></div>

@@ -23,6 +23,13 @@ const DUE_DATE_OPTIONS = [
   { label: "14 days", value: 14 },
   { label: "30 days", value: 30 },
 ];
+const TERM_PRESETS = [
+  { singular: "Lesson", plural: "Lessons" },
+  { singular: "Session", plural: "Sessions" },
+  { singular: "Event", plural: "Events" },
+  { singular: "Appointment", plural: "Appointments" },
+  { singular: "Meeting", plural: "Meetings" },
+];
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -39,6 +46,9 @@ export default function Settings() {
   const [defaultDueDate, setDefaultDueDate] = useState(7);
   const [invoicePrefix, setInvoicePrefix] = useState("INV");
   const [timeFormat, setTimeFormat] = useState<"12h" | "24h">("12h");
+  const [lessonTermSingular, setLessonTermSingular] = useState("Lesson");
+  const [lessonTermPlural, setLessonTermPlural] = useState("Lessons");
+  const [useCustomTerm, setUseCustomTerm] = useState(false);
 
   // Password change
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -58,7 +68,9 @@ export default function Settings() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("coaches")
-        .select("id, default_lesson_duration, default_due_date_days, invoice_prefix, time_format")
+        .select(
+          "id, default_lesson_duration, default_due_date_days, invoice_prefix, time_format, lesson_term_singular, lesson_term_plural"
+        )
         .eq("id", coachId)
         .single();
       if (error) throw error;
@@ -84,6 +96,14 @@ export default function Settings() {
       setDefaultDueDate(settingsData.default_due_date_days ?? 7);
       setInvoicePrefix(settingsData.invoice_prefix ?? "INV");
       setTimeFormat(settingsData.time_format ?? "12h");
+
+      const singular = settingsData.lesson_term_singular || "Lesson";
+      const plural = settingsData.lesson_term_plural || "Lessons";
+      setLessonTermSingular(singular);
+      setLessonTermPlural(plural);
+      if (!TERM_PRESETS.some((p) => p.singular === singular && p.plural === plural)) {
+        setUseCustomTerm(true);
+      }
     }
   }, [settingsData]);
 
@@ -98,6 +118,8 @@ export default function Settings() {
         default_due_date_days: defaultDueDate,
         invoice_prefix: invoicePrefix.trim() || "INV",
         time_format: timeFormat,
+        lesson_term_singular: lessonTermSingular.trim() || "Lesson",
+        lesson_term_plural: lessonTermPlural.trim() || "Lessons",
       })
       .eq("id", coachId);
 
@@ -106,6 +128,7 @@ export default function Settings() {
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
       queryClient.invalidateQueries({ queryKey: ["coach-settings", coachId] });
+      queryClient.invalidateQueries({ queryKey: ["settings", coachId] });
     }
   }
 
@@ -177,11 +200,65 @@ export default function Settings() {
         <section className="settings-section">
           <div className="settings-section-label">
             <FaClock className="settings-section-icon" />
-            Lessons
+            {lessonTermPlural}
           </div>
 
           <div className="settings-card">
-            <div className="settings-row-label">Default lesson duration</div>
+            <div className="settings-row-label">What do you call a {lessonTermSingular.toLowerCase()}?</div>
+            <div className="settings-chip-group">
+              {TERM_PRESETS.map((preset) => (
+                <button
+                  key={preset.singular}
+                  type="button"
+                  className={`settings-chip${
+                    !useCustomTerm && lessonTermSingular === preset.singular && lessonTermPlural === preset.plural
+                      ? " active"
+                      : ""
+                  }`}
+                  onClick={() => {
+                    setUseCustomTerm(false);
+                    setLessonTermSingular(preset.singular);
+                    setLessonTermPlural(preset.plural);
+                  }}
+                >
+                  {preset.plural}
+                </button>
+              ))}
+              <button
+                type="button"
+                className={`settings-chip${useCustomTerm ? " active" : ""}`}
+                onClick={() => setUseCustomTerm(true)}
+              >
+                Custom
+              </button>
+            </div>
+            {useCustomTerm && (
+              <div className="settings-custom-duration-row">
+                <input
+                  type="text"
+                  className="settings-prefix-input"
+                  style={{ width: 110 }}
+                  value={lessonTermSingular}
+                  maxLength={24}
+                  placeholder="Session"
+                  onChange={(e) => setLessonTermSingular(e.target.value)}
+                />
+                <input
+                  type="text"
+                  className="settings-prefix-input"
+                  style={{ width: 110 }}
+                  value={lessonTermPlural}
+                  maxLength={24}
+                  placeholder="Sessions"
+                  onChange={(e) => setLessonTermPlural(e.target.value)}
+                />
+                <span className="settings-prefix-preview">singular / plural</span>
+              </div>
+            )}
+          </div>
+
+          <div className="settings-card" style={{ marginTop: 10 }}>
+            <div className="settings-row-label">Default {lessonTermSingular.toLowerCase()} duration</div>
             <div className="settings-chip-group">
               {DURATION_OPTIONS.map((d) => (
                 <button
@@ -401,7 +478,7 @@ export default function Settings() {
             </div>
             <h2>Delete Account?</h2>
             <p>
-              This permanently deletes your account, all students, lessons,
+              This permanently deletes your account, all students, {lessonTermPlural.toLowerCase()},
               and invoices. <strong>This cannot be undone.</strong>
             </p>
             <p style={{ marginTop: 12 }}>

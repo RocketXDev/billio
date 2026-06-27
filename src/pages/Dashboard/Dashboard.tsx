@@ -21,6 +21,7 @@ import { usePlan } from "../../hooks/usePlan";
 import { useSettings } from "../../hooks/useSettings";
 import { useDashboardWidgets } from "../../hooks/useDashboardWidgets";
 import { getDashboardTool } from "../../lib/dashboardTools";
+import { useLessonTerm } from "../../hooks/useLessonTerm";
 import { InstallBanner, InstallGuide } from "../../components/InstallGuide/InstallGuide";
 import { useInstallPrompt } from "../../hooks/useInstallPrompt";
 import { createInstallNotification } from "../../lib/installNotification";
@@ -72,6 +73,7 @@ function generateOccurrences(
 }
 
 function QuickToolsSection({ pinned }: { pinned: string[] }) {
+  const term = useLessonTerm();
   const { setNodeRef, transform, listeners, attributes, isDragging } = useDraggable({
     id: "quickTools",
   });
@@ -100,7 +102,7 @@ function QuickToolsSection({ pinned }: { pinned: string[] }) {
 
       <div className="quick-tools-row">
         {pinned.map((slug) => {
-          const tool = getDashboardTool(slug);
+          const tool = getDashboardTool(slug, term);
           if (!tool) return null;
           return (
             <Link key={slug} to={`/${slug}`} className="quick-tool-card">
@@ -180,6 +182,7 @@ function Dashboard() {
   const location = useLocation();
   const { isPro } = usePlan();
   const { settings } = useSettings();
+  const term = useLessonTerm();
   const { pinned, quickToolsPosition, setQuickToolsPosition } = useDashboardWidgets();
   const [quickToolsDragging, setQuickToolsDragging] = useState(false);
   const dndSensors = useSensors(
@@ -272,17 +275,17 @@ function Dashboard() {
     {
       icon: "👋",
       title: "Welcome to your Dashboard",
-      text: "This is your home base in Billio. It gives you a quick snapshot of lessons, earnings, invoices, and anything that needs your attention.",
+      text: `This is your home base in Billio. It gives you a quick snapshot of ${term.lowerPlural}, earnings, invoices, and anything that needs your attention.`,
       items: [
         "Use this page when you want a fast overview",
-        "Jump into lessons, students, invoices, or settings",
+        `Jump into ${term.lowerPlural}, students, invoices, or settings`,
         "Check notifications from the bell icon",
       ],
     },
     {
       icon: "➕",
-      title: "Add lessons quickly",
-      text: "The Add Lesson card lets you log a lesson without going to another page. Billio uses those lessons to calculate earnings and prepare billing later.",
+      title: `Add ${term.lowerPlural} quickly`,
+      text: `The Add ${term.singular} card lets you log a ${term.lower} without going to another page. Billio uses those ${term.lowerPlural} to calculate earnings and prepare billing later.`,
       items: [
         "Choose or create a student",
         "Set date, time, duration, and rate",
@@ -293,20 +296,20 @@ function Dashboard() {
     {
       icon: "📊",
       title: "Understand your stats",
-      text: "The Today and This Week cards summarize what is happening right now, so you do not have to manually count lessons or totals.",
+      text: `The Today and This Week cards summarize what is happening right now, so you do not have to manually count ${term.lowerPlural} or totals.`,
       items: [
-        "Today shows lessons, earned amount, and upcoming lessons",
-        "This Week shows earnings, lesson count, unbilled lessons, and pending invoices",
-        "Use View lessons when you need the full schedule",
+        `Today shows ${term.lowerPlural}, earned amount, and upcoming ${term.lowerPlural}`,
+        `This Week shows earnings, ${term.lower} count, unbilled ${term.lowerPlural}, and pending invoices`,
+        `Use View ${term.lowerPlural} when you need the full schedule`,
       ],
     },
     {
       icon: "🧾",
-      title: "Track upcoming lessons and invoices",
-      text: "The lower sections show what is coming up today and your most recent invoices, so you can follow up faster.",
+      title: `Track upcoming ${term.lowerPlural} and invoices`,
+      text: `The lower sections show what is coming up today and your most recent invoices, so you can follow up faster.`,
       items: [
-        "Upcoming shows today’s remaining lessons",
-        "Tap the arrow to edit a dashboard lesson",
+        `Upcoming shows today’s remaining ${term.lowerPlural}`,
+        `Tap the arrow to edit a dashboard ${term.lower}`,
         "Recent Invoices gives a quick billing preview",
       ],
     },
@@ -479,7 +482,7 @@ function Dashboard() {
               profile_id: profileData.id,
               title: "Complete tutorials again",
               message:
-                "Tap here to reset the walkthroughs for Dashboard, Lessons, Students, Invoices, and More.",
+                `Tap here to reset the walkthroughs for Dashboard, ${term.plural}, Students, Invoices, and More.`,
               type: "tutorial_reset",
               is_read: false,
             })
@@ -1297,13 +1300,13 @@ function Dashboard() {
       <section className="stat-card">
         <div className="card-header">
           <h3>Today</h3>
-          <button onClick={() => navigate("/lessons")}>View lessons</button>
+          <button onClick={() => navigate("/lessons")}>View {term.lowerPlural}</button>
         </div>
 
         <div className="today-stats">
           <div>
             <strong>{todayLessons.length}</strong>
-            <p>Lessons<br />Today</p>
+            <p>{term.plural}<br />Today</p>
           </div>
 
           <span className="divider" />
@@ -1337,7 +1340,7 @@ function Dashboard() {
 
           <div>
             <strong>{weekLessons.length}</strong>
-            <p>Lessons</p>
+            <p>{term.plural}</p>
           </div>
 
           <span className="divider" />
@@ -1376,7 +1379,7 @@ function Dashboard() {
           return dateA.getTime() - dateB.getTime();
         }).length === 0 ? (
         <p className="empty-lessons">
-          No upcoming lessons for today.
+          No upcoming {term.lowerPlural} for today.
         </p>
       ) : (
         <div className="lesson-list">
@@ -1589,8 +1592,8 @@ function Dashboard() {
             </div>
 
             <div className="add-text">
-              <h2>Add Lesson</h2>
-              <p>Log a lesson in seconds</p>
+              <h2>Add {term.singular}</h2>
+              <p>Log a {term.lower} in seconds</p>
             </div>
 
             <FaChevronRight className="add-arrow" />
@@ -1633,7 +1636,7 @@ function Dashboard() {
 
         <div className="nav-item" onClick={() => navigate("/lessons")}>
           <FaCalendarAlt />
-          <span>Lessons</span>
+          <span>{term.plural}</span>
         </div>
 
          <div className="nav-item" onClick={() => navigate("/students")}>
@@ -1693,7 +1696,7 @@ function Dashboard() {
                   setMenuOpen(false);
                 }}
               >
-                Lessons
+                {term.plural}
               </a>
 
               <a
@@ -1975,7 +1978,7 @@ function Dashboard() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="add-lesson-header">
-              <h2>Add Lesson</h2>
+              <h2>Add {term.singular}</h2>
               <button type="button" onClick={closeAddLesson}>
                 ×
               </button>
@@ -2018,7 +2021,7 @@ function Dashboard() {
               </div>
 
               <div className="input-block">
-                <label>Lesson Date</label>
+                <label>{term.singular} Date</label>
                 <input
                   type="date"
                   value={lessonDate}
@@ -2051,7 +2054,7 @@ function Dashboard() {
               </div>
 
               <div className="input-block">
-                <label>Lesson Type</label>
+                <label>{term.singular} Type</label>
                 <input
                   type="text"
                   value={lessonType}
@@ -2170,14 +2173,14 @@ function Dashboard() {
                   {recurringPreviewCount > 0 && (
                     <div className="rl-preview">
                       <FaRedoAlt style={{ fontSize: 12, marginRight: 8 }} />
-                      This will create <strong>&nbsp;{recurringPreviewCount} lessons</strong>.
+                      This will create <strong>&nbsp;{recurringPreviewCount} {term.lowerPlural}</strong>.
                     </div>
                   )}
                 </>
               )}
 
               <button type="submit" className="save-lesson-btn" disabled={isSubmitting}>
-                {isSubmitting ? "Saving..." : isRecurring ? "Create Recurring Lesson" : "Save Lesson"}
+                {isSubmitting ? "Saving..." : isRecurring ? `Create Recurring ${term.singular}` : `Save ${term.singular}`}
               </button>
             </form>
           </div>
@@ -2194,7 +2197,7 @@ function Dashboard() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="add-lesson-header">
-              <h2>Edit Lesson</h2>
+              <h2>Edit {term.singular}</h2>
               <button type="button" onClick={closeEditLesson}>
                 ×
               </button>
@@ -2211,7 +2214,7 @@ function Dashboard() {
               </div>
 
               <div className="input-block">
-                <label>Lesson Date</label>
+                <label>{term.singular} Date</label>
                 <input
                   type="date"
                   value={lessonDate}
@@ -2244,7 +2247,7 @@ function Dashboard() {
               </div>
 
               <div className="input-block">
-                <label>Lesson Type</label>
+                <label>{term.singular} Type</label>
                 <input
                   type="text"
                   value={lessonType}
@@ -2301,7 +2304,7 @@ function Dashboard() {
               </div>
 
               <button type="submit" className="save-lesson-btn" disabled={isSaving}>
-                {isSaving ? "Saving..." : "Save Lesson"}
+                {isSaving ? "Saving..." : `Save ${term.singular}`}
               </button>
               <button
                 type="button"
@@ -2309,7 +2312,7 @@ function Dashboard() {
                 disabled={isDeleting}
                 onClick={() => handleDeleteLesson(editingLesson.id)}
               >
-                {isDeleting ? "Deleting..." : "Delete Lesson"}
+                {isDeleting ? "Deleting..." : `Delete ${term.singular}`}
               </button>
             </form>
           </div>

@@ -25,6 +25,7 @@ import { usePlan } from "../../hooks/usePlan";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import { useSettings } from "../../hooks/useSettings";
 import { generateInvoicePdf } from "../../lib/generateInvoicePdf";
+import { useLessonTerm } from "../../hooks/useLessonTerm";
 import "./Invoices.css"
 
 function Invoices() {
@@ -32,6 +33,7 @@ function Invoices() {
   const { isPro } = usePlan();
   const { coachId, userId, fullName, identityLoading } = useCoachIdentity();
   const { settings } = useSettings();
+  const term = useLessonTerm();
   const queryClient = useQueryClient();
 
   const [selectedFilter, setSelectedFilter] = useState("all");
@@ -1454,7 +1456,7 @@ function Invoices() {
 
             <div className="nav-item" onClick={() => navigate("/lessons")}>
             <FaCalendarAlt />
-            <span>Lessons</span>
+            <span>{term.plural}</span>
             </div>
 
             <div className="nav-item" onClick={() => navigate("/students")}>
@@ -1629,11 +1631,11 @@ function Invoices() {
                   <>
                     {invoiceLessons.length === 0 ? (
                       <p className="invoices-empty">
-                        No lessons in that date range.
+                        No {term.lowerPlural} in that date range.
                       </p>
                     ) : (
                       <div className="invoice-lessons-section">
-                        <h3>Lessons</h3>
+                        <h3>{term.plural}</h3>
 
                         <div className="invoice-lessons-picker">
                           {invoiceLessons.map((lesson) => {
@@ -1746,7 +1748,7 @@ function Invoices() {
 
                 {editInvoiceLessons.length > 0 && (
                   <div className="invoice-lessons-section">
-                    <h3>Lessons</h3>
+                    <h3>{term.plural}</h3>
 
                     <div className="invoice-lessons-picker">
                       {editInvoiceLessons.map((lesson) => {
@@ -1921,7 +1923,7 @@ function Invoices() {
                   <div className="billio-mini-spinner" />
                 </div>
               ) : invoiceDetailViewLessons.length === 0 ? (
-                <p className="invoices-empty" style={{ padding: "0 16px 24px" }}>No lessons attached to this invoice.</p>
+                <p className="invoices-empty" style={{ padding: "0 16px 24px" }}>No {term.lowerPlural} attached to this invoice.</p>
               ) : (
                 <div className="invoices-group-card" style={{ margin: "0 16px 24px" }}>
                   {invoiceDetailViewLessons.map((lesson: any) => (

@@ -8,6 +8,7 @@ import {
 import { supabase } from "../../lib/supabaseClient";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import { useSettings } from "../../hooks/useSettings";
+import { useLessonTerm } from "../../hooks/useLessonTerm";
 import "../RecurringLessons/RecurringLessons.css";
 import "../AiAssistant/AiAssistant.css";
 import "../Lessons/Lessons.css";
@@ -28,6 +29,7 @@ export default function GoogleCalendar() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { coachId, identityLoading } = useCoachIdentity();
   const { settings } = useSettings();
+  const term = useLessonTerm();
   const queryClient = useQueryClient();
 
   const [status, setStatus] = useState<GoogleStatus | null>(null);
@@ -311,7 +313,7 @@ export default function GoogleCalendar() {
           <div style={{ width: 38 }} />
         </div>
         <h1 className="rl-title">Google Calendar Sync</h1>
-        <p className="rl-subtitle">Two-way sync your lessons and events with Google Calendar.</p>
+        <p className="rl-subtitle">Two-way sync your {term.lowerPlural} and events with Google Calendar.</p>
       </div>
 
       <div className="rl-body">
@@ -320,7 +322,7 @@ export default function GoogleCalendar() {
         {calendarChoices ? (
           <div className="gc-card">
             <h3>Choose a calendar</h3>
-            <p>Sync your lessons and events to a new calendar, or pick one you already have.</p>
+            <p>Sync your {term.lowerPlural} and events to a new calendar, or pick one you already have.</p>
 
             {calendarChoices.some((cal) => cal.summary === "My Billio Calendar") ? (
               <p className="gc-existing-calendar-note">
@@ -379,7 +381,7 @@ export default function GoogleCalendar() {
           <div className="gc-card gc-connect-card">
             <FaGoogle className="gc-connect-icon" />
             <h3>Connect Google Calendar</h3>
-            <p>Push your lessons and events to Google, and pull in events from Google to review and add to Billio.</p>
+            <p>Push your {term.lowerPlural} and events to Google, and pull in events from Google to review and add to Billio.</p>
             <button type="button" className="gc-connect-btn" onClick={handleConnect}>
               Connect Google Calendar
             </button>
@@ -403,7 +405,7 @@ export default function GoogleCalendar() {
               </div>
 
               <div className="gc-toggle-row">
-                <span>Sync Lessons</span>
+                <span>Sync {term.plural}</span>
                 <button
                   type="button"
                   className={`lesson-recurring-toggle-btn ${status.syncLessons ? "active" : ""}`}
@@ -558,7 +560,7 @@ export default function GoogleCalendar() {
               <FaGoogle />
             </div>
             <h2>Disconnect Google Calendar?</h2>
-            <p>Your synced lessons and events stay in Billio, but they'll stop syncing.</p>
+            <p>Your synced {term.lowerPlural} and events stay in Billio, but they'll stop syncing.</p>
             <div className="billio-confirm-actions">
               <button type="button" className="billio-cancel-btn" onClick={() => setShowDisconnectConfirm(false)}>
                 Cancel
@@ -573,7 +575,7 @@ export default function GoogleCalendar() {
 
       <nav className="bottom-nav">
         <div className="nav-item" onClick={() => navigate("/dashboard")}><FaHome /><span>Dashboard</span></div>
-        <div className="nav-item" onClick={() => navigate("/lessons")}><FaCalendarAlt /><span>Lessons</span></div>
+        <div className="nav-item" onClick={() => navigate("/lessons")}><FaCalendarAlt /><span>{term.plural}</span></div>
         <div className="nav-item" onClick={() => navigate("/students")}><FaUsers /><span>Students</span></div>
         <div className="nav-item" onClick={() => navigate("/invoices")}><FaFileInvoiceDollar /><span>Invoices</span></div>
         <div className="nav-item" onClick={() => navigate("/more")}><FaEllipsisH /><span>More</span></div>

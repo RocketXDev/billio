@@ -7,6 +7,7 @@ import {
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
+import { useLessonTerm } from "../../hooks/useLessonTerm";
 import "./RecurringLessons.css";
 
 const DAYS = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
@@ -47,6 +48,7 @@ function generateOccurrences(
 export default function RecurringLessons() {
   const navigate = useNavigate();
   const { coachId, identityLoading } = useCoachIdentity();
+  const term = useLessonTerm();
   const queryClient = useQueryClient();
 
   // Form state
@@ -396,8 +398,8 @@ export default function RecurringLessons() {
             <FaPlus />
           </button>
         </div>
-        <h1 className="rl-title">Recurring Lessons</h1>
-        <p className="rl-subtitle">Schedule repeating lessons for your students.</p>
+        <h1 className="rl-title">Recurring {term.plural}</h1>
+        <p className="rl-subtitle">Schedule repeating {term.lowerPlural} for your students.</p>
       </div>
 
       {/* Series list */}
@@ -405,9 +407,9 @@ export default function RecurringLessons() {
         {series.length === 0 ? (
           <div className="rl-empty">
             <FaRedoAlt className="rl-empty-icon" />
-            <p>No recurring lessons yet.</p>
+            <p>No recurring {term.lowerPlural} yet.</p>
             <button type="button" className="rl-empty-btn" onClick={openNewForm}>
-              Create your first recurring lesson
+              Create your first recurring {term.lower}
             </button>
           </div>
         ) : (
@@ -441,7 +443,7 @@ export default function RecurringLessons() {
 
       <nav className="bottom-nav">
         <div className="nav-item" onClick={() => navigate("/dashboard")}><FaHome /><span>Dashboard</span></div>
-        <div className="nav-item" onClick={() => navigate("/lessons")}><FaCalendarAlt /><span>Lessons</span></div>
+        <div className="nav-item" onClick={() => navigate("/lessons")}><FaCalendarAlt /><span>{term.plural}</span></div>
         <div className="nav-item" onClick={() => navigate("/students")}><FaUsers /><span>Students</span></div>
         <div className="nav-item" onClick={() => navigate("/invoices")}><FaFileInvoiceDollar /><span>Invoices</span></div>
         <div className="nav-item" onClick={() => navigate("/more")}><FaEllipsisH /><span>More</span></div>
@@ -452,7 +454,7 @@ export default function RecurringLessons() {
         <div className="invoices-add-overlay" onClick={() => setShowForm(false)}>
           <div className="invoices-add-sheet" onClick={(e) => e.stopPropagation()}>
             <div className="invoices-add-header">
-              <h2>{editingSeries ? "Edit Series" : "New Recurring Lesson"}</h2>
+              <h2>{editingSeries ? "Edit Series" : `New Recurring ${term.singular}`}</h2>
               <button type="button" onClick={() => setShowForm(false)}>×</button>
             </div>
 
@@ -493,7 +495,7 @@ export default function RecurringLessons() {
               {/* Title */}
               <div className="input-block">
                 <label>Title (optional)</label>
-                <input type="text" value={formTitle} onChange={(e) => setFormTitle(e.target.value)} placeholder="e.g. Piano lesson" />
+                <input type="text" value={formTitle} onChange={(e) => setFormTitle(e.target.value)} placeholder={`e.g. Piano ${term.lower}`} />
               </div>
 
               {/* Start time + Duration */}
@@ -607,7 +609,7 @@ export default function RecurringLessons() {
                   <FaRedoAlt style={{ fontSize: 12, marginRight: 8 }} />
                   <>
                     This will create{" "}
-                    <strong>&nbsp;{previewCount} lessons&nbsp;</strong>
+                    <strong>&nbsp;{previewCount} {term.lowerPlural}&nbsp;</strong>
                     {editingSeries && " going forward"}.
                   </>
                 </div>
@@ -616,11 +618,11 @@ export default function RecurringLessons() {
               {/* Notes */}
               <div className="input-block">
                 <label>Notes (optional)</label>
-                <textarea value={formNotes} onChange={(e) => setFormNotes(e.target.value)} placeholder="Notes for all lessons in this series..." />
+                <textarea value={formNotes} onChange={(e) => setFormNotes(e.target.value)} placeholder={`Notes for all ${term.lowerPlural} in this series...`} />
               </div>
 
               <button type="submit" className="invoices-save-btn" disabled={isSaving}>
-                {isSaving ? "Saving..." : editingSeries ? "Update Series" : "Create Recurring Lesson"}
+                {isSaving ? "Saving..." : editingSeries ? "Update Series" : `Create Recurring ${term.singular}`}
               </button>
             </form>
           </div>
@@ -634,10 +636,10 @@ export default function RecurringLessons() {
             <div className="billio-confirm-icon" style={{ background: "#fee2e2", color: "#dc2626" }}>
               <FaTrash />
             </div>
-            <h2>Stop Recurring Lesson?</h2>
+            <h2>Stop Recurring {term.singular}?</h2>
             <p>
               This will deactivate the series and delete all <strong>upcoming unbilled</strong> occurrences.
-              Past, billed, and paid lessons are not affected.
+              Past, billed, and paid {term.lowerPlural} are not affected.
             </p>
             <div className="billio-confirm-actions">
               <button type="button" className="billio-cancel-btn" onClick={() => setShowDeleteModal(false)}>Cancel</button>

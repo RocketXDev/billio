@@ -7,6 +7,7 @@ import {
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
+import { useLessonTerm } from "../../hooks/useLessonTerm";
 import "../RecurringLessons/RecurringLessons.css";
 import "./GroupLessons.css";
 
@@ -50,6 +51,7 @@ type RosterEntry = { id: string | null; name: string };
 export default function GroupLessons() {
   const navigate = useNavigate();
   const { coachId, identityLoading } = useCoachIdentity();
+  const term = useLessonTerm();
   const queryClient = useQueryClient();
 
   // Form state
@@ -373,7 +375,7 @@ export default function GroupLessons() {
       } else {
         const { data: newGroup, error } = await supabase
           .from("group_lessons").insert(groupPayload).select().single();
-        if (error || !newGroup) { alert("Could not create group lesson: " + error?.message); return; }
+        if (error || !newGroup) { alert(`Could not create group ${term.lower}: ` + error?.message); return; }
         groupId = newGroup.id;
       }
 
@@ -493,8 +495,8 @@ export default function GroupLessons() {
             <FaPlus />
           </button>
         </div>
-        <h1 className="rl-title">Group Lessons</h1>
-        <p className="rl-subtitle">Schedule one lesson for multiple students at once.</p>
+        <h1 className="rl-title">Group {term.plural}</h1>
+        <p className="rl-subtitle">Schedule one {term.lower} for multiple students at once.</p>
       </div>
 
       {/* Group list */}
@@ -502,9 +504,9 @@ export default function GroupLessons() {
         {groups.length === 0 ? (
           <div className="rl-empty">
             <FaUserFriends className="rl-empty-icon" />
-            <p>No group lessons yet.</p>
+            <p>No group {term.lowerPlural} yet.</p>
             <button type="button" className="rl-empty-btn" onClick={openNewForm}>
-              Create your first group lesson
+              Create your first group {term.lower}
             </button>
           </div>
         ) : (
@@ -551,7 +553,7 @@ export default function GroupLessons() {
 
       <nav className="bottom-nav">
         <div className="nav-item" onClick={() => navigate("/dashboard")}><FaHome /><span>Dashboard</span></div>
-        <div className="nav-item" onClick={() => navigate("/lessons")}><FaCalendarAlt /><span>Lessons</span></div>
+        <div className="nav-item" onClick={() => navigate("/lessons")}><FaCalendarAlt /><span>{term.plural}</span></div>
         <div className="nav-item" onClick={() => navigate("/students")}><FaUsers /><span>Students</span></div>
         <div className="nav-item" onClick={() => navigate("/invoices")}><FaFileInvoiceDollar /><span>Invoices</span></div>
         <div className="nav-item" onClick={() => navigate("/more")}><FaEllipsisH /><span>More</span></div>
@@ -562,7 +564,7 @@ export default function GroupLessons() {
         <div className="invoices-add-overlay" onClick={() => setShowForm(false)}>
           <div className="invoices-add-sheet" onClick={(e) => e.stopPropagation()}>
             <div className="invoices-add-header">
-              <h2>{editingGroup ? "Edit Group Lesson" : "New Group Lesson"}</h2>
+              <h2>{editingGroup ? `Edit Group ${term.singular}` : `New Group ${term.singular}`}</h2>
               <button type="button" onClick={() => setShowForm(false)}>×</button>
             </div>
 
@@ -778,7 +780,7 @@ export default function GroupLessons() {
                   <FaUserFriends style={{ fontSize: 12, marginRight: 8 }} />
                   <>
                     This will create{" "}
-                    <strong>&nbsp;{previewCount * (groupStudents.length || 1)} lessons&nbsp;</strong>
+                    <strong>&nbsp;{previewCount * (groupStudents.length || 1)} {term.lowerPlural}&nbsp;</strong>
                     {editingGroup && " going forward"}.
                   </>
                 </div>
@@ -787,11 +789,11 @@ export default function GroupLessons() {
               {/* Notes */}
               <div className="input-block">
                 <label>Notes (optional)</label>
-                <textarea value={formNotes} onChange={(e) => setFormNotes(e.target.value)} placeholder="Notes for all lessons in this group..." />
+                <textarea value={formNotes} onChange={(e) => setFormNotes(e.target.value)} placeholder={`Notes for all ${term.lowerPlural} in this group...`} />
               </div>
 
               <button type="submit" className="invoices-save-btn" disabled={isSaving}>
-                {isSaving ? "Saving..." : editingGroup ? "Update Group Lesson" : "Create Group Lesson"}
+                {isSaving ? "Saving..." : editingGroup ? `Update Group ${term.singular}` : `Create Group ${term.singular}`}
               </button>
             </form>
           </div>
@@ -805,10 +807,10 @@ export default function GroupLessons() {
             <div className="billio-confirm-icon" style={{ background: "#fee2e2", color: "#dc2626" }}>
               <FaTrash />
             </div>
-            <h2>Cancel Group Lesson?</h2>
+            <h2>Cancel Group {term.singular}?</h2>
             <p>
-              This will cancel the group session and delete all <strong>upcoming unbilled</strong> lessons for every student in it.
-              Past, billed, and paid lessons are not affected.
+              This will cancel the group session and delete all <strong>upcoming unbilled</strong> {term.lowerPlural} for every student in it.
+              Past, billed, and paid {term.lowerPlural} are not affected.
             </p>
             <div className="billio-confirm-actions">
               <button type="button" className="billio-cancel-btn" onClick={() => setShowDeleteModal(false)}>Cancel</button>

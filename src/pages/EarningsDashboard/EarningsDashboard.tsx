@@ -8,11 +8,13 @@ import {
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
+import { useLessonTerm } from "../../hooks/useLessonTerm";
 import "./EarningsDashboard.css";
 
 export default function EarningsDashboard() {
   const navigate = useNavigate();
   const { coachId, identityLoading } = useCoachIdentity();
+  const term = useLessonTerm();
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
 
   useEffect(() => { if (!coachId && !identityLoading) navigate("/login"); }, [coachId, identityLoading]);
@@ -178,13 +180,13 @@ export default function EarningsDashboard() {
             </div>
             <span>Revenue</span>
             <strong>{fmtDec(thisMonthRevenue)}</strong>
-            <p>paid lessons</p>
+            <p>paid {term.lowerPlural}</p>
           </div>
           <div className="ed-stat-card ed-stat-purple">
             <div className="ed-stat-icon" style={{ background: "#ede9fe", color: "var(--primary-purple)" }}>
               <FaCalendarAlt />
             </div>
-            <span>Lessons</span>
+            <span>{term.plural}</span>
             <strong>{thisMonthCount}</strong>
             <p>taught this month</p>
           </div>
@@ -213,7 +215,7 @@ export default function EarningsDashboard() {
             <div className="ed-stat-icon" style={{ background: "#ede9fe", color: "var(--primary-purple)" }}>
               <FaCalendarAlt />
             </div>
-            <span>Lessons</span>
+            <span>{term.plural}</span>
             <strong>{ytdCount}</strong>
             <p>this year</p>
           </div>
@@ -245,7 +247,7 @@ export default function EarningsDashboard() {
             </div>
             <div>
               <strong>{fmtDec(unpaidLessonsTotal)}</strong>
-              <span>{unpaidLessons.length} unbilled {unpaidLessons.length === 1 ? "lesson" : "lessons"}</span>
+              <span>{unpaidLessons.length} unbilled {unpaidLessons.length === 1 ? term.lower : term.lowerPlural}</span>
             </div>
           </div>
         </div>
@@ -269,7 +271,7 @@ export default function EarningsDashboard() {
                 <strong>{fmtDec(selectedMonthData.revenue)}</strong>
               </div>
               <div>
-                <span>Lessons</span>
+                <span>{term.plural}</span>
                 <strong>{selectedMonthData.count}</strong>
               </div>
               <div>
@@ -324,7 +326,7 @@ export default function EarningsDashboard() {
                       <div className="ed-bar-track-thin">
                         <div className="ed-bar-fill-thin" style={{ width: `${pct}%` }} />
                       </div>
-                      <p>{s.count} {s.count === 1 ? "lesson" : "lessons"}</p>
+                      <p>{s.count} {s.count === 1 ? term.lower : term.lowerPlural}</p>
                     </div>
                   </div>
                 );
@@ -395,7 +397,7 @@ export default function EarningsDashboard() {
 
       <nav className="bottom-nav">
         <div className="nav-item" onClick={() => navigate("/dashboard")}><FaHome /><span>Dashboard</span></div>
-        <div className="nav-item" onClick={() => navigate("/lessons")}><FaCalendarAlt /><span>Lessons</span></div>
+        <div className="nav-item" onClick={() => navigate("/lessons")}><FaCalendarAlt /><span>{term.plural}</span></div>
         <div className="nav-item" onClick={() => navigate("/students")}><FaUsers /><span>Students</span></div>
         <div className="nav-item" onClick={() => navigate("/invoices")}><FaFileInvoiceDollar /><span>Invoices</span></div>
         <div className="nav-item" onClick={() => navigate("/more")}><FaEllipsisH /><span>More</span></div>

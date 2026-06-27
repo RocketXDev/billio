@@ -7,12 +7,14 @@ import {
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
+import { useLessonTerm } from "../../hooks/useLessonTerm";
 
 const MAX_TIMER_HOURS = 4;
 const MAX_TIMER_MS = MAX_TIMER_HOURS * 60 * 60 * 1000;
 
 export default function CoachingTimer() {
   const { coachId, identityLoading } = useCoachIdentity();
+  const term = useLessonTerm();
   const queryClient = useQueryClient();
 
   const [hourlyRate, setHourlyRate] = useState<string>("");
@@ -94,7 +96,7 @@ export default function CoachingTimer() {
         if (elapsed >= MAX_TIMER_MS) {
           setTimerRunning(false);
           setElapsedMs(MAX_TIMER_MS);
-          setMessage("Timer auto-stopped. Save or discard the lesson.");
+          setMessage(`Timer auto-stopped. Save or discard the ${term.lower}.`);
         }
       }, 1000);
     }
@@ -116,7 +118,7 @@ export default function CoachingTimer() {
       if (elapsed < MAX_TIMER_MS) {
         setTimerRunning(true);
       } else {
-        setMessage("Timer auto-stopped. Save or discard the lesson.");
+        setMessage(`Timer auto-stopped. Save or discard the ${term.lower}.`);
       }
     } catch { localStorage.removeItem("billio_active_timer"); }
   }
@@ -217,12 +219,12 @@ export default function CoachingTimer() {
     setSaving(false);
 
     if (error) {
-      setMessage(`Could not save lesson: ${error.message}`);
+      setMessage(`Could not save ${term.lower}: ${error.message}`);
       return;
     }
 
     queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
-    setMessage("Lesson saved successfully.");
+    setMessage(`${term.singular} saved successfully.`);
     clearTimer();
   }
 
@@ -254,8 +256,8 @@ export default function CoachingTimer() {
           </button>
           <img src="/logo.png" alt="Billio" />
         </div>
-        <h1>Lesson Timer</h1>
-        <p>Track a lesson live and save it when finished.</p>
+        <h1>{term.singular} Timer</h1>
+        <p>Track a {term.lower} live and save it when finished.</p>
       </div>
 
       <div className="timer-card">
@@ -360,18 +362,18 @@ export default function CoachingTimer() {
             onClick={startTimer}
             disabled={identityLoading || !coachId}
           >
-            {identityLoading || !coachId ? "Loading..." : "Start Lesson"}
+            {identityLoading || !coachId ? "Loading..." : `Start ${term.singular}`}
           </button>
         ) : (
           <button type="button" className="timer-stop-btn" onClick={stopTimer}>
-            Stop Lesson
+            Stop {term.singular}
           </button>
         )}
 
         {showSavePrompt && (
           <div className="timer-modal-overlay">
             <div className="timer-modal">
-              <h2>Save lesson?</h2>
+              <h2>Save {term.lower}?</h2>
               <p>
                 {formatTime(elapsedMs)} with{" "}
                 <strong>{studentName || "this student"}</strong>
@@ -398,7 +400,7 @@ export default function CoachingTimer() {
                     saveLesson();
                   }}
                 >
-                  {saving ? "Saving..." : "Save Lesson"}
+                  {saving ? "Saving..." : `Save ${term.singular}`}
                 </button>
               </div>
             </div>

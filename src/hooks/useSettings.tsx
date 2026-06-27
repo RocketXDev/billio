@@ -7,6 +7,8 @@ export interface CoachSettings {
   defaultDueDateDays: number;
   invoicePrefix: string;
   timeFormat: "12h" | "24h";
+  lessonTermSingular: string;
+  lessonTermPlural: string;
 }
 
 const DEFAULTS: CoachSettings = {
@@ -14,6 +16,8 @@ const DEFAULTS: CoachSettings = {
   defaultDueDateDays: 7,
   invoicePrefix: "INV",
   timeFormat: "12h",
+  lessonTermSingular: "Lesson",
+  lessonTermPlural: "Lessons",
 };
 
 export function useSettings() {
@@ -24,7 +28,9 @@ export function useSettings() {
     queryFn: async () => {
       const { data: coachData } = await supabase
         .from("coaches")
-        .select("default_lesson_duration, default_due_date_days, invoice_prefix, time_format")
+        .select(
+          "default_lesson_duration, default_due_date_days, invoice_prefix, time_format, lesson_term_singular, lesson_term_plural"
+        )
         .eq("id", coachId)
         .single();
       return coachData;
@@ -39,6 +45,8 @@ export function useSettings() {
           defaultDueDateDays: data.default_due_date_days ?? 7,
           invoicePrefix: data.invoice_prefix ?? "INV",
           timeFormat: (data.time_format ?? "12h") as "12h" | "24h",
+          lessonTermSingular: data.lesson_term_singular || "Lesson",
+          lessonTermPlural: data.lesson_term_plural || "Lessons",
         }
       : DEFAULTS,
     settingsLoading: identityLoading || isLoading,

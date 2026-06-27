@@ -12,6 +12,7 @@ import {
 import { supabase } from "../../lib/supabaseClient";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import { useSettings } from "../../hooks/useSettings";
+import { useLessonTerm } from "../../hooks/useLessonTerm";
 import "./AiAssistant.css";
 
 type ApiMessage = { role: "user" | "assistant"; content: any };
@@ -41,6 +42,7 @@ export default function AiAssistant() {
   const queryClient = useQueryClient();
   const { coachId, identityLoading } = useCoachIdentity();
   const { settings } = useSettings();
+  const term = useLessonTerm();
 
   const { data: coachRatesData } = useQuery({
     queryKey: ["coach-rates", coachId],
@@ -312,7 +314,7 @@ export default function AiAssistant() {
 
     const startDate = new Date(data.start);
     if (Number.isNaN(startDate.getTime())) {
-      throw new Error("Could not understand the lesson time.");
+      throw new Error(`Could not understand the ${term.lower} time.`);
     }
 
     const lessonDate = startDate.toLocaleDateString("en-CA");
@@ -341,7 +343,7 @@ export default function AiAssistant() {
     queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
     queryClient.invalidateQueries({ queryKey: ["coach-students", coachId] });
 
-    return `Lesson with ${data.student_name} created for ${startDate.toLocaleDateString()} at ${startDate.toLocaleTimeString(
+    return `${term.singular} with ${data.student_name} created for ${startDate.toLocaleDateString()} at ${startDate.toLocaleTimeString(
       [],
       { hour: "numeric", minute: "2-digit" }
     )}.`;
@@ -414,13 +416,13 @@ export default function AiAssistant() {
       .eq("id", data.lesson_id)
       .eq("coach_id", coachId)
       .single();
-    if (fetchError || !existing) throw new Error("Could not find that lesson.");
+    if (fetchError || !existing) throw new Error(`Could not find that ${term.lower}.`);
 
     let lessonDate = existing.lesson_date;
     let startTime = existing.start_time;
     if (data.start) {
       const startDate = new Date(data.start);
-      if (Number.isNaN(startDate.getTime())) throw new Error("Could not understand the new lesson time.");
+      if (Number.isNaN(startDate.getTime())) throw new Error(`Could not understand the new ${term.lower} time.`);
       lessonDate = startDate.toLocaleDateString("en-CA");
       startTime = startDate.toTimeString().slice(0, 5);
     }
@@ -448,7 +450,7 @@ export default function AiAssistant() {
     queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
     queryClient.invalidateQueries({ queryKey: ["assistant-lessons", coachId] });
 
-    return "Lesson updated.";
+    return `${term.singular} updated.`;
   }
 
   // Mirrors Dashboard.tsx's cleanupInvoicesAfterLessonDelete + handleDeleteLesson exactly:
@@ -469,7 +471,7 @@ export default function AiAssistant() {
       .eq("coach_id", coachId)
       .maybeSingle();
     if (ownError) throw new Error(ownError.message);
-    if (!ownedLesson) throw new Error("Could not find that lesson.");
+    if (!ownedLesson) throw new Error(`Could not find that ${term.lower}.`);
 
     // Only invoices that are actually this coach's own (inner-join + filter
     // on the embedded invoices row) are eligible for cleanup below.
@@ -516,7 +518,7 @@ export default function AiAssistant() {
     queryClient.invalidateQueries({ queryKey: ["assistant-lessons", coachId] });
     queryClient.invalidateQueries({ queryKey: ["assistant-invoices", coachId] });
 
-    return "Lesson deleted.";
+    return `${term.singular} deleted.`;
   }
 
   async function deleteInvoiceFromDraft(data: any): Promise<string> {
@@ -578,7 +580,7 @@ export default function AiAssistant() {
       .eq("coach_id", coachId)
       .select("id");
     if (error) throw new Error(error.message);
-    if (!updated || updated.length === 0) throw new Error("Could not find that lesson.");
+    if (!updated || updated.length === 0) throw new Error(`Could not find that ${term.lower}.`);
 
     // Only invoices that are actually this coach's own (inner-join + filter
     // on the embedded invoices row) are eligible for the recompute below.
@@ -617,7 +619,7 @@ export default function AiAssistant() {
     queryClient.invalidateQueries({ queryKey: ["assistant-lessons", coachId] });
     queryClient.invalidateQueries({ queryKey: ["assistant-invoices", coachId] });
 
-    return `Lesson marked as ${data.status}.`;
+    return `${term.singular} marked as ${data.status}.`;
   }
 
   async function updateStudentFromDraft(data: any): Promise<string> {
@@ -661,12 +663,12 @@ export default function AiAssistant() {
           const result = await createInvoiceFromDraft(draft.data);
           if (result.noLessons) {
             pushAssistantConfirmation(
-              `I couldn't find any unbilled lessons for ${draft.data.student_name} between ${draft.data.range_start} and ${draft.data.range_end}, so no invoice was created.`
+              `I couldn't find any unbilled ${term.lowerPlural} for ${draft.data.student_name} between ${draft.data.range_start} and ${draft.data.range_end}, so no invoice was created.`
             );
           } else {
             pushAssistantConfirmation(
-              `✅ Invoice ${result.invoiceNumber} created for ${draft.data.student_name} — ${result.count} lesson${
-                result.count === 1 ? "" : "s"
+              `✅ Invoice ${result.invoiceNumber} created for ${draft.data.student_name} — ${result.count} ${
+                result.count === 1 ? term.lower : term.lowerPlural
               }, $${Number(result.total).toFixed(2)} total.`
             );
           }
@@ -762,7 +764,7 @@ export default function AiAssistant() {
       case "create_lesson":
         return (
           <>
-            <h3>New Lesson</h3>
+            <h3>New {term.singular}</h3>
             <p className="ai-assistant-draft-name">{d.data.student_name}</p>
             <p>{formatDraftDateTime(d.data.start)}</p>
             <p>
@@ -783,7 +785,7 @@ export default function AiAssistant() {
               {d.data.range_start} – {d.data.range_end}
             </p>
             <p className="ai-assistant-draft-notes">
-              Bills all of this student's unbilled lessons in that range.
+              Bills all of this student's unbilled {term.lowerPlural} in that range.
             </p>
           </>
         );
@@ -793,7 +795,7 @@ export default function AiAssistant() {
         const name = lesson?.student_name || d.data.student_name || "this student";
         return (
           <>
-            <h3>Lesson with {name}</h3>
+            <h3>{term.singular} with {name}</h3>
             {lesson && (
               <p>
                 {lesson.date} at {lesson.time}
@@ -813,7 +815,7 @@ export default function AiAssistant() {
         const name = lesson?.student_name || d.data.student_name || "this student";
         return (
           <>
-            <h3>Lesson with {name}</h3>
+            <h3>{term.singular} with {name}</h3>
             {lesson && (
               <p>
                 {lesson.date} at {lesson.time}
@@ -821,7 +823,7 @@ export default function AiAssistant() {
             )}
             <p className="ai-assistant-draft-notes">
               This can't be undone. If it's already on an invoice, that invoice's total is
-              recalculated (or removed if this was its only lesson).
+              recalculated (or removed if this was its only {term.lower}).
             </p>
           </>
         );
@@ -832,7 +834,7 @@ export default function AiAssistant() {
         const name = lesson?.student_name || d.data.student_name || "this student";
         return (
           <>
-            <h3>Lesson with {name}</h3>
+            <h3>{term.singular} with {name}</h3>
             {lesson && (
               <p>
                 {lesson.date} at {lesson.time}
@@ -871,7 +873,7 @@ export default function AiAssistant() {
               {invoice?.student_name ? ` — ${invoice.student_name}` : ""}
             </p>
             <p className="ai-assistant-draft-notes">
-              This can't be undone. The underlying lessons stay in place but won't be billed
+              This can't be undone. The underlying {term.lowerPlural} stay in place but won't be billed
               under this invoice anymore.
             </p>
           </>
@@ -910,13 +912,13 @@ export default function AiAssistant() {
           <img src="/logo.png" alt="Billio" />
         </div>
         <h1>AI Assistant</h1>
-        <p>Create lessons and invoices by chatting or speaking naturally.</p>
+        <p>Create {term.lowerPlural} and invoices by chatting or speaking naturally.</p>
       </div>
 
       <div className="ai-assistant-body">
         {bubbles.length === 0 && !draft && (
           <p className="ai-assistant-empty">
-            Try "create a lesson with [student] tomorrow at 3pm" or "invoice [student] for this
+            Try "create a {term.lower} with [student] tomorrow at 3pm" or "invoice [student] for this
             month."
           </p>
         )}

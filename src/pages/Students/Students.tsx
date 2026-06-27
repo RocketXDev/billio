@@ -17,12 +17,14 @@ import {
 import { supabase } from "../../lib/supabaseClient";
 import { usePlan } from "../../hooks/usePlan";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
+import { useLessonTerm } from "../../hooks/useLessonTerm";
 import "./Students.css"
 
 function Students() {
   const navigate = useNavigate();
   const { isPro } = usePlan();
   const { coachId, identityLoading } = useCoachIdentity();
+  const term = useLessonTerm();
   const queryClient = useQueryClient();
 
   const [students, setStudents] = useState<any[]>([]);
@@ -1073,7 +1075,7 @@ function Students() {
 
           <div className="nav-item" onClick={() => navigate("/lessons")}>
             <FaCalendarAlt />
-            <span>Lessons</span>
+            <span>{term.plural}</span>
           </div>
 
           <div className="nav-item active" onClick={() => navigate("/students")}>
@@ -1696,12 +1698,12 @@ function Students() {
               <>
             <section className="students-detail-section">
               <div className="students-detail-title">
-                <h3>Lessons</h3>
+                <h3>{term.plural}</h3>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span>
                     {filteredStudentLessons.length === studentLessons.length
-                      ? `${filteredStudentLessons.length} ${filteredStudentLessons.length === 1 ? "lesson" : "lessons"}`
-                      : `${filteredStudentLessons.length} of ${studentLessons.length} lessons`}
+                      ? `${filteredStudentLessons.length} ${filteredStudentLessons.length === 1 ? term.lower : term.lowerPlural}`
+                      : `${filteredStudentLessons.length} of ${studentLessons.length} ${term.lowerPlural}`}
                   </span>
                   <button
                     type="button"
@@ -1727,7 +1729,7 @@ function Students() {
  
               {filteredStudentLessons.length === 0 ? (
                 <p className="students-empty">
-                  {studentLessons.length === 0 ? "No lessons for this student yet." : "No lessons match your filters."}
+                  {studentLessons.length === 0 ? `No ${term.lowerPlural} for this student yet.` : `No ${term.lowerPlural} match your filters.`}
                 </p>
               ) : (
                 <div className="students-detail-card">
@@ -1916,7 +1918,7 @@ function Students() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="add-lesson-header">
-              <h2>Edit Lesson</h2>
+              <h2>Edit {term.singular}</h2>
               <button type="button" onClick={closeEditLesson}>
                 ×
               </button>
@@ -1924,7 +1926,7 @@ function Students() {
 
             <form onSubmit={handleUpdateLesson} className="add-lesson-form">
               <div className="input-block">
-                <label>Lesson Date</label>
+                <label>{term.singular} Date</label>
                 <input
                   type="date"
                   value={lessonDate}
@@ -1957,7 +1959,7 @@ function Students() {
               </div>
 
               <div className="input-block">
-                <label>Lesson Type</label>
+                <label>{term.singular} Type</label>
                 <input
                   type="text"
                   value={lessonType}
@@ -2022,7 +2024,7 @@ function Students() {
                 className="delete-lesson-btn"
                 onClick={() => handleDeleteStudentLesson(editingLesson.id)}
               >
-                {isDeleting ? "Deleting..." : "Delete Lesson"}
+                {isDeleting ? "Deleting..." : `Delete ${term.singular}`}
               </button>
             </form>
           </div>
@@ -2032,7 +2034,7 @@ function Students() {
         <div className="invoice-settings-overlay" onClick={() => setShowFilterSheet(false)}>
           <div className="invoice-settings-sheet" onClick={(e) => e.stopPropagation()}>
             <div className="invoice-settings-header">
-              <h2>Filter Lessons</h2>
+              <h2>Filter {term.plural}</h2>
               <button type="button" onClick={() => setShowFilterSheet(false)}>×</button>
             </div>
 
@@ -2209,7 +2211,7 @@ function Students() {
                 <div className="billio-mini-spinner" />
               </div>
             ) : invoiceDetailLessons.length === 0 ? (
-              <p className="students-empty" style={{ padding: "0 16px 24px" }}>No lessons attached to this invoice.</p>
+              <p className="students-empty" style={{ padding: "0 16px 24px" }}>No {term.lowerPlural} attached to this invoice.</p>
             ) : (
               <div className="students-detail-card" style={{ margin: "0 16px 24px" }}>
                 {invoiceDetailLessons.map((lesson: any) => (

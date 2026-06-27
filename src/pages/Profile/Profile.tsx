@@ -16,11 +16,13 @@ import { supabase } from "../../lib/supabaseClient";
 import Cropper from "react-easy-crop";
 import { usePlan } from "../../hooks/usePlan";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
+import { useLessonTerm } from "../../hooks/useLessonTerm";
 
 function Profile() {
   const navigate = useNavigate();
   const { isPro, plan } = usePlan();
   const { coachId, profileId, identityLoading } = useCoachIdentity();
+  const term = useLessonTerm();
   const queryClient = useQueryClient();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -479,7 +481,7 @@ function Profile() {
                   type="text"
                   value={rateName}
                   onChange={(e) => setRateName(e.target.value)}
-                  placeholder="Lesson"
+                  placeholder={term.singular}
                 />
 
                 <input
@@ -591,7 +593,7 @@ function Profile() {
 
           <div className="nav-item" onClick={() => navigate("/lessons")}>
             <FaCalendarAlt />
-            <span>Lessons</span>
+            <span>{term.plural}</span>
           </div>
 
           <div className="nav-item" onClick={() => navigate("/students")}>

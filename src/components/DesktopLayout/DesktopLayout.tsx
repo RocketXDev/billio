@@ -3,6 +3,7 @@ import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import "./DesktopLayout.css";
 import { PullToRefresh } from "../PullToRefresh/PullToRefresh";
+import { useLessonTerm } from "../../hooks/useLessonTerm";
 import {
   FaHome,
   FaCalendarAlt,
@@ -18,24 +19,10 @@ import {
 
 type Props = { children: React.ReactNode };
 
-const PAGE_TITLES: Record<string, string> = {
-  "/dashboard": "Dashboard",
-  "/lessons": "Lessons",
-  "/students": "Students",
-  "/invoices": "Invoices",
-  "/profile": "Profile",
-  "/settings": "Settings",
-  "/upgrade": "Upgrade",
-  "/more": "More",
-  "/earnings-dashboard": "Earnings",
-  "/recurring-lessons": "Recurring Lessons",
-  "/timer": "Lesson Timer",
-  "/pdf-invoice": "PDF Invoice",
-};
-
 function DesktopLayout({ children }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
+  const term = useLessonTerm();
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -43,7 +30,22 @@ function DesktopLayout({ children }: Props) {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);
 
-  const pageTitle = PAGE_TITLES[location.pathname] ?? "";
+  const pageTitles: Record<string, string> = {
+    "/dashboard": "Dashboard",
+    "/lessons": term.plural,
+    "/students": "Students",
+    "/invoices": "Invoices",
+    "/profile": "Profile",
+    "/settings": "Settings",
+    "/upgrade": "Upgrade",
+    "/more": "More",
+    "/earnings-dashboard": "Earnings",
+    "/recurring-lessons": `Recurring ${term.plural}`,
+    "/timer": `${term.singular} Timer`,
+    "/pdf-invoice": "PDF Invoice",
+  };
+
+  const pageTitle = pageTitles[location.pathname] ?? "";
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   useEffect(() => {
@@ -128,7 +130,7 @@ function DesktopLayout({ children }: Props) {
             <FaHome /> Dashboard
           </NavLink>
           <NavLink to="/lessons" className={navLinkClass}>
-            <FaCalendarAlt /> Lessons
+            <FaCalendarAlt /> {term.plural}
           </NavLink>
           <NavLink to="/students" className={navLinkClass}>
             <FaUsers /> Students

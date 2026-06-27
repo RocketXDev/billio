@@ -22,6 +22,7 @@ import { useNavigate } from "react-router-dom";
 import { usePlan } from "../../hooks/usePlan";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import { useSettings } from "../../hooks/useSettings";
+import { useLessonTerm } from "../../hooks/useLessonTerm";
 import "./Lessons.css"
 import "../RecurringLessons/RecurringLessons.css"
 
@@ -65,6 +66,7 @@ function Lessons() {
   const { isPro } = usePlan();
   const { coachId, identityLoading } = useCoachIdentity();
   const { settings } = useSettings();
+  const term = useLessonTerm();
   const queryClient = useQueryClient();
 
   // Fire-and-forget push to Google Calendar (no-op if not connected) - never
@@ -1506,31 +1508,31 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const lessonsTutorialSteps = [
     {
       icon: "📘",
-      title: "Welcome to Lessons",
+      title: `Welcome to ${term.plural}`,
       text:
-        "This page is where you manage every lesson you teach. You can add lessons, check your schedule, update billing status, and open lessons when you need to make changes.",
+        `This page is where you manage every ${term.lower} you teach. You can add ${term.lowerPlural}, check your schedule, update billing status, and open ${term.lowerPlural} when you need to make changes.`,
       bullets: [
         "Use Calendar mode for planning by date",
-        "Use List view for a full timeline of lessons",
-        "Tap a billing status to quickly move a lesson from unbilled to billed to paid",
+        `Use List view for a full timeline of ${term.lowerPlural}`,
+        `Tap a billing status to quickly move a ${term.lower} from unbilled to billed to paid`,
       ],
     },
     {
       icon: "📅",
       title: "Calendar mode",
       text:
-        "Calendar is the default view because it is the fastest way to see which days already have lessons scheduled.",
+        `Calendar is the default view because it is the fastest way to see which days already have ${term.lowerPlural} scheduled.`,
       bullets: [
         "Switch between Calendar and List from this control",
         "Calendar helps you plan around specific dates",
-        "List is helpful when you want to review many lessons at once",
+        `List is helpful when you want to review many ${term.lowerPlural} at once`,
       ],
     },
     {
       icon: "🗓️",
       title: "Monthly calendar",
       text:
-        "The calendar shows the selected month. Days with lessons have a small purple dot, and tapping a day updates the lesson details below.",
+        `The calendar shows the selected month. Days with ${term.lowerPlural} have a small purple dot, and tapping a day updates the ${term.lower} details below.`,
       bullets: [
         "Use the arrows to move by month or year",
         "Tap a day to select it",
@@ -1541,22 +1543,22 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
       icon: "📌",
       title: "Selected day details",
       text:
-        "This card shows the lessons for the day you selected on the calendar.",
+        `This card shows the ${term.lowerPlural} for the day you selected on the calendar.`,
       bullets: [
-        "Tap + here to add a lesson for the selected date",
-        "Tap a lesson status to update billing quickly",
-        "Tap the edit icon to open the full lesson editor",
+        `Tap + here to add a ${term.lower} for the selected date`,
+        `Tap a ${term.lower} status to update billing quickly`,
+        `Tap the edit icon to open the full ${term.lower} editor`,
       ],
     },
     {
       icon: "📋",
       title: "List view",
       text:
-        "List view groups your lessons into Current, Upcoming, and Past sections so you can review everything in order.",
+        `List view groups your ${term.lowerPlural} into Current, Upcoming, and Past sections so you can review everything in order.`,
       bullets: [
-        "Great for checking older lessons",
-        "Quickly see each lesson's rate and billing status",
-        "Use the edit icon when a lesson needs changes",
+        `Great for checking older ${term.lowerPlural}`,
+        `Quickly see each ${term.lower}'s rate and billing status`,
+        `Use the edit icon when a ${term.lower} needs changes`,
       ],
     },
   ];
@@ -1584,12 +1586,12 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         <div className="lessons-body">
             <div className="lessons-header">
                 <div className="lessons-header-add">
-                    <h1>Lessons</h1>
+                    <h1>{term.plural}</h1>
                     <div className="lessons-header-actions">
                       <button
                         type="button"
                         className="lessons-log-btn"
-                        title="Lesson history"
+                        title={`${term.singular} history`}
                         onClick={() => setShowLessonHistory(true)}
                       >
                         <FaHistory />
@@ -1640,7 +1642,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
             {lessonsLoading ? (
               <div className="lessons-loading-card">
                 <div className="billio-mini-spinner"></div>
-                <p>Loading lessons...</p>
+                <p>Loading {term.lowerPlural}...</p>
               </div>
             ) : (<>
                 {viewMode === "calendar" && (
@@ -1748,8 +1750,8 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                       <span className="calendar-detail-count">
                         {selectedCalendarLessons.length}{" "}
                         {selectedCalendarLessons.length === 1
-                          ? "lesson"
-                          : "lessons"}
+                          ? term.lower
+                          : term.lowerPlural}
                       </span>
                     </div>
 
@@ -1781,7 +1783,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                   ))}
 
                   {selectedCalendarLessons.length === 0 ? (
-                      <p className="empty-lessons">No lessons for this day.</p>
+                      <p className="empty-lessons">No {term.lowerPlural} for this day.</p>
                     ) : (
                       selectedCalendarLessons.map((lesson) => (
                         <div key={lesson.id} className="calendar-detail-row" style={{ cursor: "pointer" }} onClick={() => setViewingLesson(lesson)}>
@@ -1876,13 +1878,13 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
                   {selectedCalendarLessons.length === 0 ? (
                     <div className="lessons-list-empty">
-                      <p>No lessons for this day.</p>
+                      <p>No {term.lowerPlural} for this day.</p>
                       <button
                         type="button"
                         className="lessons-list-empty-add"
                         onClick={() => { setLessonDate(selectedCalendarDate); openAddLesson(); }}
                       >
-                        <FaPlus /> Add lesson
+                        <FaPlus /> Add {term.lower}
                       </button>
                     </div>
                   ) : (
@@ -1932,7 +1934,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     
             <div className="nav-item active" onClick={() => navigate("/lessons")}>
                 <FaCalendarAlt />
-                <span>Lessons</span>
+                <span>{term.plural}</span>
             </div>
     
                 <div className="nav-item" onClick={() => navigate("/students")}>
@@ -1957,7 +1959,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
           closeAddLesson}>
           <div className="add-lesson-sheet" onClick={(e) => e.stopPropagation()}>
             <div className="add-lesson-header">
-              <h2>Add Lesson</h2>
+              <h2>Add {term.singular}</h2>
               <button type="button" onClick={closeAddLesson}>
                 ×
               </button>
@@ -2081,11 +2083,11 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
               )}
 
               <div className="input-block">
-                <label htmlFor="lessonDate">Lesson Date</label>
+                <label htmlFor="lessonDate">{term.singular} Date</label>
                 <input
                   id="lessonDate"
                   type="date"
-                  placeholder="Lesson Date"
+                  placeholder={`${term.singular} Date`}
                   value={lessonDate}
                   onChange={(e) => setLessonDate(e.target.value)}
                   required
@@ -2097,7 +2099,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                 <input
                   id="startTime"
                   type="time"
-                  placeholder="Lesson Time"
+                  placeholder={`${term.singular} Time`}
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
                   required
@@ -2118,7 +2120,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
               </div>
 
               <div className="input-block">
-                <label htmlFor="lessonType">Lesson Type</label>
+                <label htmlFor="lessonType">{term.singular} Type</label>
                 <input
                   id="lessonType"
                   type="text"
@@ -2202,7 +2204,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                 <label htmlFor="notes">Notes</label>
                 <textarea
                   id="notes"
-                  placeholder="Optional lesson notes..."
+                  placeholder={`Optional ${term.lower} notes...`}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                 />
@@ -2270,7 +2272,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                   {recurringPreviewCount > 0 && (
                     <div className="rl-preview">
                       <FaRedoAlt style={{ fontSize: 12, marginRight: 8 }} />
-                      This will create <strong>&nbsp;{recurringPreviewCount} lessons</strong>.
+                      This will create <strong>&nbsp;{recurringPreviewCount} {term.lowerPlural}</strong>.
                     </div>
                   )}
                 </>
@@ -2280,10 +2282,10 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                 {isSaving
                   ? "Saving..."
                   : isGroup
-                  ? "Create Group Lesson"
+                  ? `Create Group ${term.singular}`
                   : isRecurring
-                  ? "Create Recurring Lesson"
-                  : "Save Lesson"}
+                  ? `Create Recurring ${term.singular}`
+                  : `Save ${term.singular}`}
               </button>
             </form>
           </div>
@@ -2384,7 +2386,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
           <div className="add-lesson-sheet" onClick={(e) => e.stopPropagation()}>
             <div className="add-lesson-header">
               <div>
-                <h2>Edit Lesson</h2>
+                <h2>Edit {term.singular}</h2>
                 {editingLesson.is_recurring && (
                   <span className="edit-lesson-recurring-badge">
                     <FaRedoAlt /> Recurring
@@ -2392,7 +2394,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                 )}
                 {editingLesson.group_lesson_id && (
                   <span className="edit-lesson-recurring-badge">
-                    <FaUsers /> Group Lesson
+                    <FaUsers /> Group {term.singular}
                   </span>
                 )}
               </div>
@@ -2408,7 +2410,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                   className={`edit-series-scope-btn${!editSeriesMode ? " active" : ""}`}
                   onClick={() => setEditSeriesMode(false)}
                 >
-                  This lesson only
+                  This {term.lower} only
                 </button>
                 <button
                   type="button"
@@ -2429,7 +2431,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
               {/* Date only shown for single-lesson edits */}
               {!editSeriesMode && (
                 <div className="input-block">
-                  <label htmlFor="editLessonDate">Lesson Date</label>
+                  <label htmlFor="editLessonDate">{term.singular} Date</label>
                   <input
                     id="editLessonDate"
                     type="date"
@@ -2477,7 +2479,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
               )}
 
               <div className="input-block">
-                <label htmlFor="editLessonType">Lesson Type</label>
+                <label htmlFor="editLessonType">{term.singular} Type</label>
                 <input
                   id="editLessonType"
                   type="text"
@@ -2587,7 +2589,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                       {recurringPreviewCount > 0 && (
                         <div className="rl-preview">
                           <FaRedoAlt style={{ fontSize: 12, marginRight: 8, flexShrink: 0 }} />
-                          <span>This will create <strong>{recurringPreviewCount} lessons</strong> total.</span>
+                          <span>This will create <strong>{recurringPreviewCount} {term.lowerPlural}</strong> total.</span>
                         </div>
                       )}
                     </>
@@ -2651,14 +2653,14 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                   {seriesDays.length > 0 && seriesEndDate && (
                     <div className="rl-preview">
                       <FaRedoAlt style={{ fontSize: 12, marginRight: 8, flexShrink: 0 }} />
-                      <span>Will regenerate <strong>{generateOccurrences(new Date().toLocaleDateString("en-CA"), seriesEndDate, seriesFrequency, seriesDays).length} future lessons</strong> (unbilled only).</span>
+                      <span>Will regenerate <strong>{generateOccurrences(new Date().toLocaleDateString("en-CA"), seriesEndDate, seriesFrequency, seriesDays).length} future {term.lowerPlural}</strong> (unbilled only).</span>
                     </div>
                   )}
                 </>
               )}
 
               <button type="submit" className="save-lesson-btn" disabled={isSaving}>
-                {isSaving ? "Saving..." : editSeriesMode ? "Update Series" : isRecurring ? "Create Recurring Lesson" : "Save Changes"}
+                {isSaving ? "Saving..." : editSeriesMode ? "Update Series" : isRecurring ? `Create Recurring ${term.singular}` : "Save Changes"}
               </button>
 
               {editSeriesMode && seriesData ? (
@@ -2678,7 +2680,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                   disabled={isDeleting}
                 >
                   <FaTrash />
-                  {isDeleting ? "Deleting..." : "Delete Lesson"}
+                  {isDeleting ? "Deleting..." : `Delete ${term.singular}`}
                 </button>
               )}
             </form>
@@ -2694,7 +2696,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
             <h2>Delete Series?</h2>
             <p>
               This will deactivate the series and delete all <strong>upcoming unbilled</strong> occurrences.
-              Past, billed, and paid lessons are not affected.
+              Past, billed, and paid {term.lowerPlural} are not affected.
             </p>
             <div className="billio-confirm-actions">
               <button type="button" className="billio-cancel-btn" onClick={() => setShowDeleteSeriesModal(false)}>Cancel</button>
@@ -2711,7 +2713,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
           <div className="add-lesson-sheet" onClick={(e) => e.stopPropagation()}>
             <div className="add-lesson-header">
               <div>
-                <h2>{viewingLesson.students?.student_name || viewingLesson.student_name || "Lesson"}</h2>
+                <h2>{viewingLesson.students?.student_name || viewingLesson.student_name || term.singular}</h2>
                 <span className="lesson-view-date">
                   {new Date(`${viewingLesson.lesson_date}T00:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
                 </span>
@@ -2765,7 +2767,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                 className="save-lesson-btn"
                 onClick={() => { setViewingLesson(null); openEditLesson(viewingLesson); }}
               >
-                Edit Lesson
+                Edit {term.singular}
               </button>
             </div>
           </div>
@@ -2789,8 +2791,8 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
             <div className="invoice-log-sheet" onClick={(e) => e.stopPropagation()}>
               <div className="invoice-log-header">
                 <div>
-                  <h2>Lesson History</h2>
-                  <span>{filtered.length} of {lessons.length} lessons</span>
+                  <h2>{term.singular} History</h2>
+                  <span>{filtered.length} of {lessons.length} {term.lowerPlural}</span>
                 </div>
                 <button type="button" onClick={() => setShowLessonHistory(false)}>×</button>
               </div>
@@ -2819,7 +2821,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
               <div className="invoice-log-list">
                 {filtered.length === 0 ? (
-                  <p style={{ textAlign: "center", color: "var(--secondary-text)", padding: "24px 0" }}>No lessons found.</p>
+                  <p style={{ textAlign: "center", color: "var(--secondary-text)", padding: "24px 0" }}>No {term.lowerPlural} found.</p>
                 ) : filtered.map((lesson) => (
                   <div
                     key={lesson.id}

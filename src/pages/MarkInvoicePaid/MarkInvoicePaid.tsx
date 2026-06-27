@@ -26,6 +26,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
+import { useLessonTerm } from "../../hooks/useLessonTerm";
 import "./MarkInvoicePaid.css";
 
 type State = "loading" | "confirm" | "success" | "already_paid" | "error";
@@ -49,6 +50,7 @@ export default function MarkInvoicePaid({
 }: MarkInvoicePaidProps = {}) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const term = useLessonTerm();
 
   const token = searchParams.get("token");
   const invoiceId = invoiceIdProp || searchParams.get("invoice") || null;
@@ -232,7 +234,7 @@ export default function MarkInvoicePaid({
           </div>
 
           <p className="mip-subtitle">
-            Confirming will mark this invoice as paid and update all linked lesson
+            Confirming will mark this invoice as paid and update all linked {term.lower}
             statuses in Billio.
           </p>
 
@@ -275,7 +277,7 @@ export default function MarkInvoicePaid({
           </div>
 
           <p className="mip-subtitle">
-            This invoice has been marked as paid and lesson statuses have been
+            This invoice has been marked as paid and {term.lower} statuses have been
             updated in Billio.
           </p>
 

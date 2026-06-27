@@ -48,22 +48,6 @@
   display: block;
 }
 
-.landing-nav-links {
-  display: none;
-}
-
-.landing-nav-link {
-  text-decoration: none;
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 14px;
-  font-weight: 500;
-  transition: color 0.15s;
-}
-
-.landing-nav-link:hover {
-  color: #ffffff;
-}
-
 .landing-nav-buttons {
   display: flex;
   align-items: center;
@@ -398,67 +382,6 @@
   line-height: 1.15;
   letter-spacing: -1px;
   margin: 0 0 20px;
-}
-
-.rotating-word-wrap {
-  display: inline-block;
-}
-
-.rotating-word {
-  display: inline-flex;
-  perspective: 280px;
-}
-
-.rotating-letter {
-  display: inline-block;
-  transform-origin: 50% 100%;
-  background: linear-gradient(
-    100deg,
-    #312e81 0%,
-    #4338ff 18%,
-    #8b7cf6 32%,
-    #c4b5fd 40%,
-    #8b7cf6 48%,
-    #4338ff 64%,
-    #312e81 82%,
-    #4338ff 100%
-  );
-  background-size: 220% auto;
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-  animation:
-    rotatingLetterIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both,
-    letterMetalShine 3s linear infinite;
-}
-
-@keyframes letterMetalShine {
-  0% { background-position: 140% center; }
-  100% { background-position: -40% center; }
-}
-
-@keyframes rotatingLetterIn {
-  0% {
-    opacity: 0;
-    transform: rotateX(80deg) translateY(35%);
-  }
-  60% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 1;
-    transform: rotateX(0deg) translateY(0);
-  }
-}
-
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
 }
 
 /* ── Scroll reveal ── */
@@ -863,6 +786,95 @@
   line-height: 1.6;
 }
 
+/* ── Story teaser ── */
+.landing-story-teaser {
+  width: calc(100% - 40px);
+  max-width: 1100px;
+  margin: 56px auto 0;
+  padding: 32px 24px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #f5f3ff, #eef2ff);
+  border: 1px solid var(--shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+}
+
+.landing-story-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--accent-grad);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 8px 20px rgba(59, 51, 217, 0.3);
+  flex-shrink: 0;
+}
+
+.landing-story-text h3 {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--main-text);
+  margin: 0 0 6px;
+  letter-spacing: -0.3px;
+}
+
+.landing-story-text p {
+  font-size: 14px;
+  color: var(--secondary-text);
+  line-height: 1.6;
+  margin: 0;
+  max-width: 480px;
+}
+
+.landing-story-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border-radius: 999px;
+  background: var(--primary-purple);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px rgba(59, 51, 217, 0.28);
+  transition: opacity 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+.landing-story-link:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(59, 51, 217, 0.36);
+}
+
+@media (min-width: 1024px) {
+  .landing-story-teaser {
+    flex-direction: row;
+    text-align: left;
+    padding: 28px 40px;
+    gap: 28px;
+  }
+
+  .landing-story-text {
+    flex: 1;
+  }
+
+  .landing-story-text p {
+    max-width: none;
+  }
+
+  .landing-story-link {
+    flex-shrink: 0;
+  }
+}
+
 /* ── Divider ── */
 .landing-divider {
   width: calc(100% - 40px);
@@ -994,6 +1006,7 @@
 
   .pricing-grid {
     grid-template-columns: repeat(2, 1fr);
+    margin: 0 auto;
   }
 
   .pricing-section h2 {
@@ -1011,12 +1024,6 @@
 
   .landing-logo {
     width: 110px;
-  }
-
-  .landing-nav-links {
-    display: flex;
-    align-items: center;
-    gap: 28px;
   }
 
   .landing-login-btn {
@@ -1206,12 +1213,15 @@
     box-shadow: 0 0 0 6px var(--main-bg);
   }
 
-  /* ── Pricing — a quiet Free card beside a spotlighted Pro card (same size, different tone) ── */
+  /* ── Pricing — a quiet Free card beside a spotlighted Pro card (same size, different tone) ──
+     The label/heading/subtitle above stay left-aligned with the rest of the page's sections;
+     only the card grid itself is centered within the section's available width. */
   .pricing-grid {
     grid-template-columns: 1fr 1fr;
     gap: 32px;
     align-items: stretch;
     max-width: 940px;
+    margin: 0 auto;
   }
 
   .pricing-card {

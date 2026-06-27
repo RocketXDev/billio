@@ -18,6 +18,7 @@ import {
   FaCheckCircle,
   FaLifeRing,
 } from "react-icons/fa";
+import RotatingWord from "../../components/RotatingWord/RotatingWord";
 import "./About.css";
 
 const FEATURES = [
@@ -82,7 +83,7 @@ export default function About() {
         <div className="about-hero">
           <span className="about-label">Built for coaches, tutors & more</span>
           <h1 className="about-hero-title">
-            Billing made simple for private instructors.
+            Billing made simple for <RotatingWord variant="plain" />.
           </h1>
           <p className="about-hero-subtitle">
             Billio is a mobile-first scheduling and invoicing app for coaches, tutors,

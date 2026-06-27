@@ -134,7 +134,6 @@ function Dashboard() {
   const [fullName, setFullName] = useState("");
   const [profileId, setProfileId] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [role, setRole] = useState("");
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -439,7 +438,6 @@ function Dashboard() {
       }
 
       setFullName(profileData.full_name);
-      setRole(profileData.role);
       setProfileId(profileData.id);
 
       // Create install prompt notification once
@@ -575,33 +573,6 @@ function Dashboard() {
                 (notification) => notification.type !== "onboarding"
               )
             );
-          }
-        }
-      }
-
-      // Create student profile if role is student
-      if (profileData.role === "student") {
-        const { data: studentData, error: studentLookupError } = await supabase
-          .from("students")
-          .select("*")
-          .eq("profile_id", profileData.id)
-          .maybeSingle();
-
-        if (studentLookupError) {
-          console.log("Student lookup error:", studentLookupError);
-        }
-
-        if (!studentData) {
-          const { error: studentInsertError } = await supabase
-            .from("students")
-            .insert({
-              profile_id: profileData.id,
-              student_name: profileData.full_name,
-              active: true,
-            });
-
-          if (studentInsertError) {
-            console.log("Student insert error:", studentInsertError);
           }
         }
       }
@@ -1816,10 +1787,10 @@ function Dashboard() {
               alt="Coach onboarding"
             />
 
-            <h2>Set up your coaching profile</h2>
+            <h2>Set up your coach, nanny, or instructor profile</h2>
 
             <p>
-              Add a few details so Billio can help calculate lessons and billing
+              Add a few details so Billio can help calculate {term.lowerPlural} and billing
               faster.
             </p>
 
@@ -1829,7 +1800,7 @@ function Dashboard() {
             >
               <div className="input-block">
                 <label htmlFor="visibleName">
-                  Visible Coach Name
+                  Visible Name
                 </label>
 
                 <input

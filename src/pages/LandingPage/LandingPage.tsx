@@ -15,10 +15,10 @@ import {
   FaChild,
   FaSchool,
   FaUserMd,
+  FaHeart,
 } from "react-icons/fa";
+import RotatingWord from "../../components/RotatingWord/RotatingWord";
 import "./LandingPage.css";
-
-const ROTATING_WORDS = ["coaches", "instructors", "teachers", "tutors", "nannies", "therapists"];
 
 const PERSONAS = [
   { label: "Coaches", icon: <FaChalkboardTeacher /> },
@@ -51,36 +51,6 @@ const FAQS = [
     a: "Billio is mobile-first — install it straight to your home screen on iOS or Android, and use the full feature set on desktop too.",
   },
 ];
-
-function RotatingWord() {
-  const [index, setIndex] = useState(0);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setIndex((i) => (i + 1) % ROTATING_WORDS.length);
-    }, 2200);
-    return () => clearInterval(id);
-  }, []);
-
-  const word = ROTATING_WORDS[index];
-
-  return (
-    <span className="rotating-word-wrap">
-      <span className="rotating-word" aria-hidden="true">
-        {word.split("").map((char, i) => (
-          <span
-            key={`${index}-${i}`}
-            className="rotating-letter"
-            style={{ animationDelay: `${i * 35}ms` }}
-          >
-            {char}
-          </span>
-        ))}
-      </span>
-      <span className="visually-hidden">{ROTATING_WORDS.join(", ")}</span>
-    </span>
-  );
-}
 
 export default function LandingPage() {
   const accentRef = useRef<HTMLSpanElement>(null);
@@ -124,9 +94,6 @@ export default function LandingPage() {
           <div className="landing-nav-inner">
             <div className="landing-logo">
               <img src="./logo-white.png" alt="Billio" />
-            </div>
-            <div className="landing-nav-links">
-              <Link to="/about" className="landing-nav-link">About</Link>
             </div>
             <div className="landing-nav-buttons">
               <Link to="/login" className="landing-login-btn">Login</Link>
@@ -347,6 +314,20 @@ export default function LandingPage() {
             </div>
           ))}
         </div>
+      </section>
+
+      <section className="landing-story-teaser reveal">
+        <span className="landing-story-icon"><FaHeart /></span>
+        <div className="landing-story-text">
+          <h3>There's a story behind Billio.</h3>
+          <p>
+            Built because billing software for solo coaches, tutors, and instructors
+            just wasn't good enough — and built to keep your data yours.
+          </p>
+        </div>
+        <Link to="/about" className="landing-story-link">
+          Meet Billio <FaArrowRight />
+        </Link>
       </section>
 
       <div className="landing-divider" />

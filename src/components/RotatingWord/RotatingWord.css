@@ -1,0 +1,88 @@
+.rotating-word-wrap {
+  display: inline-block;
+}
+
+.rotating-word {
+  display: inline-flex;
+  perspective: 280px;
+}
+
+.rotating-letter {
+  display: inline-block;
+  transform-origin: 50% 100%;
+  background: linear-gradient(
+    100deg,
+    #312e81 0%,
+    #4338ff 18%,
+    #8b7cf6 32%,
+    #c4b5fd 40%,
+    #8b7cf6 48%,
+    #4338ff 64%,
+    #312e81 82%,
+    #4338ff 100%
+  );
+  background-size: 220% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation:
+    rotatingLetterIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both,
+    letterMetalShine 3s linear infinite;
+}
+
+/* On-dark variant: warm gold/pink shimmer, matching .landing-hero-accent */
+.rotating-word.on-dark .rotating-letter {
+  background: linear-gradient(
+    100deg,
+    #a78bfa 0%,
+    #f0abfc 20%,
+    #fbbf24 38%,
+    #fff8ee 44%,
+    #fde68a 48%,
+    #fbbf24 54%,
+    #f0abfc 72%,
+    #a78bfa 100%
+  );
+  background-size: 250% auto;
+}
+
+/* Plain variant: no gradient/background-clip at all — solid white text
+   with just the letter-by-letter flip-in. Used on the About page, where
+   the gradient shimmer hasn't rendered reliably. */
+.rotating-word.plain .rotating-letter {
+  background: none;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+  animation: rotatingLetterIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes letterMetalShine {
+  0% { background-position: 140% center; }
+  100% { background-position: -40% center; }
+}
+
+@keyframes rotatingLetterIn {
+  0% {
+    opacity: 0;
+    transform: rotateX(80deg) translateY(35%);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: rotateX(0deg) translateY(0);
+  }
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}

@@ -351,7 +351,7 @@ function Profile() {
             <div className="profile-avatar-wrapper">
               <label className="profile-avatar uploadable-avatar">
                 {avatarUrl ? (
-                  <img src={avatarUrl} alt="Coach avatar" />
+                  <img src={avatarUrl} alt="Profile avatar" />
                 ) : (
                   (visibleName || fullName || "B").charAt(0).toUpperCase()
                 )}
@@ -377,7 +377,7 @@ function Profile() {
 
             <div className="profile-hero-info">
               <div className="profile-name-row">
-                <h2>{visibleName || fullName || "Coach"}</h2>
+                <h2>{visibleName || fullName || "Profile"}</h2>
                 <span className={`plan-badge ${plan}`}>
                   {isPro ? <><FaCrown style={{ fontSize: 9, marginRight: 3 }} />Pro</> : "Free"}
                 </span>
@@ -401,7 +401,7 @@ function Profile() {
               </div>
 
               <div className="input-block">
-                <label>Visible Coach Name</label>
+                <label>Visible Name</label>
                 <input
                   type="text"
                   value={visibleName}
@@ -462,7 +462,7 @@ function Profile() {
             </section>
 
             <section className="profile-section-card">
-              <h3>Coaching Information</h3>
+              <h3>Rates & Pricing</h3>
 
               <div className="input-block">
                 <label>Default Hourly Rate</label>

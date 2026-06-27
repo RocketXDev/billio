@@ -26,6 +26,8 @@ import More from "./pages/More/More";
 import CoachingTimer from "./pages/CoachingTimer/CoachingTimer";
 import AiAssistant from "./pages/AiAssistant/AiAssistant";
 import About from "./pages/About/About";
+import BlogIndex from "./pages/Blog/BlogIndex";
+import BlogPost from "./pages/Blog/BlogPost";
 import Settings from "./pages/Settings/Settings";
 import MarkInvoicePaid from "./pages/MarkInvoicePaid/MarkInvoicePaid";
 import RecurringLessons from "./pages/RecurringLessons/RecurringLessons";
@@ -52,6 +54,10 @@ const PAGE_META: Record<string, { title: string; description: string }> = {
   "/about": {
     title: "About Billio | Billing Made Simple for Coaches",
     description: "Learn about Billio, the mobile-first scheduling and invoicing app built for coaches, tutors, instructors, teachers, nannies, and therapists.",
+  },
+  "/blog": {
+    title: "Blog | Billio",
+    description: "Scheduling, billing, and admin advice for coaches, tutors, instructors, and music educators — from the team building Billio.",
   },
   "/support": {
     title: "Support | Billio",
@@ -106,6 +112,14 @@ function App() {
   }, [location.pathname]);
 
   useEffect(() => {
+    // Individual blog posts (/blog/:slug) set their own title/description/
+    // canonical from post data in BlogPost.tsx — bail out here so this
+    // effect (which only knows the static PAGE_META map) doesn't stomp on
+    // them. Effects run child-first on mount, so without this guard this
+    // effect would run after BlogPost's and overwrite it back to the
+    // index.html defaults.
+    if (/^\/blog\/.+/.test(location.pathname)) return;
+
     // Unmapped routes (incl. "/") fall back to index.html's own original
     // tags — captured once on first render, before any route here has had
     // a chance to overwrite them, so navigating from e.g. /privacy back to
@@ -145,6 +159,8 @@ function App() {
       <Route path="/sms-opt-in" element={<SmsOptIn />} />
       <Route path="/support" element={<Support />} />
       <Route path="/about" element={<About />} />
+      <Route path="/blog" element={<BlogIndex />} />
+      <Route path="/blog/:slug" element={<BlogPost />} />
       <Route path="/mark-invoice-paid" element={<MarkInvoicePaid />} />
       <Route path="/pay" element={<MarkInvoicePaid />} />
 

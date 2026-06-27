@@ -210,6 +210,7 @@ export default function About() {
       {/* Footer */}
       <footer className="about-page-footer">
         <div className="about-page-footer-links">
+          <Link to="/blog">Blog</Link>
           <Link to="/privacy">Privacy Policy</Link>
           <Link to="/terms">Terms of Service</Link>
           <Link to="/sms-opt-in">SMS Info</Link>

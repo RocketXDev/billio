@@ -344,6 +344,7 @@ export default function LandingPage() {
         <img src="./logo.png" alt="Billio" className="landing-footer-logo" />
         <div className="landing-footer-links">
           <Link to="/about">About</Link>
+          <Link to="/blog">Blog</Link>
           <Link to="/privacy">Privacy Policy</Link>
           <Link to="/terms">Terms of Service</Link>
           <Link to="/sms-opt-in">SMS Info</Link>

@@ -3,6 +3,7 @@ Allow: /
 Allow: /login
 Allow: /signup
 Allow: /about
+Allow: /blog
 Allow: /support
 Allow: /privacy
 Allow: /terms

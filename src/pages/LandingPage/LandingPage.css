@@ -359,22 +359,102 @@
 }
 
 .section-label {
+  display: inline-flex;
+  align-items: center;
+  background: #eef2ff;
   color: var(--primary-purple);
+  border: 1px solid var(--shadow);
   font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 8px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  margin-bottom: 16px;
 }
 
 .landing-section h2,
-.landing-steps-section h2 {
+.landing-steps-section h2,
+.landing-faq-section h2 {
   color: var(--main-text);
   font-size: 28px;
   font-weight: 700;
   line-height: 1.15;
   letter-spacing: -1px;
   margin: 0 0 20px;
+}
+
+.rotating-word-wrap {
+  display: inline-block;
+}
+
+.rotating-word {
+  display: inline-flex;
+  perspective: 280px;
+}
+
+.rotating-letter {
+  display: inline-block;
+  transform-origin: 50% 100%;
+  background: linear-gradient(
+    100deg,
+    #312e81 0%,
+    #4338ff 18%,
+    #8b7cf6 32%,
+    #c4b5fd 40%,
+    #8b7cf6 48%,
+    #4338ff 64%,
+    #312e81 82%,
+    #4338ff 100%
+  );
+  background-size: 220% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation:
+    rotatingLetterIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both,
+    letterMetalShine 3s linear infinite;
+}
+
+@keyframes letterMetalShine {
+  0% { background-position: 140% center; }
+  100% { background-position: -40% center; }
+}
+
+@keyframes rotatingLetterIn {
+  0% {
+    opacity: 0;
+    transform: rotateX(80deg) translateY(35%);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: rotateX(0deg) translateY(0);
+  }
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* ── Scroll reveal ── */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal[data-revealed="true"] {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .landing-final-cta h2 {
@@ -499,19 +579,6 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 48px 20px 0;
-  text-align: center;
-}
-
-.section-badge {
-  display: inline-block;
-  background: #eef2ff;
-  color: var(--primary-purple);
-  border: 1px solid var(--shadow);
-  padding: 7px 14px;
-  border-radius: 999px;
-  font-weight: 600;
-  font-size: 13px;
-  margin-bottom: 14px;
 }
 
 .pricing-section h2 {
@@ -524,7 +591,7 @@
 
 .pricing-subtitle {
   max-width: 540px;
-  margin: 0 auto 28px;
+  margin: 0 0 28px;
   color: var(--secondary-text);
   line-height: 1.65;
   font-size: 15px;
@@ -535,7 +602,7 @@
   grid-template-columns: 1fr;
   gap: 18px;
   max-width: 840px;
-  margin: 0 auto;
+  margin: 0;
   text-align: left;
 }
 
@@ -659,6 +726,125 @@
   background: var(--input-bg);
   color: var(--main-text);
   border: 1px solid var(--border);
+}
+
+/* ── Persona strip ── */
+.landing-personas {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 20px 0;
+  text-align: center;
+}
+
+.personas-caption {
+  color: var(--secondary-text);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 16px;
+}
+
+.landing-personas-inner {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 12px;
+}
+
+.persona-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--main-text);
+}
+
+.persona-chip svg {
+  color: var(--primary-purple);
+  font-size: 13px;
+}
+
+/* ── FAQ ── */
+.landing-faq-section {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 48px 20px 0;
+}
+
+.landing-faq-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.faq-item {
+  border-bottom: 1px solid var(--border);
+}
+
+.faq-item:first-child {
+  border-top: 1px solid var(--border);
+}
+
+.faq-question {
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 20px 4px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--main-text);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+}
+
+.faq-icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #eef2ff;
+  color: var(--primary-purple);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.faq-item.faq-open .faq-icon {
+  background: var(--primary-purple);
+  color: #ffffff;
+  transform: rotate(180deg);
+}
+
+.faq-answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease;
+}
+
+.faq-item.faq-open .faq-answer {
+  max-height: 240px;
+}
+
+.faq-answer p {
+  margin: 0 4px 20px;
+  color: var(--secondary-text);
+  font-size: 14.5px;
+  line-height: 1.6;
 }
 
 /* ── Divider ── */
@@ -876,59 +1062,302 @@
     padding: 72px 64px;
   }
 
-  .landing-section h2,
-  .landing-steps-section h2 {
-    font-size: 42px;
-    letter-spacing: -1.5px;
-  }
-
   .pricing-section h2 {
     font-size: 42px;
     letter-spacing: -1.5px;
   }
 
+  /* ── "Why Billio?" — full-width headline, then a 4-up feature strip ── */
+  .landing-section {
+    position: relative;
+  }
+
+  .landing-section h2 {
+    font-size: 58px;
+    letter-spacing: -2px;
+    line-height: 1.08;
+    max-width: 1040px;
+    margin: 0 0 64px;
+  }
+
   .landing-features {
     grid-template-columns: repeat(4, 1fr);
-    gap: 18px;
+    gap: 0;
   }
 
   .landing-feature-card {
-    padding: 26px 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    background: transparent;
+    border: none;
+    border-left: 1px solid var(--border);
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0 28px;
+    transition: transform 0.25s ease;
+  }
+
+  .landing-feature-card:first-child {
+    border-left: none;
+    padding-left: 0;
+  }
+
+  .landing-feature-card:hover {
+    transform: translateY(-6px);
+    box-shadow: none;
+  }
+
+  .feature-icon-chip {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    font-size: 22px;
+    margin-bottom: 20px;
+    transition: background 0.25s ease, color 0.25s ease;
+  }
+
+  .landing-feature-card svg {
+    font-size: 22px;
+    transition: color 0.25s ease;
+  }
+
+  .landing-feature-card:hover .feature-icon-chip {
+    background: var(--primary-purple);
+  }
+
+  .landing-feature-card:hover .feature-icon-chip svg {
+    color: #ffffff;
   }
 
   .landing-feature-card h3 {
-    font-size: 17px;
+    font-size: 18px;
+    margin-bottom: 10px;
+  }
+
+  .landing-feature-card p {
+    font-size: 14.5px;
+    max-width: none;
+  }
+
+  /* ── "From lesson to invoice" — a plain numbered timeline, no card boxes ── */
+  .landing-steps-section h2 {
+    font-size: 42px;
+    letter-spacing: -1.5px;
+  }
+
+  .landing-steps {
+    position: relative;
+    gap: 28px;
+    padding-top: 8px;
+  }
+
+  .landing-steps::before {
+    content: "";
+    position: absolute;
+    top: 30px;
+    left: 90px;
+    right: 90px;
+    height: 2px;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--border) 0,
+      var(--border) 10px,
+      transparent 10px,
+      transparent 20px
+    );
+    z-index: 0;
   }
 
   .landing-steps div {
-    padding: 26px 22px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+    position: relative;
+    z-index: 1;
   }
 
+  .landing-steps div:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .landing-steps span {
+    box-shadow: 0 0 0 6px var(--main-bg);
+  }
+
+  /* ── Pricing — a quiet Free card beside a spotlighted Pro card (same size, different tone) ── */
   .pricing-grid {
-    max-width: 800px;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    align-items: stretch;
+    max-width: 940px;
+  }
+
+  .pricing-card {
+    padding: 40px 36px;
+    border-radius: 28px;
+  }
+
+  .pricing-card:first-child {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    box-shadow: none;
+  }
+
+  .pricing-card:hover {
+    transform: translateY(-4px);
+  }
+
+  .pro-card {
+    background: linear-gradient(165deg, #2b275f, #3d3796 55%, #4338ff);
+    border: none;
+    box-shadow: 0 30px 60px -14px rgba(59, 51, 217, 0.4);
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+  }
+
+  .pro-card::before {
+    content: "";
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.22), transparent 70%);
+    top: -110px;
+    right: -90px;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  .pro-card:hover {
+    transform: translateY(-4px);
+  }
+
+  .pro-card h3,
+  .pro-card .price,
+  .pro-card .price-note,
+  .pro-card li {
+    color: #ffffff;
+  }
+
+  .pro-card .price span {
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .pro-card li::before {
+    color: #86efac;
+  }
+
+  .pro-card .popular-badge {
+    background: #ffffff;
+    color: var(--primary-purple);
+  }
+
+  .pro-card .pricing-btn.primary-pricing {
+    background: #ffffff;
+    color: var(--primary-purple);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.25);
+  }
+
+  .pro-card .pricing-btn.primary-pricing:hover {
+    opacity: 0.92;
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.3);
   }
 
   .price {
     font-size: 52px;
   }
 
+  /* ── Persona strip ── */
+  .landing-personas {
+    padding: 44px 52px 0;
+  }
+
+  .personas-caption {
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+
+  .persona-chip {
+    padding: 11px 20px;
+    font-size: 14px;
+  }
+
+  .persona-chip svg {
+    font-size: 15px;
+  }
+
+  /* ── FAQ ── */
+  .landing-faq-section {
+    max-width: 880px;
+    padding: 96px 52px 0;
+  }
+
+  .landing-faq-section h2 {
+    font-size: 42px;
+    letter-spacing: -1.5px;
+  }
+
+  .faq-question {
+    font-size: 17px;
+    padding: 26px 4px;
+  }
+
+  .faq-answer p {
+    font-size: 15.5px;
+    max-width: 680px;
+  }
+
+  /* ── Final CTA — full-bleed glow accents instead of a plain centered band ── */
   .landing-final-cta {
+    position: relative;
+    overflow: hidden;
     text-align: center;
     padding: 80px 80px 88px;
   }
 
+  .landing-final-cta::before,
+  .landing-final-cta::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  .landing-final-cta::before {
+    width: 460px;
+    height: 460px;
+    background: radial-gradient(circle, rgba(124, 109, 255, 0.32), transparent 70%);
+    top: -160px;
+    right: -120px;
+  }
+
+  .landing-final-cta::after {
+    width: 360px;
+    height: 360px;
+    background: radial-gradient(circle, rgba(244, 171, 252, 0.18), transparent 70%);
+    bottom: -180px;
+    left: -100px;
+  }
+
   .landing-final-cta h2 {
+    position: relative;
     font-size: 48px;
     letter-spacing: -2px;
   }
 
   .landing-final-cta p {
+    position: relative;
     font-size: 17px;
     max-width: 500px;
     margin: 0 auto 24px;
   }
 
   .landing-final-cta .landing-main-btn {
+    position: relative;
     margin: 0 auto;
     min-height: 58px;
     font-size: 18px;
@@ -979,6 +1408,11 @@
 
   .landing-stat-card strong {
     font-size: 24px;
+  }
+
+  .landing-section h2 {
+    font-size: 64px;
+    max-width: 1180px;
   }
 }
 

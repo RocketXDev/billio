@@ -25,6 +25,7 @@ import { useLessonTerm } from "../../hooks/useLessonTerm";
 import { InstallBanner, InstallGuide } from "../../components/InstallGuide/InstallGuide";
 import { useInstallPrompt } from "../../hooks/useInstallPrompt";
 import { createInstallNotification } from "../../lib/installNotification";
+import { getDefaultLessonTerm } from "../../lib/professions";
 import {
   DndContext,
   PointerSensor,
@@ -413,6 +414,7 @@ function Dashboard() {
 
       const metadataFullName = user.user_metadata.full_name || "New User";
       const metadataRole = user.user_metadata.role || "coach";
+      const metadataProfession = user.user_metadata.profession || "coach";
 
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
@@ -530,12 +532,16 @@ function Dashboard() {
         }
 
         if (!coachData) {
+        const defaultTerm = getDefaultLessonTerm(metadataProfession);
         const { data: newCoach, error: coachInsertError } = await supabase
           .from("coaches")
           .insert({
             profile_id: profileData.id,
             active: true,
             setup_completed: false,
+            profession: metadataProfession,
+            lesson_term_singular: defaultTerm.singular,
+            lesson_term_plural: defaultTerm.plural,
           })
           .select()
           .single();

@@ -1,8 +1,9 @@
 import '../Login/Login.css';
 import { useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
+import { PROFESSIONS } from "../../lib/professions";
 
 function Signup() {
     const navigate = useNavigate();
@@ -11,10 +12,10 @@ function Signup() {
     const [message, setMessage] = useState("");
     const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
-    const [role, setRole] = useState<"coach" | "student">("coach");
+    const [profession, setProfession] = useState(PROFESSIONS[0].value);
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
-    
+
     async function handleSignup(e: any) {
         e.preventDefault();
         setLoading(true);
@@ -27,7 +28,8 @@ function Signup() {
             emailRedirectTo: `${window.location.origin}/email-confirmed`,
             data: {
                 full_name: fullName,
-                role: role,
+                role: "coach",
+                profession,
             },
             },
         });
@@ -58,32 +60,18 @@ function Signup() {
                     <h1 className="mb-form-title">Sign Up</h1>
 
                     <form onSubmit={handleSignup}>
-                        <div className="role-toggle">
-                        <div
-                            className={`role-slider ${
-                            role === "student" ? "role-slider-right" : ""
-                            }`}
-                        />
-
-                        <button
-                            type="button"
-                            className={`role-option ${
-                            role === "coach" ? "role-option-active" : ""
-                            }`}
-                            onClick={() => setRole("coach")}
+                        <div className="input-block">
+                        <label htmlFor="profession">What best describes you?</label>
+                        <select
+                            id="profession"
+                            className="profession-select"
+                            value={profession}
+                            onChange={(e) => setProfession(e.target.value)}
                         >
-                            Coach
-                        </button>
-
-                        <button
-                            type="button"
-                            className={`role-option ${
-                            role === "student" ? "role-option-active" : ""
-                            }`}
-                            onClick={() => setRole("student")}
-                        >
-                            Student
-                        </button>
+                            {PROFESSIONS.map((p) => (
+                            <option key={p.value} value={p.value}>{p.label}</option>
+                            ))}
+                        </select>
                         </div>
 
                         <div className="input-block">

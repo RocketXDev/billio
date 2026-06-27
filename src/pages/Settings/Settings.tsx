@@ -26,6 +26,7 @@ const DUE_DATE_OPTIONS = [
 const TERM_PRESETS = [
   { singular: "Lesson", plural: "Lessons" },
   { singular: "Session", plural: "Sessions" },
+  { singular: "Booking", plural: "Bookings" },
   { singular: "Event", plural: "Events" },
   { singular: "Appointment", plural: "Appointments" },
   { singular: "Meeting", plural: "Meetings" },

@@ -2923,7 +2923,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
               <section className="reminder-settings-section">
                 <h3>Send reminders</h3>
                 <p>
-                  Off by default. When on, Billio emails or texts (Pro only) the student or parent before their {term.lower}. 
+                  When on, Billio emails or texts (Pro only) the student or parent before their {term.lower}. 
                 </p>
 
                 <div className="input-block">

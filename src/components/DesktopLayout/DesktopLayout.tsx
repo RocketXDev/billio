@@ -15,6 +15,7 @@ import {
   FaSignOutAlt,
   FaBell,
   FaTrash,
+  FaEllipsisH
 } from "react-icons/fa";
 
 type Props = { children: React.ReactNode };
@@ -139,7 +140,7 @@ function DesktopLayout({ children }: Props) {
             <FaFileInvoiceDollar /> Invoices
           </NavLink>
           <NavLink to="/more" className={navLinkClass}>
-            <FaFileInvoiceDollar /> More
+            <FaEllipsisH /> More
           </NavLink>
 
           <div className="desktop-sidebar-divider" />

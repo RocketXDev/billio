@@ -716,6 +716,317 @@ export const BLOG_POSTS: BlogPost[] = [
       </>
     ),
   },
+  {
+    slug: "attendance-tracking-methods-swim-coaches-rely-on",
+    title: "Attendance Tracking Methods Swim Coaches Rely On",
+    metaTitle: "Attendance Tracking Methods Swim Coaches Rely On | Billio",
+    metaDescription:
+      "Discover the attendance tracking methods swim coaches actually use to cut admin time, catch dropout risk early, and keep squad records accurate.",
+    excerpt:
+      "Clipboards get wet and lost. Spreadsheets fall out of sync. Here's how swim coaches track who showed up, spot dropout risk early, and stop re-typing the same roster three times a week.",
+    heroImage:
+      "https://images.unsplash.com/photo-1630049038179-afaaebb62fe2?q=80&w=1600&auto=format&fit=crop",
+    heroImageAlt: "Swimmer in goggles training in a pool lane",
+    tag: "Swim Coaching",
+    author: { name: "Artem", role: "Founder, Billio" },
+    publishedAt: "2026-06-28",
+    readTime: "8 min read",
+    keyTakeaways: [
+      "Digital check-ins and squad scheduling beat paper and spreadsheets once a roster grows past a handful of swimmers.",
+      "Logging attendance right after practice — not during it — keeps your focus on the water and your records accurate.",
+      "Missed-session patterns are an early warning sign for dropout, usually showing up two to three weeks before a swimmer leaves.",
+      "Keeping attendance, scheduling, and billing in one place means a logged session turns into an invoice automatically — no second system to update.",
+    ],
+    toc: [
+      { id: "methods", label: "Attendance tracking methods" },
+      { id: "efficiency", label: "Why digital tracking saves time" },
+      { id: "practical-tips", label: "Poolside tips that don't disrupt practice" },
+      { id: "retention", label: "Attendance & swimmer retention" },
+      { id: "choosing", label: "Choosing the right method" },
+      { id: "lessons-learned", label: "What I learned the hard way" },
+      { id: "how-billio-helps", label: "How Billio helps" },
+      { id: "faq", label: "FAQ" },
+    ],
+    faq: [
+      {
+        question: "What is the best attendance tracking method for swim coaches?",
+        answer:
+          "Digital check-ins paired with a scheduling and billing platform like Billio are the most effective approach. They cut hours of admin work out of the week and support logging attendance after practice instead of during it.",
+      },
+      {
+        question: "Why do swim instructors need attendance tracking?",
+        answer:
+          "Attendance is an early warning system for swimmer dropout. Missed-session patterns typically show up two to three weeks before a swimmer leaves, giving coaches time to follow up before it's too late.",
+      },
+      {
+        question: "Can coaches log attendance after a session instead of during it?",
+        answer:
+          "Yes, and most experienced coaches prefer it. Prioritizing session safety and flow, then logging who was at practice digitally within minutes of it ending, keeps records accurate without pulling focus from the water.",
+      },
+      {
+        question: "How does squad size affect which attendance method makes sense?",
+        answer:
+          "Small squads of ten or fewer swimmers can usually manage with a spreadsheet. Squads of thirty or more benefit from a platform that combines scheduling, reminders, and billing, since manual tracking stops scaling well past that point.",
+      },
+      {
+        question: "How does attendance data connect to swimmer retention?",
+        answer:
+          "Attendance reviewed alongside your session history shows whether a swimmer's absences line up with a schedule conflict, a skill plateau, or quiet disengagement — and that combined view is what makes a follow-up conversation actually useful.",
+      },
+    ],
+    Content: () => (
+      <>
+        <p>
+          Attendance tracking for swim coaches means systematically recording which swimmers show up to each practice
+          or lesson. The methods coaches actually rely on range from a clipboard at the pool entrance to a phone that
+          handles scheduling, reminders, and billing in one place. Coaches who track attendance consistently spot
+          retention risk early, keep parents informed without extra effort, and spend less time rebuilding records
+          from memory. Paper has mostly given way to digital tools for this, and the shift shows up directly in time
+          saved and in how early a coach notices a swimmer drifting away.
+        </p>
+
+        <h2 id="methods">What attendance tracking methods do swim coaches actually use?</h2>
+        <p>
+          Methods range from a clipboard passed around the pool deck to a fully integrated scheduling and billing
+          platform. Each fits a different stage of a coaching practice, and the right one usually comes down to squad
+          size and how much time you're willing to spend on data entry.
+        </p>
+        <p>
+          <strong>Paper sign-in sheets and roll calls</strong> are the oldest approach. A coach reads names aloud or
+          passes a clipboard around the deck. It costs nothing and needs no technology, but sheets get wet, torn, or
+          left in a bag — and there's no way to spot a pattern across weeks without re-typing everything into
+          something else first.
+        </p>
+
+        <figure className="blog-inline-figure">
+          <img
+            src="https://images.unsplash.com/photo-1560090995-01632a28895b?q=80&w=1600&auto=format&fit=crop"
+            alt="Swim squad training together in a pool"
+            loading="lazy"
+          />
+        </figure>
+
+        <p>
+          <strong>Spreadsheet tracking</strong> sits one step up. Coaches log who attended in Google Sheets or Excel
+          after each practice. It's free and familiar, but it's fully manual, and nothing flags a swimmer who's
+          started missing sessions — you only notice if you happen to look.
+        </p>
+        <p>
+          <strong>A scheduling app with logged sessions</strong> lets a coach mark a practice as having happened, by
+          squad or by swimmer, in a few taps on a phone. The session record becomes the attendance record — there's
+          no separate sign-in sheet to keep in sync with your calendar.
+        </p>
+        <p>
+          <strong>An all-in-one coaching platform</strong> goes further, tying that session record directly to
+          billing and reminders, so a logged practice doesn't just tell you who showed up — it tells you what's owed.
+        </p>
+        <p>Here's a quick summary of the four approaches:</p>
+        <ul>
+          <li><strong>Paper registers:</strong> Free, zero tech required, but prone to loss and hard to review over time</li>
+          <li><strong>Spreadsheets:</strong> Low cost and flexible, but fully manual with no automatic alerts</li>
+          <li><strong>Scheduling apps with session logging:</strong> Fast, phone-friendly, and built for logging after practice ends</li>
+          <li><strong>All-in-one platforms:</strong> Attendance, reminders, and billing in one place — built for growing squads</li>
+        </ul>
+
+        <h2 id="efficiency">How does digital attendance tracking save coaches time?</h2>
+        <p>
+          Digital tracking saves real time every week, mostly by removing the re-typing that paper and spreadsheets
+          require. Logging a session once — on the same record that already holds the schedule and the billing
+          status — means you're not maintaining three versions of the same information.
+        </p>
+        <ul>
+          <li><strong>Post-session entry:</strong> Log attendance after practice ends, not during warm-up, so your attention stays on the water</li>
+          <li><strong>One record per squad or swimmer:</strong> The session you log is the same one your schedule and your invoice read from</li>
+          <li><strong>Automated reminders:</strong> A reminder sent before practice closes the most common reason swimmers miss a session — simply forgetting</li>
+          <li><strong>Parent visibility:</strong> Parents who can see a swimmer's session history ask fewer "are we still on for Tuesday?" texts</li>
+        </ul>
+
+        <div className="blog-pro-tip">
+          <strong>Pro Tip</strong>
+          <p>
+            Log each practice on your phone within a few minutes of swimmers leaving the deck. The session is still
+            fresh, and the entry takes under two minutes — far less time than reconstructing it the next day.
+          </p>
+        </div>
+
+        <p>
+          Digital records also hold up better than paper. A sheet can get wet or lost; a record stored on your phone
+          is there the next time a parent asks about a swimmer's history or you need to review a month of practices
+          at once.
+        </p>
+
+        <h2 id="practical-tips">How can coaches track attendance without disrupting practice?</h2>
+        <p>
+          The pool deck is a hard place for screens — water, humidity, and the need to keep eyes on swimmers all
+          work against real-time data entry. Most experienced coaches solve this by separating the moment of
+          noticing who's there from the moment of logging it.
+        </p>
+        <ul>
+          <li><strong>Do a quick visual check at the start:</strong> Note absences mentally, or with a glance at a printed roster, and move straight into the set</li>
+          <li><strong>Log it after practice, not during:</strong> Enter who attended on your phone once swimmers are out of the water</li>
+          <li><strong>Keep a laminated roster as backup:</strong> A printed sheet on a clipboard covers you if your phone is dead or your hands are full</li>
+          <li><strong>Hand it to an assistant for larger squads:</strong> If you're coaching thirty-plus swimmers, an assistant logging sessions frees you to actually coach</li>
+        </ul>
+
+        <figure className="blog-inline-figure">
+          <img
+            src="https://images.unsplash.com/photo-1560089000-7433a4ebbd64?q=80&w=1600&auto=format&fit=crop"
+            alt="Coach watching swimmers train from the edge of the pool"
+            loading="lazy"
+          />
+        </figure>
+
+        <div className="blog-pro-tip">
+          <strong>Pro Tip</strong>
+          <p>
+            Keep a laminated roster on a clipboard at the pool entrance and let swimmers check their own name as
+            they arrive. You log it digitally once practice wraps up. It's fast, accurate, and needs zero screen
+            time on deck.
+          </p>
+        </div>
+        <p>
+          The biggest mistake coaches make is trying to log attendance in real time while running a session.
+          Post-session entry exists precisely because session safety and flow come before data entry.
+        </p>
+
+        <h2 id="retention">How does attendance data improve swimmer retention?</h2>
+        <p>
+          Attendance is one of the most reliable early signals for dropout. Missed-session patterns tend to show up
+          two to three weeks before a swimmer actually leaves a program — a window that's only useful if you're
+          tracking attendance consistently enough to notice it.
+        </p>
+        <ul>
+          <li><strong>Early identification:</strong> A swimmer who misses two sessions in a row stands out immediately in a session history</li>
+          <li><strong>Timely follow-up:</strong> A quick message or call before a swimmer has mentally checked out keeps the door open</li>
+          <li><strong>Better parent conversations:</strong> A real attendance record gives you something concrete to point to, instead of a vague impression</li>
+          <li><strong>Program-level patterns:</strong> Drop-off across a whole squad can point to a session time, group, or training block that isn't working</li>
+        </ul>
+        <p>
+          The coaches who retain swimmers longest aren't necessarily running the hardest sets — they're the ones who
+          notice when someone goes quiet and follow up while there's still time to fix it.
+        </p>
+
+        <h2 id="choosing">How should coaches choose an attendance tracking method?</h2>
+        <p>
+          The right choice depends on squad size, how many sessions you run per week, and how much manual entry
+          you're willing to do. The table below maps common situations to a practical starting point.
+        </p>
+        <div className="blog-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Coaching scenario</th>
+                <th>Best-fit method</th>
+                <th>Key reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Solo coach, 10 or fewer swimmers</td>
+                <td>Spreadsheet, or a simple scheduling app</td>
+                <td>Low complexity, minimal setup</td>
+              </tr>
+              <tr>
+                <td>Mid-size squad, 11–30 swimmers</td>
+                <td>Scheduling app with session logging</td>
+                <td>Fast, phone-friendly, post-practice entry</td>
+              </tr>
+              <tr>
+                <td>Large club, 30+ swimmers</td>
+                <td>All-in-one platform (like Billio)</td>
+                <td>Reminders, billing, and history in one place</td>
+              </tr>
+              <tr>
+                <td>Multiple coaches sharing a roster</td>
+                <td>All-in-one platform</td>
+                <td>One shared record instead of several private ones</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          Squad size is the biggest factor. A coach running two private lessons a week doesn't need a full platform.
+          A club coach running six sessions a week with forty swimmers feels the pain of manual tracking fast — and
+          the time a digital system saves usually justifies the switch well before that point.
+        </p>
+
+        <h2 id="lessons-learned">What I've learned about attendance tracking after years of coaching</h2>
+        <p className="blog-byline-inline">By Artem</p>
+        <p>
+          I've spent years watching coaches build their programs from the ground up, and the ones who struggle most
+          are almost always the ones who treat attendance as an afterthought. A clipboard for the first year, then a
+          spreadsheet, then genuine confusion about why swimmers keep quietly leaving after six weeks.
+        </p>
+        <p>
+          The counterintuitive part is that attendance data isn't really about compliance. It's about care. When you
+          know a swimmer missed three sessions in two weeks, you have a real reason to reach out. That outreach is
+          what keeps people in your program — not the hardest set you can write.
+        </p>
+        <p>
+          My honest recommendation is to skip the paper stage if you're starting fresh. The learning curve on a
+          digital tool is about an afternoon. The cost of a lost paper record, or a missed dropout signal, is much
+          higher than that afternoon. Start by logging sessions digitally, build the habit of doing it right after
+          practice, and let your roster grow into the system instead of outgrowing it.
+        </p>
+        <p>
+          What isn't complicated is a five-minute logging routine after each practice. What is complicated is trying
+          to remember who was absent three weeks ago when a parent calls to ask why their kid seems behind.
+        </p>
+        <blockquote>— Artem</blockquote>
+
+        <h2 id="how-billio-helps">How Billio helps swim coaches track attendance and admin</h2>
+        <p>
+          Billio brings squad scheduling, session logging, reminders, and invoicing into one place, so the practice
+          you log is also your attendance record and the start of your next invoice.
+        </p>
+        <p>
+          <Link to="/group-lessons">Group Lessons</Link> let you schedule a whole squad in one session instead of
+          booking each swimmer separately, so you always know exactly who was on deck for a given practice.{" "}
+          <Link to="/recurring-lessons">Recurring Lessons</Link> handle a weekly or biweekly squad schedule once,
+          instead of rebuilding it every week. Automated email and SMS reminders go out before each session to cut
+          down on no-shows, and the <Link to="/timer">Coaching Timer</Link> lets you track a live session right from
+          the pool deck. Log a practice on your phone when it wraps up, and Billio turns it straight into a branded
+          PDF invoice with a payment link — no spreadsheet, no separate sign-in sheet, no second system to keep in
+          sync. <Link to="/">Billio</Link> works from your phone, and the free plan covers up to 5 students before
+          you ever enter a card number.
+        </p>
+
+        <h2>Key takeaways</h2>
+        <div className="blog-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Point</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Digital tools save real time</td>
+                <td>Logging a session once, on the same record as your schedule and billing, removes the re-typing paper and spreadsheets require.</td>
+              </tr>
+              <tr>
+                <td>Post-session entry is best practice</td>
+                <td>Log attendance after swimmers leave the deck to keep your focus on coaching and safety.</td>
+              </tr>
+              <tr>
+                <td>Attendance predicts dropout</td>
+                <td>Missed-session patterns tend to appear two to three weeks before a swimmer leaves, giving you time to act.</td>
+              </tr>
+              <tr>
+                <td>Method should match squad size</td>
+                <td>Small squads can manage with a spreadsheet; larger clubs benefit from an all-in-one platform.</td>
+              </tr>
+              <tr>
+                <td>Integration multiplies value</td>
+                <td>Combining attendance with scheduling and billing means a logged session becomes an invoice automatically.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </>
+    ),
+  },
 ];
 
 export function getBlogPost(slug: string | undefined): BlogPost | undefined {

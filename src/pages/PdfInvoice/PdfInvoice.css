@@ -327,6 +327,43 @@
   padding: 18px;
 }
 
+.pdfinv-auto-card {
+  position: relative;
+}
+
+.pdfinv-auto-card h3 {
+  padding-right: 34px;
+}
+
+.pdfinv-auto-delete-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 30px;
+  height: 30px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #fee2e2;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.pdfinv-auto-delete-btn:hover {
+  background: #fecaca;
+}
+
+.pdfinv-auto-delete-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .pdfinv-auto-meta {
   margin: -8px 0 14px;
   font-size: 12px;

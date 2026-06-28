@@ -90,6 +90,11 @@ function App() {
     description: document.querySelector('meta[name="description"]')?.getAttribute("content") ?? "",
     ogTitle: document.querySelector('meta[property="og:title"]')?.getAttribute("content") ?? "",
     ogDescription: document.querySelector('meta[property="og:description"]')?.getAttribute("content") ?? "",
+    ogImage: document.querySelector('meta[property="og:image"]')?.getAttribute("content") ?? "",
+    ogType: document.querySelector('meta[property="og:type"]')?.getAttribute("content") ?? "website",
+    twitterTitle: document.querySelector('meta[name="twitter:title"]')?.getAttribute("content") ?? "",
+    twitterDescription: document.querySelector('meta[name="twitter:description"]')?.getAttribute("content") ?? "",
+    twitterImage: document.querySelector('meta[name="twitter:image"]')?.getAttribute("content") ?? "",
   });
 
   // This is a client-rendered SPA with one index.html for every route, so
@@ -109,6 +114,12 @@ function App() {
       document.head.appendChild(link);
     }
     link.setAttribute("href", canonicalUrl);
+
+    // og:url was previously static (always the homepage) — every shared
+    // page looked like a duplicate of "/" in link previews. Keep it in sync
+    // with the canonical URL for every route, including blog posts.
+    const ogUrl = document.querySelector<HTMLMetaElement>('meta[property="og:url"]');
+    if (ogUrl) ogUrl.setAttribute("content", canonicalUrl);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -142,6 +153,25 @@ function App() {
 
     const ogDesc = document.querySelector<HTMLMetaElement>('meta[property="og:description"]');
     if (ogDesc) ogDesc.setAttribute("content", ogDescriptionValue);
+
+    // Reset the image/type/Twitter tags to their defaults on every
+    // non-blog-post route. Blog posts set their own (post hero image,
+    // og:type "article") in BlogPost.tsx — this is what restores the
+    // defaults once you navigate away from one.
+    const ogImage = document.querySelector<HTMLMetaElement>('meta[property="og:image"]');
+    if (ogImage) ogImage.setAttribute("content", defaults.ogImage);
+
+    const ogType = document.querySelector<HTMLMetaElement>('meta[property="og:type"]');
+    if (ogType) ogType.setAttribute("content", defaults.ogType);
+
+    const twitterTitle = document.querySelector<HTMLMetaElement>('meta[name="twitter:title"]');
+    if (twitterTitle) twitterTitle.setAttribute("content", ogTitleValue || defaults.twitterTitle);
+
+    const twitterDescription = document.querySelector<HTMLMetaElement>('meta[name="twitter:description"]');
+    if (twitterDescription) twitterDescription.setAttribute("content", ogDescriptionValue || defaults.twitterDescription);
+
+    const twitterImage = document.querySelector<HTMLMetaElement>('meta[name="twitter:image"]');
+    if (twitterImage) twitterImage.setAttribute("content", defaults.twitterImage);
   }, [location.pathname]);
 
   return (

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate, useParams, Link, Navigate } from "react-router-dom";
 import { FaArrowLeft, FaArrowRight, FaRegClock, FaCheckCircle, FaHeart } from "react-icons/fa";
-import { getBlogPost } from "../../content/blogPosts";
+import { BLOG_POSTS, getBlogPost } from "../../content/blogPosts";
 import "./Blog.css";
 
 const SITE_URL = "https://www.mybillioapp.com";
@@ -10,6 +10,7 @@ export default function BlogPost() {
   const navigate = useNavigate();
   const { slug } = useParams();
   const post = getBlogPost(slug);
+  const relatedPosts = BLOG_POSTS.filter((p) => p.slug !== slug).slice(0, 2);
 
   useEffect(() => {
     if (!post) return;
@@ -21,6 +22,16 @@ export default function BlogPost() {
     if (ogTitle) ogTitle.setAttribute("content", post.metaTitle);
     const ogDesc = document.querySelector<HTMLMetaElement>('meta[property="og:description"]');
     if (ogDesc) ogDesc.setAttribute("content", post.metaDescription);
+    const ogImage = document.querySelector<HTMLMetaElement>('meta[property="og:image"]');
+    if (ogImage) ogImage.setAttribute("content", post.heroImage);
+    const ogType = document.querySelector<HTMLMetaElement>('meta[property="og:type"]');
+    if (ogType) ogType.setAttribute("content", "article");
+    const twitterTitle = document.querySelector<HTMLMetaElement>('meta[name="twitter:title"]');
+    if (twitterTitle) twitterTitle.setAttribute("content", post.metaTitle);
+    const twitterDesc = document.querySelector<HTMLMetaElement>('meta[name="twitter:description"]');
+    if (twitterDesc) twitterDesc.setAttribute("content", post.metaDescription);
+    const twitterImage = document.querySelector<HTMLMetaElement>('meta[name="twitter:image"]');
+    if (twitterImage) twitterImage.setAttribute("content", post.heroImage);
 
     const postUrl = `${SITE_URL}/blog/${post.slug}`;
     const articleSchema = {
@@ -50,6 +61,16 @@ export default function BlogPost() {
       })),
     };
 
+    const breadcrumbSchema = {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+        { "@type": "ListItem", position: 2, name: "Blog", item: `${SITE_URL}/blog` },
+        { "@type": "ListItem", position: 3, name: post.title, item: postUrl },
+      ],
+    };
+
     const articleScript = document.createElement("script");
     articleScript.type = "application/ld+json";
     articleScript.text = JSON.stringify(articleSchema);
@@ -62,9 +83,16 @@ export default function BlogPost() {
     faqScript.dataset.blogSchema = "faq";
     document.head.appendChild(faqScript);
 
+    const breadcrumbScript = document.createElement("script");
+    breadcrumbScript.type = "application/ld+json";
+    breadcrumbScript.text = JSON.stringify(breadcrumbSchema);
+    breadcrumbScript.dataset.blogSchema = "breadcrumb";
+    document.head.appendChild(breadcrumbScript);
+
     return () => {
       articleScript.remove();
       faqScript.remove();
+      breadcrumbScript.remove();
     };
   }, [post]);
 
@@ -154,6 +182,29 @@ export default function BlogPost() {
             <p>Building Billio to take the admin out of running a teaching practice.</p>
           </div>
         </div> */}
+
+        {relatedPosts.length > 0 && (
+          <div className="blog-related-section">
+            <h2>More from the blog</h2>
+            <div className="blog-related-grid">
+              {relatedPosts.map((relatedPost) => (
+                <Link to={`/blog/${relatedPost.slug}`} className="blog-card" key={relatedPost.slug}>
+                  <div className="blog-card-image">
+                    <img src={relatedPost.heroImage} alt={relatedPost.heroImageAlt} loading="lazy" />
+                    <span className="blog-card-tag">{relatedPost.tag}</span>
+                  </div>
+                  <div className="blog-card-body">
+                    <h3>{relatedPost.title}</h3>
+                    <p>{relatedPost.excerpt}</p>
+                    <span className="blog-card-readmore">
+                      Read article <FaArrowRight />
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="blog-post-cta">
           <h2>Ready to spend less time on admin?</h2>

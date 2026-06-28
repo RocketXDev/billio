@@ -348,16 +348,6 @@
     box-shadow: var(--shadow-lg);
   }
 
-  .mb-form::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 6px;
-    background: var(--accent-grad);
-  }
-
   .mb-form-logo {
     width: 100%;
     max-width: 360px;

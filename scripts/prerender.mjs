@@ -36,8 +36,6 @@ const STATIC_ROUTES = [
   "/support",
   "/privacy",
   "/terms",
-  "/login",
-  "/signup",
   "/sms-opt-in",
 ];
 

@@ -239,3 +239,17 @@
   }
 }
 
+/* ── Desktop: header full width, card stays the same size ── */
+@media (min-width: 769px) {
+  .timer-page {
+    max-width: none;
+    margin: 0;
+    padding: 32px 40px;
+  }
+
+  .timer-card {
+    max-width: 760px;
+    margin: 0 auto;
+  }
+}
+

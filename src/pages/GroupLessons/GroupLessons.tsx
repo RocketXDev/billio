@@ -502,7 +502,12 @@ export default function GroupLessons() {
             <FaPlus />
           </button>
         </div>
-        <h1 className="rl-title">Group {term.plural}</h1>
+        <div className="rl-title-row">
+          <h1 className="rl-title">Group {term.plural}</h1>
+          <button type="button" className="rl-add-btn rl-add-btn-desktop" onClick={openNewForm}>
+            <FaPlus />
+          </button>
+        </div>
         <p className="rl-subtitle">Schedule one {term.lower} for multiple students at once.</p>
       </div>
 

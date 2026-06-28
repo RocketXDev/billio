@@ -422,7 +422,18 @@
    ============================================================ */
 @media (min-width: 769px) {
   .ed-header {
-    display: none;
+    max-width: none;
+    margin: 0;
+    padding: 32px 40px 0;
+  }
+
+  .ed-header-top {
+    padding: 0 0 16px;
+  }
+
+  .ed-header-inner {
+    max-width: none;
+    padding: 0;
   }
 
   .ed-body {

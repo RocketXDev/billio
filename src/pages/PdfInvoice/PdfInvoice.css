@@ -1142,9 +1142,11 @@
    DESKTOP
    ============================================================ */
 @media (min-width: 769px) {
-  /* Hide mobile header — desktop topbar takes over */
+  /* Header — full width, with arrow/logo/border-bottom */
   .pdfinv-header {
-    display: none;
+    max-width: none;
+    margin: 0;
+    padding: 32px 40px 0;
   }
 
   .pdfinv-page {

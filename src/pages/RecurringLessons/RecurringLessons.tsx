@@ -405,7 +405,12 @@ export default function RecurringLessons() {
             <FaPlus />
           </button>
         </div>
-        <h1 className="rl-title">Recurring {term.plural}</h1>
+        <div className="rl-title-row">
+          <h1 className="rl-title">Recurring {term.plural}</h1>
+          <button type="button" className="rl-add-btn rl-add-btn-desktop" onClick={openNewForm}>
+            <FaPlus />
+          </button>
+        </div>
         <p className="rl-subtitle">Schedule repeating {term.lowerPlural} for your students.</p>
       </div>
 

@@ -271,3 +271,12 @@
   opacity: 0.5;
   cursor: default;
 }
+
+/* ── Desktop: full width ── */
+@media (min-width: 769px) {
+  .ai-assistant-page {
+    max-width: none;
+    margin: 0;
+    padding: 32px 40px 100px;
+  }
+}

@@ -277,3 +277,12 @@
 .settings-msg.error {
   color: #ef4444;
 }
+
+/* ── Desktop: stretch full width, like Profile ── */
+@media (min-width: 769px) {
+  .settings-body {
+    max-width: none;
+    margin: 0;
+    padding: 32px 40px 0;
+  }
+}

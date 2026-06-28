@@ -379,3 +379,22 @@
     width: 100%;
   }
 }
+
+/* ── Desktop: header matches Lessons (no arrow/logo/border, just the title) ── */
+@media (min-width: 769px) {
+  .more-header .logo-wrapper {
+    display: none;
+  }
+
+  .more-header {
+    margin-bottom: 24px;
+  }
+
+  .more-header h1 {
+    margin: 0;
+  }
+
+  .more-header p {
+    display: none;
+  }
+}

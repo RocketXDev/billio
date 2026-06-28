@@ -55,7 +55,7 @@ function Login() {
                     </div>
                 </div>
                 <div className="mb-wrapper">
-                    <img className="mb-logo" src="./logo.png" alt="Billio" />
+                    <img className="mb-logo" src="/logo-white.png" alt="Billio" />
                     <div className="mb-form">
                         <img className="mb-form-logo" 
                             alt="Login Illustration" 

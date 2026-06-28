@@ -15,7 +15,7 @@ function EmailConfirmed() {
   return (
     <div className="mb">
       <div className="mb-wrapper">
-        <img className="mb-logo" src="/logo.png" alt="Billio logo" />
+        <img className="mb-logo" src="/logo-white.png" alt="Billio logo" />
         <div className="mb-form">
           <img
             className="mb-form-logo"

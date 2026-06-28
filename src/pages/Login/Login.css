@@ -2,7 +2,67 @@
 
 .mb {
   width: 100%;
-  height: 100%;
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(165deg, #2b275f, #1e1b4b);
+}
+
+/* Decorative blurred orbs for depth — pseudo-elements so no extra
+   markup is needed, and they sit behind all page content. */
+.mb::before,
+.mb::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.mb::before {
+  width: 320px;
+  height: 320px;
+  top: -100px;
+  left: -100px;
+  background: rgba(99, 91, 255, .4);
+  filter: blur(80px);
+  animation: mb-orb-float-1 18s ease-in-out infinite;
+}
+
+.mb::after {
+  width: 280px;
+  height: 280px;
+  bottom: -100px;
+  right: -90px;
+  background: rgba(167, 139, 250, .3);
+  filter: blur(70px);
+  animation: mb-orb-float-2 15s ease-in-out infinite;
+}
+
+@keyframes mb-orb-float-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(60px, 60px) scale(1.15); }
+  50% { transform: translate(90px, 140px) scale(0.85); }
+  75% { transform: translate(20px, 90px) scale(1.1); }
+}
+
+@keyframes mb-orb-float-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(-60px, -60px) scale(1.2); }
+  50% { transform: translate(-90px, -140px) scale(0.85); }
+  75% { transform: translate(-20px, -90px) scale(1.05); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mb::before,
+  .mb::after {
+    animation: none;
+  }
+}
+
+.mb-wrapper {
+  position: relative;
+  z-index: 1;
 }
 
 .mb-logo {
@@ -18,9 +78,10 @@
   width: 90%;
   min-height: 80%;
   padding: 0px 20px;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   background-color: var(--card-bg);
   border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(15, 11, 50, .35);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -58,11 +119,13 @@
   margin-top: 30px;
   font-size: 18px;
   margin-bottom: 40px;
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .mb-signup > a {
-  text-decoration: none;
-  color: var(--primary-purple);
+  text-decoration: underline;
+  color: #c7c9f5;
+  font-weight: 600;
   margin-left: 5px;
 }
 
@@ -164,77 +227,12 @@
   .mb-desktop-aside {
     display: flex;
     position: relative;
-    overflow: hidden;
+    z-index: 1;
     align-items: center;
     justify-content: center;
     flex: 1 1 46%;
     min-height: 100vh;
     padding: 64px;
-    background: linear-gradient(165deg, #2b275f, #1e1b4b);
-  }
-
-  /* Decorative blurred orbs for depth — pseudo-elements so no extra
-     markup is needed, and they're inert to layout/mobile. */
-  .mb-desktop-aside::before,
-  .mb-desktop-aside::after {
-    content: "";
-    position: absolute;
-    border-radius: 50%;
-    pointer-events: none;
-  }
-
-  .mb-desktop-aside::before {
-    width: 480px;
-    height: 480px;
-    top: -140px;
-    left: -120px;
-    background: rgba(99, 91, 255, .4);
-    filter: blur(100px);
-    animation: mb-orb-float-1 18s ease-in-out infinite;
-  }
-
-  .mb-desktop-aside::after {
-    width: 380px;
-    height: 380px;
-    bottom: -120px;
-    right: -100px;
-    background: rgba(167, 139, 250, .3);
-    filter: blur(90px);
-    animation: mb-orb-float-2 15s ease-in-out infinite;
-  }
-
-  @keyframes mb-orb-float-1 {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    25% { transform: translate(220px, 160px) scale(1.15); }
-    50% { transform: translate(280px, 420px) scale(0.85); }
-    75% { transform: translate(60px, 280px) scale(1.1); }
-  }
-
-  @keyframes mb-orb-float-2 {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    25% { transform: translate(-240px, -180px) scale(1.2); }
-    50% { transform: translate(-300px, -440px) scale(0.85); }
-    75% { transform: translate(-80px, -260px) scale(1.05); }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .mb-desktop-aside::before,
-    .mb-desktop-aside::after {
-      animation: none;
-    }
-  }
-
-  /* Signup mirrors the orb placement so the glow still reads as
-     anchored to the panel's outer corners once it's flipped to the
-     right-hand side. */
-  .mb-reverse .mb-desktop-aside::before {
-    left: auto;
-    right: -120px;
-  }
-
-  .mb-reverse .mb-desktop-aside::after {
-    right: auto;
-    left: -100px;
   }
 
   .mb-desktop-aside-inner {
@@ -328,7 +326,6 @@
     justify-content: center;
     min-height: 100vh;
     padding: 38px 48px;
-    background: var(--main-bg);
   }
 
   /* The top mobile logo is replaced by the one inside .mb-desktop-aside */
@@ -345,7 +342,7 @@
     margin: 0;
     padding: 60px 56px 52px;
     border-radius: 28px;
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 24px 70px rgba(15, 11, 50, .4);
   }
 
   .mb-form-logo {

@@ -25,3 +25,6 @@ dist-ssr
 
 # Custom
 .env*
+
+# Claude
+CLAUDE.md

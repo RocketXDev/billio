@@ -326,6 +326,7 @@
     justify-content: center;
     min-height: 100vh;
     padding: 38px 48px;
+    background: var(--main-bg);
   }
 
   /* The top mobile logo is replaced by the one inside .mb-desktop-aside */
@@ -342,7 +343,16 @@
     margin: 0;
     padding: 60px 56px 52px;
     border-radius: 28px;
-    box-shadow: 0 24px 70px rgba(15, 11, 50, .4);
+    border-color: var(--border);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .mb-signup {
+    color: var(--main-text);
+  }
+
+  .mb-signup > a {
+    color: var(--primary-purple);
   }
 
   .mb-form-logo {

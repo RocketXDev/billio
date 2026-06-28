@@ -14,6 +14,7 @@ import {
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
+import { TIMEZONE_GROUPS } from "../../lib/timezones";
 import "./Settings.css";
 
 const DURATION_OPTIONS = [30, 45, 60, 90, 120];
@@ -47,6 +48,7 @@ export default function Settings() {
   const [defaultDueDate, setDefaultDueDate] = useState(7);
   const [invoicePrefix, setInvoicePrefix] = useState("INV");
   const [timeFormat, setTimeFormat] = useState<"12h" | "24h">("12h");
+  const [timezone, setTimezone] = useState("America/Denver");
   const [lessonTermSingular, setLessonTermSingular] = useState("Lesson");
   const [lessonTermPlural, setLessonTermPlural] = useState("Lessons");
   const [useCustomTerm, setUseCustomTerm] = useState(false);
@@ -70,7 +72,7 @@ export default function Settings() {
       const { data, error } = await supabase
         .from("coaches")
         .select(
-          "id, default_lesson_duration, default_due_date_days, invoice_prefix, time_format, lesson_term_singular, lesson_term_plural"
+          "id, default_lesson_duration, default_due_date_days, invoice_prefix, time_format, lesson_term_singular, lesson_term_plural, invoice_timezone"
         )
         .eq("id", coachId)
         .single();
@@ -101,6 +103,7 @@ export default function Settings() {
       setDefaultDueDate(settingsData.default_due_date_days ?? 7);
       setInvoicePrefix(settingsData.invoice_prefix ?? "INV");
       setTimeFormat(settingsData.time_format ?? "12h");
+      setTimezone(settingsData.invoice_timezone || "America/Denver");
 
       const singular = settingsData.lesson_term_singular || "Lesson";
       const plural = settingsData.lesson_term_plural || "Lessons";
@@ -125,6 +128,7 @@ export default function Settings() {
         time_format: timeFormat,
         lesson_term_singular: lessonTermSingular.trim() || "Lesson",
         lesson_term_plural: lessonTermPlural.trim() || "Lessons",
+        invoice_timezone: timezone,
       })
       .eq("id", coachId);
 
@@ -134,6 +138,8 @@ export default function Settings() {
       setTimeout(() => setSaved(false), 2500);
       queryClient.invalidateQueries({ queryKey: ["coach-settings", coachId] });
       queryClient.invalidateQueries({ queryKey: ["settings", coachId] });
+      queryClient.invalidateQueries({ queryKey: ["invoice-settings", coachId] });
+      queryClient.invalidateQueries({ queryKey: ["lesson-reminder-settings", coachId] });
     }
   }
 
@@ -380,6 +386,26 @@ export default function Settings() {
                 24h (14:30)
               </button>
             </div>
+          </div>
+
+          <div className="settings-card" style={{ marginTop: 10 }}>
+            <div className="settings-row-label">Timezone</div>
+            <p className="settings-row-note">
+              Used for invoice automation and lesson reminder timing.
+            </p>
+            <select
+              className="settings-select"
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+            >
+              {TIMEZONE_GROUPS.map((group) => (
+                <optgroup key={group.label} label={group.label}>
+                  {group.options.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
           </div>
         </section>
 

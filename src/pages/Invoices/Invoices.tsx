@@ -26,6 +26,7 @@ import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import { useSettings } from "../../hooks/useSettings";
 import { generateInvoicePdf } from "../../lib/generateInvoicePdf";
 import { useLessonTerm } from "../../hooks/useLessonTerm";
+import { timezoneLabel } from "../../lib/timezones";
 import "./Invoices.css"
 
 function Invoices() {
@@ -1133,7 +1134,6 @@ function Invoices() {
         invoice_generation_time: invoiceGenerationTime,
         invoice_review_day: Number(invoiceReviewDay),
         invoice_review_time: invoiceReviewTime,
-        invoice_timezone: invoiceTimezone,
         auto_invoice_enabled: autoInvoiceEnabled,
         auto_invoice_frequency: autoInvoiceFrequency,
         auto_invoice_day: Number(autoInvoiceDay),
@@ -2261,30 +2261,18 @@ function Invoices() {
                 <section className="invoice-settings-section">
                   <h3>Timezone</h3>
                   <p>
-                    Used for invoice automation timing.
+                    Used for invoice automation and lesson reminder timing.
                   </p>
 
-                  <div className="input-block">
-                    <label>Timezone</label>
-                    <select
-                      value={invoiceTimezone}
-                      onChange={(e) => setInvoiceTimezone(e.target.value)}
+                  <div className="invoice-settings-timezone-row">
+                    <span>{timezoneLabel(invoiceTimezone)}</span>
+                    <button
+                      type="button"
+                      className="invoice-settings-timezone-link"
+                      onClick={() => navigate("/settings")}
                     >
-                      <optgroup label="Americas">
-                        <option value="America/Denver">Mountain Time</option>
-                        <option value="America/Los_Angeles">Pacific Time</option>
-                        <option value="America/Chicago">Central Time</option>
-                        <option value="America/New_York">Eastern Time</option>
-                      </optgroup>
-                      <optgroup label="Europe">
-                        <option value="Europe/London">London (GMT/BST)</option>
-                        <option value="Europe/Lisbon">Lisbon (WET/WEST)</option>
-                        <option value="Europe/Paris">Paris, Berlin, Madrid, Rome (CET/CEST)</option>
-                        <option value="Europe/Athens">Athens, Helsinki, Bucharest (EET/EEST)</option>
-                        <option value="Europe/Istanbul">Istanbul (TRT)</option>
-                        <option value="Europe/Moscow">Moscow (MSK)</option>
-                      </optgroup>
-                    </select>
+                      Change in Settings
+                    </button>
                   </div>
                 </section>
 

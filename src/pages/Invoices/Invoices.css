@@ -1013,6 +1013,37 @@
 
 .invoice-settings-save-btn:disabled { opacity: 0.65; }
 
+.invoice-settings-timezone-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 50px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: var(--input-bg);
+}
+
+.invoice-settings-timezone-row span {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--main-text);
+}
+
+.invoice-settings-timezone-link {
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--primary-purple);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
 /* CALENDAR BILLING LABEL */
 .calendar-billing-label { display: inline-flex; font-size: 13px; font-weight: 600; }
 .calendar-billing-label.unbilled { color: #f59e0b; }

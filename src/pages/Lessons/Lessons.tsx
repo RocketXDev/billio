@@ -16,6 +16,7 @@ import {
   FaLock,
   FaRedoAlt,
   FaHistory,
+  FaBell,
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
 import { useNavigate } from "react-router-dom";
@@ -23,6 +24,7 @@ import { usePlan } from "../../hooks/usePlan";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import { useSettings } from "../../hooks/useSettings";
 import { useLessonTerm } from "../../hooks/useLessonTerm";
+import { timezoneLabel } from "../../lib/timezones";
 import "./Lessons.css"
 import "../RecurringLessons/RecurringLessons.css"
 
@@ -30,6 +32,16 @@ const RECURRING_DAYS = ["monday","tuesday","wednesday","thursday","friday","satu
 const RECURRING_DAY_LABELS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 const RECURRING_MAX_MONTHS = 12;
 const PRESET_EVENT_COLORS = ["#3b33d9", "#f59e0b", "#3b82f6", "#22c55e", "#dc2626"];
+
+// Minutes-before-lesson presets a coach can toggle on for reminders.
+const REMINDER_OFFSET_PRESETS = [
+  { minutes: 30, label: "30 minutes before" },
+  { minutes: 60, label: "1 hour before" },
+  { minutes: 180, label: "3 hours before" },
+  { minutes: 1440, label: "1 day before" },
+  { minutes: 2880, label: "2 days before" },
+  { minutes: 10080, label: "1 week before" },
+];
 
 function generateOccurrences(
   startDate: string,
@@ -141,6 +153,13 @@ function Lessons() {
   const [historySearch, setHistorySearch] = useState("");
   const [historyStatusFilter, setHistoryStatusFilter] = useState("all");
 
+  // Lesson reminder settings
+  const [showReminderSettings, setShowReminderSettings] = useState(false);
+  const [remindersEnabled, setRemindersEnabled] = useState(false);
+  const [reminderOffsets, setReminderOffsets] = useState<number[]>([]);
+  const [selectedReminderStudentIds, setSelectedReminderStudentIds] = useState<string[]>([]);
+  const [savingReminderSettings, setSavingReminderSettings] = useState(false);
+
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeletingSeries, setIsDeletingSeries] = useState(false);
@@ -210,6 +229,125 @@ function Lessons() {
   });
 
   useEffect(() => { if (eventsData) setEvents(eventsData); }, [eventsData]);
+
+  const { data: reminderSettingsData } = useQuery({
+    queryKey: ["lesson-reminder-settings", coachId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("coaches")
+        .select("lesson_reminders_enabled, lesson_reminder_offsets, invoice_timezone")
+        .eq("id", coachId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!coachId,
+  });
+
+  useEffect(() => {
+    if (!reminderSettingsData) return;
+    setRemindersEnabled(!!reminderSettingsData.lesson_reminders_enabled);
+    setReminderOffsets(reminderSettingsData.lesson_reminder_offsets ?? []);
+  }, [reminderSettingsData]);
+
+  const { data: reminderStudentsData } = useQuery({
+    queryKey: ["reminder-students", coachId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("coach_students")
+        .select("lesson_reminders_enabled, students(id, student_name, active)")
+        .eq("coach_id", coachId);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!coachId,
+  });
+
+  const reminderStudentOptions = (reminderStudentsData ?? [])
+    .filter((link: any) => link.students?.active !== false)
+    .map((link: any) => ({
+      id: link.students?.id,
+      name: link.students?.student_name || "Unnamed student",
+      enabled: !!link.lesson_reminders_enabled,
+    }))
+    .filter((s: any) => !!s.id);
+
+  useEffect(() => {
+    setSelectedReminderStudentIds(
+      reminderStudentOptions.filter((s: any) => s.enabled).map((s: any) => s.id)
+    );
+    // Only re-sync from the server once the data actually arrives — not on
+    // every render, or toggling a checkbox would get clobbered back to the
+    // saved state before the coach hits Save.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reminderStudentsData]);
+
+  function toggleReminderOffset(minutes: number) {
+    setReminderOffsets((prev) =>
+      prev.includes(minutes) ? prev.filter((m) => m !== minutes) : [...prev, minutes].sort((a, b) => a - b)
+    );
+  }
+
+  function toggleReminderStudent(studentId: string) {
+    setSelectedReminderStudentIds((prev) =>
+      prev.includes(studentId) ? prev.filter((id) => id !== studentId) : [...prev, studentId]
+    );
+  }
+
+  async function handleSaveReminderSettings(e: any) {
+    e.preventDefault();
+    if (!coachId || savingReminderSettings) return;
+
+    setSavingReminderSettings(true);
+
+    const { error: coachError } = await supabase
+      .from("coaches")
+      .update({
+        lesson_reminders_enabled: remindersEnabled,
+        lesson_reminder_offsets: reminderOffsets,
+      })
+      .eq("id", coachId);
+
+    if (coachError) {
+      console.log("Save lesson reminder settings error:", coachError);
+      setSavingReminderSettings(false);
+      return;
+    }
+
+    // Two-step set rather than a per-row conditional update: clear
+    // everyone for this coach, then turn it back on only for the students
+    // currently checked. Every enabled student follows the coach-wide
+    // offsets above — there's no per-student timing override.
+    const { error: clearError } = await supabase
+      .from("coach_students")
+      .update({ lesson_reminders_enabled: false })
+      .eq("coach_id", coachId);
+
+    if (clearError) {
+      console.log("Clear reminder students error:", clearError);
+      setSavingReminderSettings(false);
+      return;
+    }
+
+    if (selectedReminderStudentIds.length > 0) {
+      const { error: enableError } = await supabase
+        .from("coach_students")
+        .update({ lesson_reminders_enabled: true })
+        .eq("coach_id", coachId)
+        .in("student_id", selectedReminderStudentIds);
+
+      if (enableError) {
+        console.log("Enable reminder students error:", enableError);
+        setSavingReminderSettings(false);
+        return;
+      }
+    }
+
+    setSavingReminderSettings(false);
+    queryClient.invalidateQueries({ queryKey: ["lesson-reminder-settings", coachId] });
+    queryClient.invalidateQueries({ queryKey: ["reminder-students", coachId] });
+    setShowReminderSettings(false);
+  }
 
   // Gate on the data actually being present, not just `isLoading` — react-query
   // reports `isLoading: false` while the query is still `enabled: false` (i.e.
@@ -1575,6 +1713,14 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                         <FaHistory />
                       </button>
                       <button
+                        type="button"
+                        className="lessons-reminders-btn"
+                        title={`${term.singular} reminders`}
+                        onClick={() => setShowReminderSettings(true)}
+                      >
+                        <FaBell />
+                      </button>
+                      <button
                           type="button"
                           className="lessons-add-btn"
                           onClick={() => openAddLesson()}
@@ -2748,6 +2894,131 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                 Edit {term.singular}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showReminderSettings && (
+        <div
+          className="reminder-settings-overlay"
+          onClick={() => setShowReminderSettings(false)}
+        >
+          <div
+            className="reminder-settings-sheet"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="reminder-settings-header">
+              <h2>{term.singular} Reminders</h2>
+              <button type="button" onClick={() => setShowReminderSettings(false)}>
+                ×
+              </button>
+            </div>
+
+            <p className="reminder-settings-timezone-note">
+              Reminders use your <strong>{timezoneLabel(reminderSettingsData?.invoice_timezone)}</strong> timezone —{" "}
+              <button type="button" onClick={() => navigate("/settings")}>change in Settings</button>.
+            </p>
+
+            <form className="reminder-settings-form" onSubmit={handleSaveReminderSettings}>
+              <section className="reminder-settings-section">
+                <h3>Send reminders</h3>
+                <p>
+                  Off by default. When on, Billio emails or texts (Pro only) the student or parent before their {term.lower}. 
+                </p>
+
+                <div className="input-block">
+                  <label>Automatic reminders</label>
+                  <select
+                    value={remindersEnabled ? "yes" : "no"}
+                    onChange={(e) => setRemindersEnabled(e.target.value === "yes")}
+                  >
+                    <option value="no">Off</option>
+                    <option value="yes">On</option>
+                  </select>
+                </div>
+              </section>
+
+              {remindersEnabled && (
+                <section className="reminder-settings-section">
+                  <h3>When to send</h3>
+                  <p>Choose any combination — each fires independently, reminding about the lesson it's tied to.</p>
+
+                  <div className="reminder-offset-grid">
+                    {REMINDER_OFFSET_PRESETS.map((preset) => (
+                      <button
+                        key={preset.minutes}
+                        type="button"
+                        className={`reminder-offset-choice${
+                          reminderOffsets.includes(preset.minutes) ? " active" : ""
+                        }`}
+                        onClick={() => toggleReminderOffset(preset.minutes)}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {reminderOffsets.length === 0 && (
+                    <p className="reminder-offset-warning">
+                      Pick at least one option above — reminders stay off otherwise, even
+                      with automatic reminders turned on.
+                    </p>
+                  )}
+                </section>
+              )}
+
+              {remindersEnabled && (
+                <section className="reminder-settings-section">
+                  <h3>Students</h3>
+                  <p>
+                    Reminders only go out to students picked here — turning this on
+                    doesn't remind everyone automatically.
+                  </p>
+
+                  {reminderStudentOptions.length === 0 ? (
+                    <p className="reminder-students-empty">No active students yet.</p>
+                  ) : (
+                    <div className="reminder-student-picker">
+                      {reminderStudentOptions.map((student: any) => (
+                        <button
+                          key={student.id}
+                          type="button"
+                          className={`reminder-student-option${
+                            selectedReminderStudentIds.includes(student.id) ? " selected" : ""
+                          }`}
+                          onClick={() => toggleReminderStudent(student.id)}
+                        >
+                          <span>{student.name}</span>
+                          <span className="reminder-student-check">
+                            {selectedReminderStudentIds.includes(student.id) ? "✓" : ""}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {selectedReminderStudentIds.length === 0 && reminderStudentOptions.length > 0 && (
+                    <p className="reminder-offset-warning">
+                      No students selected — nobody will get a reminder yet.
+                    </p>
+                  )}
+                </section>
+              )}
+
+              {!isPro && (
+                <p className="reminder-settings-pro-note">
+                  <FaLock /> Want to text students too? SMS reminders are included with Pro.
+                </p>
+              )}
+
+              <button
+                type="submit"
+                className="reminder-settings-save-btn"
+                disabled={savingReminderSettings}
+              >
+                {savingReminderSettings ? "Saving..." : "Save Settings"}
+              </button>
+            </form>
           </div>
         </div>
       )}

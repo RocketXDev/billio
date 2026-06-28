@@ -165,6 +165,250 @@
   cursor: pointer;
 }
 
+.lessons-reminders-btn {
+  flex-shrink: 0;
+  width: 45px;
+  height: 45px;
+  margin: 0;
+  border-radius: 50%;
+  border: 1px solid #c7d2fe;
+  background: #eef2ff;
+  color: var(--primary-purple);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  box-shadow: 0 4px 12px rgba(91, 61, 245, 0.10);
+  cursor: pointer;
+}
+
+/* ── Lesson reminder settings sheet ── */
+.reminder-settings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: rgba(15, 23, 42, 0.35);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.reminder-settings-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  max-height: 88vh;
+  background: var(--card-bg);
+  border-radius: 30px 30px 0 0;
+  padding: 22px 18px 28px;
+  overflow-y: auto;
+  animation: lessonSheetUp 0.22s ease;
+}
+
+.reminder-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.reminder-settings-header h2 {
+  margin: 0;
+  color: var(--main-text);
+  font-size: 25px;
+  font-weight: 650;
+}
+
+.reminder-settings-header button {
+  width: 38px;
+  height: 38px;
+  margin: 0;
+  border-radius: 50%;
+  background: var(--input-bg);
+  color: var(--main-text);
+  font-size: 24px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reminder-settings-timezone-note {
+  margin: 0 0 18px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--input-bg);
+  color: var(--secondary-text);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.reminder-settings-timezone-note strong {
+  color: var(--main-text);
+}
+
+.reminder-settings-timezone-note button {
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--primary-purple);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.reminder-settings-section {
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  width: 100%;
+}
+
+.reminder-settings-section .input-block {
+  margin-top: 5px;
+}
+
+.reminder-settings-section h3 {
+  margin: 0 0 6px;
+  color: var(--main-text);
+  font-size: 19px;
+  font-weight: 550;
+}
+
+.reminder-settings-section p {
+  margin: 0 0 14px;
+  color: var(--secondary-text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.reminder-settings-form select {
+  width: 100%;
+  height: 50px;
+  border: none;
+  outline: none;
+  border-radius: 14px;
+  background: var(--input-bg);
+  color: var(--main-text);
+  padding: 0 14px;
+  font-size: 15px;
+  font-weight: 500;
+  box-sizing: border-box;
+}
+
+.reminder-offset-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.reminder-offset-choice {
+  width: 100%;
+  height: 48px;
+  margin: 0;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--main-text);
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.reminder-offset-choice.active {
+  background: var(--primary-purple);
+  color: white;
+  border-color: var(--primary-purple);
+}
+
+.reminder-offset-warning {
+  margin: 12px 0 0 !important;
+  color: #b45309 !important;
+}
+
+.reminder-students-empty {
+  color: var(--secondary-text) !important;
+}
+
+.reminder-student-picker {
+  width: 100%;
+  min-width: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reminder-student-option {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: auto;
+  margin: 0;
+  padding: 13px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--main-text);
+  font-size: 14.5px;
+  font-weight: 600;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.reminder-student-option.selected {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+
+.reminder-student-check {
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  margin: 0;
+  border-radius: 50%;
+  background: white;
+  color: var(--primary-purple) !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.reminder-settings-pro-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 18px 0 0;
+  color: var(--secondary-text);
+  font-size: 13px;
+}
+
+.reminder-settings-save-btn {
+  width: 100%;
+  height: 52px;
+  margin-top: 18px;
+  border-radius: 16px;
+  background: var(--primary-purple);
+  color: white;
+  font-size: 16px;
+  font-weight: 800;
+  border: none;
+  cursor: pointer;
+}
+
+.reminder-settings-save-btn:disabled { opacity: 0.65; }
+
 /* ── List view date nav ── */
 .lessons-list-date-nav {
   display: flex;

@@ -1403,6 +1403,11 @@
   font-size: 13px;
   margin-top: 10px;
   margin-bottom: 0;
+  text-align: center;
+}
+
+.final-cta-note.reveal {
+  margin-top: 10px;
 }
 
 /* ── Footer ── */

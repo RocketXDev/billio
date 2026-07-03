@@ -7,7 +7,7 @@
   padding-bottom: 0;
 }
 
-/* ── Dark band wrapping nav + hero (single full-bleed background surface) ── */
+/* ── Dark band wrapping nav + hero ── */
 .landing-dark-band {
   position: relative;
   width: 100%;
@@ -108,14 +108,14 @@
 .landing-badge {
   display: inline-block;
   width: fit-content;
-  background: #eef2ff;
-  color: var(--primary-purple);
+  background: rgba(255, 255, 255, 0.12);
+  color: #c7d2fe;
   border-radius: 999px;
   padding: 7px 14px;
   font-size: 12px;
   font-weight: 600;
   margin-bottom: 18px;
-  border: 1px solid var(--shadow);
+  border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 .landing-hero-left h1 {
@@ -159,8 +159,22 @@
   color: rgba(255, 255, 255, 0.72);
   font-size: 15px;
   line-height: 1.7;
-  margin: 0 0 26px;
+  margin: 0 0 10px;
   max-width: 540px;
+}
+
+.landing-trust-line {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0 0 22px;
+  line-height: 1.5;
+}
+
+/* ── Hero CTA row ── */
+.hero-cta-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .landing-main-btn {
@@ -185,28 +199,54 @@
   box-shadow: 0 12px 32px rgba(59, 51, 217, 0.42);
 }
 
+.landing-ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 20px;
+  border-radius: 16px;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.85);
+  background: transparent;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.landing-ghost-btn:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
 .landing-arrow {
   font-size: 14px;
 }
 
-.landing-mini-checks {
+/* ── Benefit chips (under hero CTA) ── */
+.landing-benefit-chips {
   margin-top: 18px;
   display: flex;
   flex-direction: column;
   gap: 9px;
 }
 
-.landing-mini-checks span {
+.landing-benefit-chips span {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #ffffff;
+  color: rgba(255, 255, 255, 0.8);
   font-size: 13px;
   font-weight: 500;
 }
 
-.landing-mini-checks svg {
-  color: #ffffff;
+.landing-benefit-chips svg {
+  color: #a5b4fc;
   flex-shrink: 0;
 }
 
@@ -311,13 +351,6 @@
   color: #16a34a;
 }
 
-.landing-trial {
-  color: var(--primary-purple);
-  font-weight: 600;
-  margin-bottom: 16px;
-}
-
-/* Stat row below preview card */
 .landing-stat-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -405,6 +438,228 @@
   line-height: 1.15;
   letter-spacing: -1px;
   margin: 0 0 20px;
+}
+
+/* ── Pain / Problem section ── */
+.landing-pain-section {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 48px 20px 0;
+}
+
+.pain-header {
+  margin-bottom: 24px;
+}
+
+.pain-header h2 {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  color: var(--main-text);
+  margin: 0 0 12px;
+  line-height: 1.15;
+}
+
+.pain-subtext {
+  color: var(--secondary-text);
+  font-size: 15px;
+  line-height: 1.65;
+  max-width: 640px;
+  margin: 0;
+}
+
+.pain-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.pain-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 24px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.07);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pain-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+.pain-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: #eef2ff;
+  color: var(--primary-purple);
+  font-size: 20px;
+  margin-bottom: 14px;
+}
+
+.pain-card h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--main-text);
+  margin: 0 0 8px;
+}
+
+.pain-card p {
+  font-size: 14px;
+  color: var(--secondary-text);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ── Screenshots section ── */
+.screenshots-section {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 48px 20px 0;
+}
+
+.screenshots-header {
+  margin-bottom: 24px;
+}
+
+.screenshots-header h2 {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  color: var(--main-text);
+  margin: 0 0 8px;
+  line-height: 1.15;
+}
+
+/* Mobile screenshots — horizontal scroll, shown only below 1024px */
+.screenshots-mobile-row {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 14px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.screenshots-mobile-row::-webkit-scrollbar {
+  height: 4px;
+}
+
+.screenshots-mobile-row::-webkit-scrollbar-track {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.screenshots-mobile-row::-webkit-scrollbar-thumb {
+  background: var(--primary-purple);
+  border-radius: 2px;
+  opacity: 0.5;
+}
+
+/* Desktop screenshots — 2×2 grid, hidden below 1024px */
+.screenshots-desktop-grid {
+  display: none;
+}
+
+.screenshot-card {
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.screenshot-card--mobile {
+  flex-shrink: 0;
+  width: 200px;
+}
+
+.screenshot-card--desktop {
+  width: 100%;
+}
+
+.screenshot-frame {
+  overflow: hidden;
+  background: #f1f5f9;
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.1);
+}
+
+.screenshot-card--mobile .screenshot-frame {
+  width: 200px;
+  height: 400px;
+  border-radius: 24px;
+}
+
+.screenshot-card--desktop .screenshot-frame {
+  width: 100%;
+  border-radius: 14px;
+  /* No aspect-ratio here — the image sets the height so nothing is cropped */
+}
+
+/* Mobile image fills the fixed-height phone frame */
+.screenshot-card--mobile .screenshot-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Desktop image expands to its natural dimensions — no cropping */
+.screenshot-card--desktop .screenshot-img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Placeholder for desktop cards (no image yet) — use a ratio to size it */
+.screenshot-card--desktop .screenshot-placeholder {
+  aspect-ratio: 16 / 9;
+  min-height: 220px;
+}
+
+.screenshot-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #f0f4ff, #ede9fe);
+  color: var(--secondary-text);
+  font-size: 12px;
+  gap: 8px;
+  text-align: center;
+  padding: 16px;
+}
+
+.screenshot-placeholder span {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.screenshot-placeholder p {
+  margin: 0;
+}
+
+.screenshot-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--main-text);
+}
+
+.screenshot-caption {
+  font-size: 12px;
+  color: var(--secondary-text);
+  line-height: 1.5;
+  margin: 0;
+  max-width: 200px;
 }
 
 /* ── Features ── */
@@ -512,6 +767,129 @@
   color: var(--secondary-text);
   font-size: 13px;
   margin: 3px 0 0;
+}
+
+/* CTA after workflow steps */
+.steps-cta {
+  margin-top: 28px;
+  display: flex;
+  justify-content: center;
+}
+
+.steps-cta .landing-main-btn {
+  width: 100%;
+}
+
+/* ── Before / After comparison ── */
+.comparison-section {
+  width: 100%;
+}
+
+.comparison-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 48px 20px 0;
+}
+
+.comparison-inner h2 {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  color: var(--main-text);
+  margin: 0 0 24px;
+  line-height: 1.15;
+}
+
+.comparison-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.comparison-column {
+  border-radius: 22px;
+  padding: 24px;
+}
+
+.comparison-column h3 {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.comparison-column ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.comparison-column li {
+  font-size: 14px;
+  font-weight: 500;
+  padding-left: 22px;
+  position: relative;
+  line-height: 1.5;
+}
+
+.comparison-column li::before {
+  position: absolute;
+  left: 0;
+  font-weight: 700;
+}
+
+.comparison-column--before {
+  background: #fff5f5;
+  border: 1px solid #fecaca;
+}
+
+.comparison-column--before h3 {
+  color: #991b1b;
+}
+
+.comparison-column--before li {
+  color: #7f1d1d;
+}
+
+.comparison-column--before li::before {
+  content: "×";
+  color: #ef4444;
+}
+
+.comparison-column--after {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+}
+
+.comparison-column--after h3 {
+  color: #14532d;
+}
+
+.comparison-column--after li {
+  color: #166534;
+}
+
+.comparison-column--after li::before {
+  content: "✓";
+  color: #16a34a;
+}
+
+.comparison-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.comparison-icon--x {
+  color: #ef4444;
+}
+
+.comparison-icon--check {
+  color: #16a34a;
 }
 
 /* ── Pricing ── */
@@ -667,6 +1045,134 @@
   background: var(--input-bg);
   color: var(--main-text);
   border: 1px solid var(--border);
+}
+
+.pricing-no-card-note {
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--secondary-text);
+  text-align: center;
+}
+
+/* ── Stats / Social proof ── */
+.stats-section {
+  width: 100%;
+  margin-top: 48px;
+  background: linear-gradient(165deg, #2b275f, #1e1b4b);
+  padding: 48px 20px;
+}
+
+.stats-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.stats-label {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #c7d2fe !important;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.stat-tile {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  padding: 18px 14px;
+  text-align: center;
+}
+
+.stat-tile strong {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  color: #c7d2fe;
+  letter-spacing: -0.3px;
+  margin-bottom: 4px;
+}
+
+.stat-tile span {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.4;
+}
+
+/* ── Testimonials ── */
+.testimonials-section {
+  width: 100%;
+}
+
+.testimonials-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 48px 20px 0;
+}
+
+.testimonials-inner h2 {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  color: var(--main-text);
+  margin: 0 0 8px;
+  line-height: 1.15;
+}
+
+.testimonials-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.testimonial-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 24px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.testimonial-quote-icon {
+  color: var(--primary-purple);
+  opacity: 0.3;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.testimonial-text {
+  color: var(--main-text);
+  font-size: 14.5px;
+  line-height: 1.65;
+  margin: 0;
+  font-style: italic;
+  flex: 1;
+}
+
+.testimonial-author {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  margin-top: 2px;
+}
+
+.testimonial-author strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--main-text);
+}
+
+.testimonial-author span {
+  font-size: 12px;
+  color: var(--secondary-text);
 }
 
 /* ── Persona strip ── */
@@ -856,27 +1362,6 @@
   box-shadow: 0 10px 24px rgba(59, 51, 217, 0.36);
 }
 
-@media (min-width: 1024px) {
-  .landing-story-teaser {
-    flex-direction: row;
-    text-align: left;
-    padding: 28px 40px;
-    gap: 28px;
-  }
-
-  .landing-story-text {
-    flex: 1;
-  }
-
-  .landing-story-text p {
-    max-width: none;
-  }
-
-  .landing-story-link {
-    flex-shrink: 0;
-  }
-}
-
 /* ── Divider ── */
 .landing-divider {
   width: calc(100% - 40px);
@@ -895,7 +1380,6 @@
   margin-bottom: 20px;
 }
 
-
 .landing-final-cta p {
   color: rgba(255, 255, 255, 0.72);
   font-size: 15px;
@@ -912,6 +1396,13 @@
 .landing-final-cta .landing-main-btn:hover {
   opacity: 0.95;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.24);
+}
+
+.final-cta-note {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 13px;
+  margin-top: 10px;
+  margin-bottom: 0;
 }
 
 /* ── Footer ── */
@@ -976,34 +1467,69 @@
     letter-spacing: -1.5px;
   }
 
-  .landing-main-btn {
+  /* Hero CTAs side by side */
+  .hero-cta-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .hero-cta-row .landing-main-btn {
     width: fit-content;
     padding: 0 28px;
   }
 
-  .landing-mini-checks {
+  .landing-ghost-btn {
+    width: auto;
+    flex-shrink: 0;
+  }
+
+  .landing-benefit-chips {
     flex-direction: row;
     flex-wrap: wrap;
-    gap: 10px 20px;
+    gap: 8px 18px;
   }
 
   .landing-features {
     grid-template-columns: repeat(2, 1fr);
   }
 
+  /* Steps: single column on tablet, 5 steps too wide for 3-col */
   .landing-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .steps-cta .landing-main-btn {
+    width: fit-content;
+    padding: 0 32px;
+  }
+
+  /* Comparison: 2 columns */
+  .comparison-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  .comparison-inner h2 {
+    font-size: 36px;
+  }
+
+  .comparison-column h3 {
+    font-size: 18px;
+  }
+
+  .comparison-column li {
+    font-size: 15px;
+  }
+
+  /* Pain cards: 3 columns */
+  .pain-cards {
     grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
   }
 
-  .landing-steps div {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0;
-  }
-
-  .landing-steps span {
-    margin-bottom: 14px;
+  .pain-header h2 {
+    font-size: 36px;
   }
 
   .pricing-grid {
@@ -1013,6 +1539,26 @@
 
   .pricing-section h2 {
     font-size: 36px;
+  }
+
+  /* Stats: 4 columns */
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+
+  .stat-tile strong {
+    font-size: 20px;
+  }
+
+  .stat-tile span {
+    font-size: 13px;
+  }
+
+  /* Testimonials: 3 columns */
+  .testimonials-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
   }
 }
 
@@ -1085,6 +1631,64 @@
     padding-top: 96px;
   }
 
+  .landing-pain-section {
+    padding-left: 52px;
+    padding-right: 52px;
+    padding-top: 96px;
+  }
+
+  .pain-header h2 {
+    font-size: 46px;
+    letter-spacing: -1.5px;
+    max-width: 700px;
+  }
+
+  .screenshots-section {
+    padding-left: 52px;
+    padding-right: 52px;
+    padding-top: 96px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .screenshots-header h2 {
+    font-size: 42px;
+    letter-spacing: -1.5px;
+  }
+
+  /* Switch to desktop screenshot grid */
+  .screenshots-mobile-row {
+    display: none;
+  }
+
+  .screenshots-desktop-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+
+  .screenshot-card--desktop .screenshot-frame {
+    border-radius: 18px;
+    box-shadow: 0 12px 40px rgba(15, 23, 42, 0.14);
+  }
+
+  .screenshot-caption {
+    max-width: none;
+    font-size: 13px;
+  }
+
+  .comparison-inner {
+    padding-left: 52px;
+    padding-right: 52px;
+    padding-top: 96px;
+  }
+
+  .comparison-inner h2 {
+    font-size: 42px;
+    letter-spacing: -1.5px;
+    margin-bottom: 36px;
+  }
+
   .landing-final-cta {
     padding: 72px 64px;
   }
@@ -1094,7 +1698,7 @@
     letter-spacing: -1.5px;
   }
 
-  /* ── "Why Billio?" — full-width headline, then a 4-up feature strip ── */
+  /* Features — 4-column strip */
   .landing-section {
     position: relative;
   }
@@ -1167,15 +1771,16 @@
     max-width: none;
   }
 
-  /* ── "From lesson to invoice" — a plain numbered timeline, no card boxes ── */
+  /* Steps — 5-column horizontal timeline */
   .landing-steps-section h2 {
     font-size: 42px;
     letter-spacing: -1.5px;
   }
 
   .landing-steps {
+    grid-template-columns: repeat(5, 1fr);
     position: relative;
-    gap: 28px;
+    gap: 16px;
     padding-top: 8px;
   }
 
@@ -1204,6 +1809,10 @@
     padding: 0;
     position: relative;
     z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    grid-template-columns: unset;
   }
 
   .landing-steps div:hover {
@@ -1212,12 +1821,23 @@
   }
 
   .landing-steps span {
+    grid-row: unset;
     box-shadow: 0 0 0 6px var(--main-bg);
+    margin-bottom: 14px;
   }
 
-  /* ── Pricing — a quiet Free card beside a spotlighted Pro card (same size, different tone) ──
-     The label/heading/subtitle above stay left-aligned with the rest of the page's sections;
-     only the card grid itself is centered within the section's available width. */
+  .steps-cta {
+    margin-top: 48px;
+  }
+
+  .steps-cta .landing-main-btn {
+    width: fit-content;
+    padding: 0 36px;
+    font-size: 17px;
+    min-height: 56px;
+  }
+
+  /* Pricing */
   .pricing-grid {
     grid-template-columns: 1fr 1fr;
     gap: 32px;
@@ -1301,7 +1921,32 @@
     font-size: 52px;
   }
 
-  /* ── Persona strip ── */
+  .pricing-no-card-note {
+    text-align: center;
+    max-width: 940px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Stats */
+  .stats-section {
+    margin-top: 96px;
+    padding: 72px 52px;
+  }
+
+  /* Testimonials */
+  .testimonials-inner {
+    padding-left: 52px;
+    padding-right: 52px;
+    padding-top: 96px;
+  }
+
+  .testimonials-inner h2 {
+    font-size: 42px;
+    letter-spacing: -1.5px;
+  }
+
+  /* Persona strip */
   .landing-personas {
     padding: 96px 52px 0;
   }
@@ -1320,7 +1965,7 @@
     font-size: 15px;
   }
 
-  /* ── FAQ ── */
+  /* FAQ */
   .landing-faq-section {
     max-width: 880px;
     padding: 96px 52px 0;
@@ -1341,7 +1986,27 @@
     max-width: 680px;
   }
 
-  /* ── Final CTA — full-bleed glow accents instead of a plain centered band ── */
+  /* Story teaser */
+  .landing-story-teaser {
+    flex-direction: row;
+    text-align: left;
+    padding: 28px 40px;
+    gap: 28px;
+  }
+
+  .landing-story-text {
+    flex: 1;
+  }
+
+  .landing-story-text p {
+    max-width: none;
+  }
+
+  .landing-story-link {
+    flex-shrink: 0;
+  }
+
+  /* Final CTA */
   .landing-final-cta {
     position: relative;
     overflow: hidden;
@@ -1392,8 +2057,14 @@
     min-height: 58px;
     font-size: 18px;
     padding: 0 36px;
+    width: fit-content;
   }
 
+  .final-cta-note {
+    position: relative;
+  }
+
+  /* Footer */
   .landing-footer {
     display: flex;
     flex-direction: row;
@@ -1450,13 +2121,10 @@
    MOBILE ONLY  < 768px
    ================================================================ */
 @media (max-width: 767px) {
-  /* Hide all hairline dividers — neither does useful work when the
-     CTA is full-bleed and the footer is dark. */
   .landing-divider {
     display: none;
   }
 
-  /* Full-bleed CTA band: square corners, no side margins, no max-width cap. */
   .landing-final-cta {
     border-radius: 0;
     max-width: none;
@@ -1466,4 +2134,7 @@
     margin-bottom: 0px;
     border-bottom: 1px solid var(--border);
   }
+
+  /* Screenshots: section's 20px padding provides the edge gap for cards.
+     No overflow: hidden here — that would block the row's own scroll context. */
 }

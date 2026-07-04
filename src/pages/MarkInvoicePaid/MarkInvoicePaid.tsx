@@ -210,7 +210,7 @@ export default function MarkInvoicePaid({
     );
   }
 
-  const studentName = invoice?.students?.student_name || "Student";
+  const studentName = invoice?.students?.student_name || invoice?.student_name || "Student";
   const invoiceNumber = invoice?.invoice_number || "Invoice";
   const total = invoice ? `$${Number(invoice.total || 0).toFixed(2)}` : "";
 

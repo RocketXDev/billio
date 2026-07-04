@@ -88,21 +88,30 @@ async function snapshotRoute(page, route) {
 
 async function main() {
   console.log(`Starting "vite preview" on port ${PORT}...`);
-  const preview = spawn(
-    "npx",
-    ["vite", "preview", "--port", String(PORT), "--strictPort"],
-    { cwd: ROOT, stdio: ["ignore", "pipe", "pipe"] }
-  );
 
+  let preview;
   let previewOutput = "";
-  preview.stdout.on("data", (d) => (previewOutput += d.toString()));
-  preview.stderr.on("data", (d) => (previewOutput += d.toString()));
-
-  const cleanup = () => {
-    preview.kill();
-  };
 
   try {
+    const viteBin = join(ROOT, "node_modules", "vite", "bin", "vite.js");
+
+    preview = spawn(
+      process.execPath,
+      [viteBin, "preview", "--port", String(PORT), "--strictPort"],
+      {
+        cwd: ROOT,
+        stdio: ["ignore", "pipe", "pipe"],
+        windowsHide: true,
+      }
+    );
+
+    preview.stdout.on("data", (d) => (previewOutput += d.toString()));
+    preview.stderr.on("data", (d) => (previewOutput += d.toString()));
+
+    preview.on("error", (err) => {
+      console.error("Failed to start vite preview:", err.message);
+    });
+
     await waitForServer(BASE_URL);
 
     const browser = await chromium.launch();
@@ -115,6 +124,7 @@ async function main() {
 
     console.log(`Prerendering ${routes.length} routes:`);
     const failures = [];
+
     for (const route of routes) {
       try {
         await snapshotRoute(page, route);
@@ -131,7 +141,7 @@ async function main() {
       process.exitCode = 1;
     } else {
       console.log(`\nDone. Prerendered ${routes.length} routes into public/.`);
-      console.log('Review the diff, then: git add public && git commit && git push');
+      console.log("Review the diff, then: git add public && git commit && git push");
     }
   } catch (err) {
     console.error("Prerender failed:", err);
@@ -139,7 +149,9 @@ async function main() {
     console.error(previewOutput);
     process.exitCode = 1;
   } finally {
-    cleanup();
+    if (preview && !preview.killed) {
+      preview.kill();
+    }
   }
 }
 

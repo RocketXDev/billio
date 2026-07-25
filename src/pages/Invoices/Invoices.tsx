@@ -77,7 +77,9 @@ function Invoices() {
 
   // Invoices settings
   const [showInvoiceSettings, setShowInvoiceSettings] = useState(false);
+  const [invoiceGenerationFrequency, setInvoiceGenerationFrequency] = useState("weekly");
   const [invoiceGenerationDay, setInvoiceGenerationDay] = useState("0");
+  const [invoiceGenerationDayOfMonth, setInvoiceGenerationDayOfMonth] = useState("1");
   const [invoiceGenerationTime, setInvoiceGenerationTime] = useState("15:00");
   const [invoiceReviewDay, setInvoiceReviewDay] = useState("0");
   const [invoiceReviewTime, setInvoiceReviewTime] = useState("15:05");
@@ -132,7 +134,8 @@ function Invoices() {
     queryFn: async () => {
       const { data } = await supabase
         .from("coaches")
-        .select(`invoice_generation_day, invoice_generation_time, invoice_review_day,
+        .select(`invoice_generation_frequency, invoice_generation_day, invoice_generation_day_of_month,
+                 invoice_generation_time, invoice_review_day,
                  invoice_review_time, invoice_timezone, auto_invoice_enabled,
                  auto_invoice_frequency, auto_invoice_day, auto_invoice_day_of_month,
                  auto_invoice_time`)
@@ -147,7 +150,9 @@ function Invoices() {
 
   useEffect(() => {
     if (!invoiceSettingsData) return;
+    setInvoiceGenerationFrequency(invoiceSettingsData.invoice_generation_frequency || "weekly");
     setInvoiceGenerationDay(String(invoiceSettingsData.invoice_generation_day ?? 0));
+    setInvoiceGenerationDayOfMonth(String(invoiceSettingsData.invoice_generation_day_of_month ?? 1));
     setInvoiceGenerationTime(invoiceSettingsData.invoice_generation_time || "15:00");
     setInvoiceReviewDay(String(invoiceSettingsData.invoice_review_day ?? 0));
     setInvoiceReviewTime(invoiceSettingsData.invoice_review_time || "15:05");
@@ -1130,7 +1135,9 @@ function Invoices() {
     const { error } = await supabase
       .from("coaches")
       .update({
+        invoice_generation_frequency: invoiceGenerationFrequency,
         invoice_generation_day: Number(invoiceGenerationDay),
+        invoice_generation_day_of_month: Number(invoiceGenerationDayOfMonth),
         invoice_generation_time: invoiceGenerationTime,
         invoice_review_day: Number(invoiceReviewDay),
         invoice_review_time: invoiceReviewTime,
@@ -2122,20 +2129,45 @@ function Invoices() {
                   </p>
 
                   <div className="input-block">
-                    <label>Day</label>
+                    <label>Frequency</label>
                     <select
-                      value={invoiceGenerationDay}
-                      onChange={(e) => setInvoiceGenerationDay(e.target.value)}
+                      value={invoiceGenerationFrequency}
+                      onChange={(e) => setInvoiceGenerationFrequency(e.target.value)}
                     >
-                      <option value="0">Sunday</option>
-                      <option value="1">Monday</option>
-                      <option value="2">Tuesday</option>
-                      <option value="3">Wednesday</option>
-                      <option value="4">Thursday</option>
-                      <option value="5">Friday</option>
-                      <option value="6">Saturday</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
                     </select>
                   </div>
+
+                  {invoiceGenerationFrequency === "monthly" ? (
+                    <div className="input-block">
+                      <label>Day of month</label>
+                      <select
+                        value={invoiceGenerationDayOfMonth}
+                        onChange={(e) => setInvoiceGenerationDayOfMonth(e.target.value)}
+                      >
+                        {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                          <option key={d} value={String(d)}>{d}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="input-block">
+                      <label>Day</label>
+                      <select
+                        value={invoiceGenerationDay}
+                        onChange={(e) => setInvoiceGenerationDay(e.target.value)}
+                      >
+                        <option value="0">Sunday</option>
+                        <option value="1">Monday</option>
+                        <option value="2">Tuesday</option>
+                        <option value="3">Wednesday</option>
+                        <option value="4">Thursday</option>
+                        <option value="5">Friday</option>
+                        <option value="6">Saturday</option>
+                      </select>
+                    </div>
+                  )}
 
                   <div className="input-block">
                     <label>Time</label>

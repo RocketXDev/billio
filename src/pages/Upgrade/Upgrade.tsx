@@ -65,6 +65,7 @@ function Upgrade() {
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [subscriptionPeriodEnd, setSubscriptionPeriodEnd] = useState<string | null>(null);
   const [trialEnd, setTrialEnd] = useState<string | null>(null);
+  const [stripeSubscriptionId, setStripeSubscriptionId] = useState<string | null>(null);
 
   const [cancelLoading, setCancelLoading] = useState(false);
   const [cancelConfirm, setCancelConfirm] = useState(false);
@@ -90,7 +91,7 @@ function Upgrade() {
         if (profileData?.id) {
           const { data: coachData } = await supabase
             .from("coaches")
-            .select("trial_used, trial_end, subscription_status, subscription_period_end")
+            .select("trial_used, trial_end, subscription_status, subscription_period_end, stripe_subscription_id")
             .eq("profile_id", profileData.id)
             .single();
 
@@ -98,6 +99,7 @@ function Upgrade() {
           setTrialEnd(coachData?.trial_end ?? null);
           setSubscriptionStatus(coachData?.subscription_status ?? null);
           setSubscriptionPeriodEnd(coachData?.subscription_period_end ?? null);
+          setStripeSubscriptionId(coachData?.stripe_subscription_id ?? null);
         }
       } finally {
         setTrialLoading(false);
@@ -163,10 +165,18 @@ function Upgrade() {
   const isTrialing = !!trialEndDate && trialEndDate.getTime() > Date.now();
   const periodEndDate = subscriptionPeriodEnd ? new Date(subscriptionPeriodEnd) : null;
 
+  // A comped account (Pro, but no real Stripe subscription behind it) has no
+  // subscription_status of its own — it's granted manually — so it needs its
+  // own branch here rather than relying on the "active" check below, which
+  // only ever gets set by the Stripe webhook.
+  const isComped = !stripeSubscriptionId && !!periodEndDate;
+
   const countdown = isTrialing && trialEndDate
     ? { label: "Trial ends", date: trialEndDate }
     : subscriptionStatus === "active" && periodEndDate
     ? { label: cancelSuccess ? "Pro access ends" : "Renews", date: periodEndDate }
+    : isComped
+    ? { label: "Pro access ends", date: periodEndDate! }
     : null;
 
   const daysUntil = (date: Date) =>
@@ -357,6 +367,8 @@ function Upgrade() {
                 <>Your free trial ends on {formatCountdownDate(trialEndDate)}. You'll then be billed {PRO_PRICE}/mo unless you cancel first.</>
               ) : cancelSuccess && periodEndDate ? (
                 <>Your Pro access ends on {formatCountdownDate(periodEndDate)}.</>
+              ) : isComped ? (
+                <>Your Pro access ends on {formatCountdownDate(periodEndDate!)}.</>
               ) : (
                 <>Your subscription renews monthly. Cancel anytime — you keep Pro access until the end of your billing period.</>
               )}
@@ -386,10 +398,14 @@ function Upgrade() {
                   onClick={() => navigate("/dashboard")}>
                   Back to Dashboard
                 </button>
-                <button type="button" className="up-cancel-btn"
-                  onClick={() => setCancelConfirm(true)}>
-                  Cancel subscription
-                </button>
+                {/* No real Stripe subscription behind a comped account, so
+                    there's nothing for cancel-subscription to act on. */}
+                {!isComped && (
+                  <button type="button" className="up-cancel-btn"
+                    onClick={() => setCancelConfirm(true)}>
+                    Cancel subscription
+                  </button>
+                )}
               </>
             )}
           </div>

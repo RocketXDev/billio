@@ -553,6 +553,75 @@ function Dashboard() {
               )
             );
           }
+
+          // Heads-up when a manually-comped account (Pro, but no real Stripe
+          // subscription behind it) is about to reach its
+          // subscription_period_end. Scoped to stripe_subscription_id being
+          // null on purpose — real Stripe subscribers (including active
+          // trials) are excluded, since without a cancel_at_period_end field
+          // there's no way to tell "renewing normally" apart from "about to
+          // lose access", and false-alarming a paying/trialing customer is
+          // worse than staying quiet.
+          const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
+          const now = Date.now();
+
+          const periodEndMs = coachData.subscription_period_end
+            ? new Date(coachData.subscription_period_end).getTime()
+            : null;
+          const compedExpiringSoon =
+            coachData.plan === "pro" &&
+            !coachData.stripe_subscription_id &&
+            !!periodEndMs &&
+            periodEndMs > now &&
+            periodEndMs - now <= FIVE_DAYS_MS;
+
+          if (compedExpiringSoon) {
+            const expiryLabel = new Date(periodEndMs!).toLocaleDateString("en-US", {
+              month: "long",
+              day: "numeric",
+            });
+
+            const { data: expiringNotification, error: expiringNotificationError } =
+              await supabase
+                .from("notifications")
+                .upsert(
+                  {
+                    profile_id: profileData.id,
+                    title: "Your Pro access ends soon",
+                    message: `Your Pro access ends on ${expiryLabel}. Visit the Upgrade page to keep your Pro features.`,
+                    type: "subscription_expiring",
+                    is_read: false,
+                  },
+                  { onConflict: "profile_id,type", ignoreDuplicates: true }
+                )
+                .select()
+                .maybeSingle();
+
+            if (expiringNotificationError) {
+              console.log(
+                "Subscription expiring notification error:",
+                expiringNotificationError
+              );
+            }
+
+            if (expiringNotification) {
+              setNotifications((prev) => [expiringNotification, ...prev]);
+            }
+          } else if (
+            loadedNotifications.some((n) => n.type === "subscription_expiring")
+          ) {
+            // No longer applicable (renewed, converted, downgraded, or past
+            // the window) — clear the stale heads-up.
+            await supabase
+              .from("notifications")
+              .delete()
+              .eq("profile_id", profileData.id)
+              .eq("type", "subscription_expiring");
+
+            setNotifications((prev) =>
+              prev.filter((n) => n.type !== "subscription_expiring")
+            );
+          }
         }
       }
 
@@ -579,6 +648,11 @@ function Dashboard() {
 
     if (notification.type === "tutorial_reset") {
       resetAllTutorials();
+    }
+
+    if (notification.type === "subscription_expiring") {
+      setNotificationsOpen(false);
+      navigate("/upgrade");
     }
 
     const { error } = await supabase

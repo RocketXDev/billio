@@ -100,6 +100,9 @@ function DesktopLayout({ children }: Props) {
     if (notification.type === "onboarding") {
       navigate("/dashboard");
     }
+    if (notification.type === "subscription_expiring") {
+      navigate("/upgrade");
+    }
     await supabase
       .from("notifications")
       .update({ is_read: true })

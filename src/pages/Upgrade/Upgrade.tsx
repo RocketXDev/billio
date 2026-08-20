@@ -62,6 +62,9 @@ function Upgrade() {
   const [coachName, setCoachName] = useState("");
   const [trialEligible, setTrialEligible] = useState(false);
   const [trialLoading, setTrialLoading] = useState(true);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
+  const [subscriptionPeriodEnd, setSubscriptionPeriodEnd] = useState<string | null>(null);
+  const [trialEnd, setTrialEnd] = useState<string | null>(null);
 
   const [cancelLoading, setCancelLoading] = useState(false);
   const [cancelConfirm, setCancelConfirm] = useState(false);
@@ -87,11 +90,14 @@ function Upgrade() {
         if (profileData?.id) {
           const { data: coachData } = await supabase
             .from("coaches")
-            .select("trial_used")
+            .select("trial_used, trial_end, subscription_status, subscription_period_end")
             .eq("profile_id", profileData.id)
             .single();
 
           setTrialEligible(coachData ? !coachData.trial_used : false);
+          setTrialEnd(coachData?.trial_end ?? null);
+          setSubscriptionStatus(coachData?.subscription_status ?? null);
+          setSubscriptionPeriodEnd(coachData?.subscription_period_end ?? null);
         }
       } finally {
         setTrialLoading(false);
@@ -150,6 +156,25 @@ function Upgrade() {
     }
   }
 
+  // Trial takes priority over a billing-period countdown whenever it's still
+  // running — a trialing coach may not have subscription_status/period_end
+  // populated yet (no first invoice has happened).
+  const trialEndDate = trialEnd ? new Date(trialEnd) : null;
+  const isTrialing = !!trialEndDate && trialEndDate.getTime() > Date.now();
+  const periodEndDate = subscriptionPeriodEnd ? new Date(subscriptionPeriodEnd) : null;
+
+  const countdown = isTrialing && trialEndDate
+    ? { label: "Trial ends", date: trialEndDate }
+    : subscriptionStatus === "active" && periodEndDate
+    ? { label: cancelSuccess ? "Pro access ends" : "Renews", date: periodEndDate }
+    : null;
+
+  const daysUntil = (date: Date) =>
+    Math.max(0, Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+
+  const formatCountdownDate = (date: Date) =>
+    date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+
   if (planLoading || trialLoading) {
     return (
       <div className="loading-screen">
@@ -196,7 +221,25 @@ function Upgrade() {
         {isPro && (
           <div className="up-already-pro">
             <FaCheck />
-            Active Pro subscription
+            {isTrialing ? "Free trial active" : "Active Pro subscription"}
+          </div>
+        )}
+
+        {/* Renewal / trial countdown */}
+        {isPro && countdown && (
+          <div className="up-countdown">
+            <FaClock className="up-countdown-icon" />
+            <div className="up-countdown-text">
+              <strong>
+                {(() => {
+                  const days = daysUntil(countdown.date);
+                  if (days === 0) return "Today";
+                  if (days === 1) return "1 day left";
+                  return `${days} days left`;
+                })()}
+              </strong>
+              <span>{countdown.label} on {formatCountdownDate(countdown.date)}</span>
+            </div>
           </div>
         )}
 
@@ -309,7 +352,15 @@ function Upgrade() {
           <div className="up-manage">
             <FaCrown className="up-manage-icon" />
             <h3>You're on Pro</h3>
-            <p>Your subscription renews monthly. Cancel anytime — you keep Pro access until the end of your billing period.</p>
+            <p>
+              {isTrialing && trialEndDate ? (
+                <>Your free trial ends on {formatCountdownDate(trialEndDate)}. You'll then be billed {PRO_PRICE}/mo unless you cancel first.</>
+              ) : cancelSuccess && periodEndDate ? (
+                <>Your Pro access ends on {formatCountdownDate(periodEndDate)}.</>
+              ) : (
+                <>Your subscription renews monthly. Cancel anytime — you keep Pro access until the end of your billing period.</>
+              )}
+            </p>
 
             {cancelSuccess ? (
               <div className="cancel-success-banner">

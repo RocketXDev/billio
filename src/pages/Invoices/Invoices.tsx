@@ -1111,8 +1111,6 @@ function Invoices() {
     if (sortedLessons.length > 0) lines.push("");
 
     lines.push(`Total: ${formatMoney(invoice.total)}`);
-    lines.push("");
-    lines.push(`— ${fullName || "Billio"}`);
 
     return lines.join("\n");
   }

@@ -891,27 +891,27 @@ function Invoices() {
     setInvoiceDetailViewLoading(false);
   }
 
-  function getInvoiceWeekLabel(lessons: any[]) {
+  // True min-to-max span of the invoice's actual attached lesson dates —
+  // recomputed live every time it's called, so correcting a lesson's date
+  // (on the Lessons page) automatically fixes this the next time the invoice
+  // is opened. Deliberately not a fixed calendar-week bucket (the previous
+  // approach): bucketing off only the earliest lesson date meant a lesson
+  // dated outside that week (e.g. corrected from the 7th to the 8th) could
+  // still display as if it fell within the old range.
+  function getInvoiceDateRangeLabel(lessons: any[]) {
     const dates = lessons.map((l: any) => l.lesson_date).filter(Boolean).sort();
     if (dates.length === 0) return "";
-    const date = new Date(`${dates[0]}T00:00:00`);
-    const day = date.getDate();
-    const year = date.getFullYear();
-    const month = date.getMonth();
 
-    let bucketStart: number;
-    if (day <= 7) bucketStart = 1;
-    else if (day <= 14) bucketStart = 8;
-    else if (day <= 21) bucketStart = 15;
-    else bucketStart = 22;
+    const fmt = (dateStr: string) =>
+      new Date(`${dateStr}T00:00:00`).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
 
-    const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
-    const bucketEnd = bucketStart === 22 ? lastDayOfMonth : bucketStart + 6;
+    const first = dates[0];
+    const last = dates[dates.length - 1];
 
-    const start = new Date(year, month, bucketStart);
-    const end = new Date(year, month, bucketEnd);
-
-    return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+    return first === last ? fmt(first) : `${fmt(first)} – ${fmt(last)}`;
   }
 
   const sentInvoices = invoices.filter((inv) => inv.sent_at);
@@ -1872,6 +1872,17 @@ function Invoices() {
                   </strong>
                 </div>
 
+                <div className="invoice-readonly-number">
+                  <span>{term.singular} Date Range</span>
+                  <strong>
+                    {getInvoiceDateRangeLabel(
+                      editInvoiceLessons.filter((lesson) =>
+                        editSelectedLessonIds.includes(lesson.id)
+                      )
+                    ) || "No lessons selected"}
+                  </strong>
+                </div>
+
                 <div className="input-block">
                   <label>Status</label>
                   <select
@@ -2062,7 +2073,7 @@ function Invoices() {
                   <h2>{invoiceDetailView.invoice_number || "Invoice"}</h2>
                   {!invoiceDetailViewLoading && invoiceDetailViewLessons.length > 0 && (
                     <span style={{ fontSize: 13, color: "var(--secondary-text)", fontWeight: 500 }}>
-                      {getInvoiceWeekLabel(invoiceDetailViewLessons)}
+                      {getInvoiceDateRangeLabel(invoiceDetailViewLessons)}
                     </span>
                   )}
                 </div>

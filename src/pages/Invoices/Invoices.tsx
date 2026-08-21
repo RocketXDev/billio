@@ -20,6 +20,7 @@ import {
   FaLock,
   FaHistory
 } from "react-icons/fa";
+import { IoShareOutline } from "react-icons/io5";
 import { supabase } from "../../lib/supabaseClient";
 import { usePlan } from "../../hooks/usePlan";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
@@ -69,6 +70,8 @@ function Invoices() {
   const [editSelectedLessonIds, setEditSelectedLessonIds] = useState<string[]>([]);
   const [originalInvoiceStatus, setOriginalInvoiceStatus] = useState("unbilled");
   const [sendingInvoiceId, setSendingInvoiceId] = useState<string | null>(null);
+  const [sharingInvoiceId, setSharingInvoiceId] = useState<string | null>(null);
+  const [shareCopiedId, setShareCopiedId] = useState<string | null>(null);
   const [invoiceDetailView, setInvoiceDetailView] = useState<any>(null);
   const [invoiceDetailViewLessons, setInvoiceDetailViewLessons] = useState<any[]>([]);
   const [invoiceDetailViewLoading, setInvoiceDetailViewLoading] = useState(false);
@@ -1079,6 +1082,84 @@ function Invoices() {
     setSendSuccessMethod(data.deliveryMethod || "email");
   }
 
+  // Prefers the stored per-lesson `rate`, same as the invoice-generation
+  // logic, falling back to hourly_rate × (duration_minutes / 60).
+  function lessonAmount(lesson: any): number {
+    if (lesson.rate != null) return Number(lesson.rate) || 0;
+    const hourly = Number(lesson.hourly_rate) || 0;
+    const minutes = Number(lesson.duration_minutes) || 0;
+    return Math.round(hourly * (minutes / 60) * 100) / 100;
+  }
+
+  function buildInvoiceShareText(invoice: any, lessons: any[]) {
+    const studentName =
+      invoice.students?.student_name || invoice.student_name || "Student";
+
+    const lines: string[] = [];
+    lines.push(`Invoice ${invoice.invoice_number || ""}`.trim());
+    lines.push(`For: ${studentName}`);
+    lines.push("");
+
+    const sortedLessons = [...lessons].sort((a, b) =>
+      (a.lesson_date || "").localeCompare(b.lesson_date || "")
+    );
+
+    for (const lesson of sortedLessons) {
+      lines.push(`${formatDate(lesson.lesson_date)} — ${formatMoney(lessonAmount(lesson))}`);
+    }
+
+    if (sortedLessons.length > 0) lines.push("");
+
+    lines.push(`Total: ${formatMoney(invoice.total)}`);
+    lines.push("");
+    lines.push(`— ${fullName || "Billio"}`);
+
+    return lines.join("\n");
+  }
+
+  async function shareInvoice(invoice: any) {
+    if (sharingInvoiceId) return;
+
+    setSharingInvoiceId(invoice.id);
+    setShareCopiedId(null);
+
+    try {
+      const { data, error } = await supabase
+        .from("invoice_lessons")
+        .select("lessons(lesson_date, rate, hourly_rate, duration_minutes)")
+        .eq("invoice_id", invoice.id);
+
+      const lessons =
+        !error && data ? data.map((row: any) => row.lessons).filter(Boolean) : [];
+
+      const text = buildInvoiceShareText(invoice, lessons);
+
+      if (navigator.share) {
+        try {
+          await navigator.share({ text });
+        } catch (shareErr: any) {
+          // AbortError just means the user closed the share sheet — not a failure.
+          if (shareErr?.name !== "AbortError") {
+            console.log("Share failed, falling back to clipboard:", shareErr);
+            await navigator.clipboard.writeText(text);
+            setShareCopiedId(invoice.id);
+            setTimeout(() => {
+              setShareCopiedId((prev) => (prev === invoice.id ? null : prev));
+            }, 2000);
+          }
+        }
+      } else {
+        await navigator.clipboard.writeText(text);
+        setShareCopiedId(invoice.id);
+        setTimeout(() => {
+          setShareCopiedId((prev) => (prev === invoice.id ? null : prev));
+        }, 2000);
+      }
+    } finally {
+      setSharingInvoiceId(null);
+    }
+  }
+
   function getMonthWeekBucket(dateStr: string) {
     const date = new Date(`${dateStr}T00:00:00`);
     const day = date.getDate();
@@ -1289,6 +1370,16 @@ function Invoices() {
                           </button>
                         </div>
                         <div className="invoice-actions">
+                          <div className="invoice-share-wrap">
+                            <button type="button" className="invoice-share-btn"
+                              disabled={sharingInvoiceId === invoice.id}
+                              onClick={(e) => { e.stopPropagation(); shareInvoice(invoice); }}>
+                              {sharingInvoiceId === invoice.id ? "..." : <IoShareOutline />}
+                            </button>
+                            {shareCopiedId === invoice.id && (
+                              <span className="invoice-share-copied">Copied!</span>
+                            )}
+                          </div>
                           <button type="button" className="invoice-edit-btn"
                             onClick={(e) => { e.stopPropagation(); openEditInvoice(invoice); }}>
                             <FaEdit />

@@ -144,6 +144,7 @@ function Dashboard() {
   const [bio, setBio] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [coachTimezone, setCoachTimezone] = useState("America/Denver");
 
   // Onboarding specific
   const [preferredCommunication, setPreferredCommunication] = useState("email");
@@ -535,6 +536,7 @@ function Dashboard() {
         } else {
           setCoachId(coachData.id);
           setAvatarUrl(coachData.avatar_url || "");
+          setCoachTimezone(coachData.invoice_timezone || "America/Denver");
 
           if (!coachData.setup_completed) {
             setShowOnboarding(true);
@@ -747,11 +749,38 @@ function Dashboard() {
     setShowOnboarding(false);
   }
 
+  // Today's date and current time in the coach's chosen timezone (falls back
+  // to America/Denver, same default used for invoice automation).
+  function getNowInTimezone(timezone: string) {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).formatToParts(new Date());
+
+    const get = (type: string) => parts.find((p) => p.type === type)?.value || "";
+
+    return {
+      date: `${get("year")}-${get("month")}-${get("day")}`,
+      // Midnight can come back as "24" instead of "00" under hour12:false.
+      time: `${get("hour") === "24" ? "00" : get("hour")}:${get("minute")}`,
+    };
+  }
+
   function openAddLesson() {
     if (coachRatesData?.default_hourly_rate) {
       setHourlyRate(String(coachRatesData.default_hourly_rate));
     }
     setDurationMinutes(String(settings.defaultLessonDuration));
+
+    const { date, time } = getNowInTimezone(coachTimezone);
+    setLessonDate(date);
+    setStartTime(time);
+
     setShowAddLesson(true);
   }
 
@@ -1768,6 +1797,15 @@ function Dashboard() {
                 }}
               >
                 Settings
+              </a>
+
+              <a
+                onClick={() => {
+                  navigate("/upgrade");
+                  setMenuOpen(false);
+                }}
+              >
+                Subscription
               </a>
             </nav>
 

@@ -57,6 +57,7 @@ function Invoices() {
   const [rangeStart, setRangeStart] = useState("");
   const [rangeEnd, setRangeEnd] = useState("");
   const [isClosingCalendar, setIsClosingCalendar] = useState(false);
+  const [billAllMode, setBillAllMode] = useState(false);
 
   // Invoices Editing
   const [showEditInvoice, setShowEditInvoice] = useState(false);
@@ -182,6 +183,12 @@ function Invoices() {
       loadInvoiceLessons();
     }
   }, [coachId, selectedStudentId, rangeStart, rangeEnd]);
+
+  useEffect(() => {
+    if (coachId && selectedStudentId && billAllMode) {
+      loadAllUnbilledLessons();
+    }
+  }, [coachId, selectedStudentId, billAllMode]);
 
   useEffect(() => {
     if (!loading) {
@@ -371,6 +378,30 @@ function Invoices() {
     setSelectedLessonIds((data || []).map((lesson) => lesson.id));
   }
 
+  // Catch-up path for a student who hasn't been billed in a while and the
+  // coach doesn't know/remember the exact date range — grabs every unbilled
+  // lesson for them regardless of date instead of requiring a range pick.
+  async function loadAllUnbilledLessons() {
+    if (!coachId || !selectedStudentId) return;
+
+    const { data, error } = await supabase
+      .from("lessons")
+      .select("*")
+      .eq("coach_id", coachId)
+      .eq("student_id", selectedStudentId)
+      .eq("billing_status", "unbilled")
+      .order("lesson_date", { ascending: true })
+      .order("start_time", { ascending: true });
+
+    if (error) {
+      console.log("Load all unbilled lessons error:", error);
+      return;
+    }
+
+    setInvoiceLessons(data || []);
+    setSelectedLessonIds((data || []).map((lesson) => lesson.id));
+  }
+
   function toggleInvoiceLesson(lessonId: string) {
     setSelectedLessonIds((prev) =>
       prev.includes(lessonId)
@@ -449,12 +480,13 @@ function Invoices() {
         return;
       }
 
-      await supabase
-        .from("lessons")
-        .update({
-          status: "unbilled",
-        })
-        .in("id", selectedLessonIds);
+      // Deliberately not touching lessons.billing_status here — a new
+      // invoice always starts at status "unbilled", and lessons only follow
+      // an invoice's status when it's explicitly changed later
+      // (quickUpdateInvoiceStatus / handleUpdateInvoice). The date range
+      // picker intentionally shows already billed/paid lessons too (for
+      // mistake-correction), so forcing a status here would overwrite real
+      // state that may still be accurate on another invoice.
 
       queryClient.setQueryData<any[]>(["invoices", coachId], (prev) => [invoiceData, ...(prev ?? [])]);
 
@@ -462,7 +494,7 @@ function Invoices() {
       setIsSaving(false);
     }
 
-    
+
     setSelectedStudentId("");
     setStudentQuery("");
     setStudentNameError("");
@@ -470,6 +502,7 @@ function Invoices() {
     setRangeEnd("");
     setInvoiceLessons([]);
     setSelectedLessonIds([]);
+    setBillAllMode(false);
     setShowAddInvoice(false);
   }
 
@@ -544,6 +577,7 @@ function Invoices() {
     setInvoiceLessons([]);
     setSelectedLessonIds([]);
     setShowDateRangePicker(false);
+    setBillAllMode(false);
   }
 
   async function openEditInvoice(invoice: any) {
@@ -1637,6 +1671,34 @@ function Invoices() {
                     <p className="invoice-student-error">{studentNameError}</p>
                   )}
                 </div>
+                <div className="input-block invoice-billall-toggle-wrapper">
+                  <button
+                    type="button"
+                    className={`invoice-billall-toggle ${billAllMode ? "active" : ""}`}
+                    onClick={() => {
+                      const next = !billAllMode;
+                      setBillAllMode(next);
+                      if (next) {
+                        setShowDateRangePicker(false);
+                        setRangeStart("");
+                        setRangeEnd("");
+                      } else {
+                        setInvoiceLessons([]);
+                        setSelectedLessonIds([]);
+                      }
+                    }}
+                  >
+                    <span className="invoice-billall-checkbox">
+                      {billAllMode ? "✓" : ""}
+                    </span>
+                    Bill all unbilled {term.lowerPlural} for this student
+                  </button>
+                  <p className="invoice-billall-hint">
+                    Skip picking a date range — this pulls in every unbilled {term.lowerPlural} for the student, no matter how far back.
+                  </p>
+                </div>
+
+                {!billAllMode && (
                 <div className="input-block invoice-date-range-wrapper">
                   <label>Date Range</label>
                   <button
@@ -1727,11 +1789,14 @@ function Invoices() {
                       </div>
                     )}
                 </div>
-                {rangeStart && rangeEnd && (
+                )}
+                {(billAllMode || (rangeStart && rangeEnd)) && (
                   <>
                     {invoiceLessons.length === 0 ? (
                       <p className="invoices-empty">
-                        No {term.lowerPlural} in that date range.
+                        {billAllMode
+                          ? `No unbilled ${term.lowerPlural} for this student.`
+                          : `No ${term.lowerPlural} in that date range.`}
                       </p>
                     ) : (
                       <div className="invoice-lessons-section">

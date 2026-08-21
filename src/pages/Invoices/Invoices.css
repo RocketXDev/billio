@@ -622,6 +622,59 @@
 
 /* DATE RANGE */
 
+.invoice-billall-toggle-wrapper {
+  width: 100%;
+}
+
+.invoice-billall-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--main-text);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.invoice-billall-toggle.active {
+  border-color: var(--primary-purple);
+  background: #eef2ff;
+  color: var(--primary-purple);
+}
+
+.invoice-billall-checkbox {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.invoice-billall-toggle.active .invoice-billall-checkbox {
+  border-color: var(--primary-purple);
+  background: var(--primary-purple);
+}
+
+.invoice-billall-hint {
+  margin: 6px 2px 0;
+  font-size: 12px;
+  color: var(--secondary-text);
+  line-height: 1.4;
+}
+
 .invoice-date-range-wrapper {
   position: relative;
   width: 100%;

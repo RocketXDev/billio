@@ -81,40 +81,11 @@
   color: #16a34a;
   font-size: 14px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
-.up-countdown {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 0 auto;
-  padding: 14px 18px;
-  border-radius: 16px;
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-}
-
-.up-countdown-icon {
-  font-size: 20px;
-  color: var(--primary-purple);
-  flex-shrink: 0;
-}
-
-.up-countdown-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.up-countdown-text strong {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--main-text);
-}
-
-.up-countdown-text span {
-  font-size: 12px;
-  color: var(--secondary-text);
+.up-already-pro-divider {
+  opacity: 0.5;
 }
 
 .up-cards {

@@ -171,19 +171,14 @@ function Upgrade() {
   // only ever gets set by the Stripe webhook.
   const isComped = !stripeSubscriptionId && !!periodEndDate;
 
-  const countdown = isTrialing && trialEndDate
-    ? { label: "Trial ends", date: trialEndDate }
-    : subscriptionStatus === "active" && periodEndDate
-    ? { label: cancelSuccess ? "Pro access ends" : "Renews", date: periodEndDate }
-    : isComped
-    ? { label: "Pro access ends", date: periodEndDate! }
+  const countdownDate = isTrialing
+    ? trialEndDate
+    : subscriptionStatus === "active" || isComped
+    ? periodEndDate
     : null;
 
   const daysUntil = (date: Date) =>
     Math.max(0, Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
-
-  const formatCountdownDate = (date: Date) =>
-    date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
   if (planLoading || trialLoading) {
     return (
@@ -227,29 +222,34 @@ function Upgrade() {
           </p>
         </div>
 
-        {/* Already Pro */}
+        {/* Already Pro (+ countdown, folded into the same pill). The phrasing
+            of the count itself depends on whether Pro access is actually
+            ending (trial, comped, or a cancelled subscription) vs. just
+            renewing normally — "X days left" reads as an expiration warning,
+            which is wrong for a subscriber who's going to auto-renew. */}
         {isPro && (
           <div className="up-already-pro">
             <FaCheck />
             {isTrialing ? "Free trial active" : "Active Pro subscription"}
-          </div>
-        )}
-
-        {/* Renewal / trial countdown */}
-        {isPro && countdown && (
-          <div className="up-countdown">
-            <FaClock className="up-countdown-icon" />
-            <div className="up-countdown-text">
-              <strong>
+            {countdownDate && (
+              <>
+                <span className="up-already-pro-divider">·</span>
                 {(() => {
-                  const days = daysUntil(countdown.date);
-                  if (days === 0) return "Today";
-                  if (days === 1) return "1 day left";
-                  return `${days} days left`;
+                  const days = daysUntil(countdownDate);
+                  const isEnding = isTrialing || cancelSuccess || isComped;
+
+                  if (isEnding) {
+                    if (days === 0) return "Ends today";
+                    if (days === 1) return "1 day left";
+                    return `${days} days left`;
+                  }
+
+                  if (days === 0) return "Renews today";
+                  if (days === 1) return "Renews tomorrow";
+                  return `Renews in ${days} days`;
                 })()}
-              </strong>
-              <span>{countdown.label} on {formatCountdownDate(countdown.date)}</span>
-            </div>
+              </>
+            )}
           </div>
         )}
 
@@ -363,12 +363,12 @@ function Upgrade() {
             <FaCrown className="up-manage-icon" />
             <h3>You're on Pro</h3>
             <p>
-              {isTrialing && trialEndDate ? (
-                <>Your free trial ends on {formatCountdownDate(trialEndDate)}. You'll then be billed {PRO_PRICE}/mo unless you cancel first.</>
-              ) : cancelSuccess && periodEndDate ? (
-                <>Your Pro access ends on {formatCountdownDate(periodEndDate)}.</>
+              {isTrialing ? (
+                <>You'll be billed {PRO_PRICE}/mo when your trial ends, unless you cancel first.</>
+              ) : cancelSuccess ? (
+                <>No further charges will be made.</>
               ) : isComped ? (
-                <>Your Pro access ends on {formatCountdownDate(periodEndDate!)}.</>
+                <>You'll move to the Free plan once your access ends.</>
               ) : (
                 <>Your subscription renews monthly. Cancel anytime — you keep Pro access until the end of your billing period.</>
               )}

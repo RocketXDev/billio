@@ -19,57 +19,42 @@ export default function EarningsDashboard() {
 
   useEffect(() => { if (!coachId && !identityLoading) navigate("/login"); }, [coachId, identityLoading]);
 
-  const { data: lessonsData, isLoading: lessonsLoading } = useQuery({
-    queryKey: ["lessons", coachId],
+  // Aggregation (sums/counts/group-bys) happens in Postgres via the
+  // get_earnings_summary RPC instead of pulling every lesson/invoice a coach
+  // has ever created to the client and reducing them here — see
+  // scripts/add_earnings_summary_rpc.sql. Own query key (not the shared
+  // ["lessons"/"invoices", coachId] used elsewhere), so it can't go stale
+  // relative to, or interfere with, other pages' caches.
+  const { data: summary, isLoading: summaryLoading } = useQuery({
+    queryKey: ["earnings-summary", coachId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("lessons")
-        .select("*, students(student_name)")
-        .eq("coach_id", coachId)
-        .order("lesson_date", { ascending: true })
-        .order("start_time", { ascending: true });
+      const { data, error } = await supabase.rpc("get_earnings_summary", { p_coach_id: coachId });
       if (error) throw error;
-      return data ?? [];
+      return data as {
+        thisMonth: { revenue: number; count: number };
+        ytd: { revenue: number; count: number; monthsWithRevenue: number };
+        allTime: { revenue: number; paidCount: number };
+        unpaidLessons: { total: number; count: number };
+        unpaidInvoices: { total: number; count: number };
+        monthly: { key: string; revenue: number; count: number }[];
+        topStudents: { name: string; revenue: number; count: number }[];
+        byType: { type: string; amount: number }[];
+      };
     },
     enabled: !!coachId,
   });
-  const lessons = lessonsData ?? [];
-
-  const { data: invoicesData, isLoading: invoicesLoading } = useQuery({
-    queryKey: ["invoices", coachId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("invoices")
-        .select(`*, students(student_name, email, phone_number, parent_name, parent_phone)`)
-        .eq("coach_id", coachId)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
-    enabled: !!coachId,
-  });
-  const invoices = invoicesData ?? [];
 
   // Gate on the data actually being present, not just `isLoading` — react-query
   // reports `isLoading: false` while a query is still `enabled: false` (i.e.
   // before coachId resolves), which would otherwise let stats render as zero
   // before the real numbers arrive.
-  const loading =
-    identityLoading || !coachId || lessonsLoading || invoicesLoading ||
-    lessonsData === undefined || invoicesData === undefined;
+  const loading = identityLoading || !coachId || summaryLoading || summary === undefined;
 
   const now = new Date();
-  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const thisYearStart = new Date(now.getFullYear(), 0, 1);
 
   // ── This month ──
-  const thisMonthLessons = lessons.filter(l =>
-    l.lesson_date && new Date(l.lesson_date + "T00:00:00") >= thisMonthStart
-  );
-  const thisMonthRevenue = thisMonthLessons
-    .filter(l => l.billing_status === "paid")
-    .reduce((sum, l) => sum + Number(l.rate || 0), 0);
-  const thisMonthCount = thisMonthLessons.length;
+  const thisMonthRevenue = summary?.thisMonth.revenue ?? 0;
+  const thisMonthCount = summary?.thisMonth.count ?? 0;
 
   // avg weekly: divide by weeks elapsed this month (at least 1)
   const dayOfMonth = now.getDate();
@@ -77,40 +62,28 @@ export default function EarningsDashboard() {
   const thisMonthAvgWeekly = thisMonthRevenue / weeksElapsed;
 
   // ── YTD ──
-  const ytdLessons = lessons.filter(l =>
-    l.lesson_date && new Date(l.lesson_date + "T00:00:00") >= thisYearStart
-  );
-  const ytdRevenue = ytdLessons
-    .filter(l => l.billing_status === "paid")
-    .reduce((sum, l) => sum + Number(l.rate || 0), 0);
-  const ytdCount = ytdLessons.length;
-  const monthsWithRevenue = new Set(
-    ytdLessons.filter(l => l.billing_status === "paid").map(l => l.lesson_date?.slice(0, 7))
-  ).size;
+  const ytdRevenue = summary?.ytd.revenue ?? 0;
+  const ytdCount = summary?.ytd.count ?? 0;
+  const monthsWithRevenue = summary?.ytd.monthsWithRevenue ?? 0;
   const ytdAvgMonthly = monthsWithRevenue > 0 ? ytdRevenue / monthsWithRevenue : 0;
 
   // ── All time ──
-  const allTimeRevenue = lessons
-    .filter(l => l.billing_status === "paid")
-    .reduce((sum, l) => sum + Number(l.rate || 0), 0);
+  const allTimeRevenue = summary?.allTime.revenue ?? 0;
+  const allTimePaidCount = summary?.allTime.paidCount ?? 0;
 
   // ── Outstanding ──
-  const unpaidInvoices = invoices.filter(i => i.status === "unbilled" || i.status === "billed");
-  const unpaidInvoiceTotal = unpaidInvoices.reduce((sum, i) => sum + Number(i.total || 0), 0);
-  const unpaidLessons = lessons.filter(l => l.billing_status === "unbilled");
-  const unpaidLessonsTotal = unpaidLessons.reduce((sum, l) => sum + Number(l.rate || 0), 0);
+  const unpaidInvoiceTotal = summary?.unpaidInvoices.total ?? 0;
+  const unpaidInvoiceCount = summary?.unpaidInvoices.count ?? 0;
+  const unpaidLessonsTotal = summary?.unpaidLessons.total ?? 0;
+  const unpaidLessonCount = summary?.unpaidLessons.count ?? 0;
 
   // ── Monthly chart (last 12 months) ──
-  const monthlyData = Array.from({ length: 12 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - 11 + i, 1);
-    const key = d.toLocaleDateString("en-CA").slice(0, 7);
+  const monthlyData = (summary?.monthly ?? []).map((m) => {
+    const [year, month] = m.key.split("-").map(Number);
+    const d = new Date(year, month - 1, 1);
     const label = d.toLocaleDateString("en-US", { month: "short" });
     const fullLabel = d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-    const monthLessons = lessons.filter(l => l.lesson_date?.startsWith(key));
-    const revenue = monthLessons.filter(l => l.billing_status === "paid")
-      .reduce((sum, l) => sum + Number(l.rate || 0), 0);
-    const count = monthLessons.length;
-    return { key, label, fullLabel, revenue, count };
+    return { key: m.key, label, fullLabel, revenue: m.revenue, count: m.count };
   });
   const maxRevenue = Math.max(...monthlyData.map(m => m.revenue), 1);
 
@@ -119,23 +92,10 @@ export default function EarningsDashboard() {
     : null;
 
   // ── Top students ──
-  const studentRevMap: Record<string, { name: string; revenue: number; count: number }> = {};
-  lessons.filter(l => l.billing_status === "paid").forEach(l => {
-    const id = l.student_id;
-    const name = l.students?.student_name || "Unknown";
-    if (!studentRevMap[id]) studentRevMap[id] = { name, revenue: 0, count: 0 };
-    studentRevMap[id].revenue += Number(l.rate || 0);
-    studentRevMap[id].count += 1;
-  });
-  const topStudents = Object.values(studentRevMap).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+  const topStudents = summary?.topStudents ?? [];
 
   // ── Revenue by type ──
-  const typeMap: Record<string, number> = {};
-  lessons.filter(l => l.billing_status === "paid" && l.lesson_type).forEach(l => {
-    const t = l.lesson_type.trim();
-    typeMap[t] = (typeMap[t] || 0) + Number(l.rate || 0);
-  });
-  const typeEntries = Object.entries(typeMap).sort((a, b) => b[1] - a[1]);
+  const typeEntries: [string, number][] = (summary?.byType ?? []).map(t => [t.type, t.amount]);
   const typeTotal = typeEntries.reduce((sum, [, v]) => sum + v, 0);
   const typeColors = ["#6366f1","#22c55e","#f59e0b","#3b82f6","#ec4899","#14b8a6"];
 
@@ -246,7 +206,7 @@ export default function EarningsDashboard() {
             </div>
             <div>
               <strong>{fmtDec(unpaidInvoiceTotal)}</strong>
-              <span>{unpaidInvoices.length} unpaid {unpaidInvoices.length === 1 ? "invoice" : "invoices"}</span>
+              <span>{unpaidInvoiceCount} unpaid {unpaidInvoiceCount === 1 ? "invoice" : "invoices"}</span>
             </div>
           </div>
           <div className="ed-outstanding-card">
@@ -255,7 +215,7 @@ export default function EarningsDashboard() {
             </div>
             <div>
               <strong>{fmtDec(unpaidLessonsTotal)}</strong>
-              <span>{unpaidLessons.length} unbilled {unpaidLessons.length === 1 ? term.lower : term.lowerPlural}</span>
+              <span>{unpaidLessonCount} unbilled {unpaidLessonCount === 1 ? term.lower : term.lowerPlural}</span>
             </div>
           </div>
         </div>
@@ -377,7 +337,7 @@ export default function EarningsDashboard() {
           <div className="ed-insight-card">
             <span>All-time Revenue</span>
             <strong>{fmtDec(allTimeRevenue)}</strong>
-            <p>{lessons.filter(l => l.billing_status === "paid").length} paid lessons total</p>
+            <p>{allTimePaidCount} paid lessons total</p>
           </div>
           <div className="ed-insight-card">
             <span>{now.getFullYear()} Revenue</span>

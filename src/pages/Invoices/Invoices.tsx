@@ -1066,6 +1066,43 @@ function Invoices() {
     return filePath;
   }
 
+  // The Supabase auth client runs a background timer that periodically tries
+  // to (non-blockingly) grab a browser-level lock to check whether the
+  // session needs refreshing — if another tab/instance holds it at that
+  // exact moment it's supposed to just back off quietly, but this can still
+  // transiently interfere with whatever's attaching the auth token to a
+  // request fired at the same instant, causing an otherwise-fine call to
+  // fail once. A single automatic retry after a short delay absorbs that
+  // instead of surfacing it to the coach as a failed send.
+  async function invokeFunctionWithRetry(name: string, body: any) {
+    let result = await supabase.functions.invoke(name, { body });
+    if (result.error && !result.data?.error) {
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      result = await supabase.functions.invoke(name, { body });
+    }
+    return result;
+  }
+
+  // supabase-js's functions.invoke() does NOT parse a non-2xx response body
+  // into `data` — it comes back as `error` (a FunctionsHttpError) whose
+  // `.message` is just the generic "Edge Function returned a non-2xx status
+  // code", with the real `{ error: "..." }` JSON we sent sitting unread on
+  // `error.context` (the raw Response). Without this, every edge-function
+  // failure below was showing that generic SDK message instead of the
+  // specific reason, no matter how it's meant to be presented afterward.
+  async function extractFunctionErrorMessage(data: any, error: any, fallback: string): Promise<string> {
+    if (data?.error) return data.error;
+    if (error?.context && typeof error.context.json === "function") {
+      try {
+        const body = await error.context.json();
+        if (body?.error) return body.error;
+      } catch {
+        // response body wasn't JSON — fall through
+      }
+    }
+    return error?.message || fallback;
+  }
+
   async function sendInvoice(invoice: any) {
     const invoiceId = invoice.id;
     if (sendingInvoiceId) return;
@@ -1082,20 +1119,12 @@ function Invoices() {
       // Never block sending the invoice on a PDF generation failure.
     }
 
-    const { data, error } = await supabase.functions.invoke(
-      "send-single-invoice",
-      {
-        body: { invoiceId, pdfPath },
-      }
-    );
+    const { data, error } = await invokeFunctionWithRetry("send-single-invoice", { invoiceId, pdfPath });
 
     setSendingInvoiceId(null);
 
     if (error || data?.error) {
-      const rawError =
-        data?.error ||
-        error?.message ||
-        "Invoice could not be sent.";
+      const rawError = await extractFunctionErrorMessage(data, error, "Invoice could not be sent.");
 
       let customMessage = "Invoice could not be sent. Please try again.";
 
@@ -1166,16 +1195,35 @@ function Invoices() {
     setSendError("");
     setSendSuccessRecipient("");
 
-    const { data, error } = await supabase.functions.invoke(
-      "send-combined-invoice",
-      { body: { invoiceIds } }
-    );
+    const { data, error } = await invokeFunctionWithRetry("send-combined-invoice", { invoiceIds });
 
     setSendingCombined(false);
     setCombinePrompt(null);
 
     if (error || data?.error) {
-      setSendError(data?.error || error?.message || "Combined invoice could not be sent. Please try again.");
+      const rawError = await extractFunctionErrorMessage(data, error, "Combined invoice could not be sent.");
+      console.log("Combined invoice send error:", rawError);
+
+      let customMessage = "Combined invoice could not be sent. Please try again.";
+      const lower = rawError.toLowerCase();
+
+      if (lower.includes("could not be found")) {
+        customMessage = "One of these invoices couldn't be found. Please refresh the page and try again.";
+      } else if (lower.includes("already been sent")) {
+        customMessage = "One of these invoices has already been sent. Please refresh the page and try again.";
+      } else if (lower.includes("deleted")) {
+        customMessage = "One of these students has been deleted, so their invoice can't be combined. Please send the others separately.";
+      } else if (lower.includes("phone number")) {
+        customMessage = "These students' parent phone numbers don't actually match. Please check their contact info.";
+      } else if (lower.includes("parent email")) {
+        customMessage = "These students have different parent emails on file. Please make them match, or send invoices separately.";
+      } else if (lower.includes("sms consent")) {
+        customMessage = "SMS consent isn't enabled for one of these students. Please update their profile, or send invoices separately.";
+      } else if (lower.includes("same coach")) {
+        customMessage = "Something went wrong combining these invoices. Please refresh the page and try again.";
+      }
+
+      setSendError(customMessage);
       return;
     }
 

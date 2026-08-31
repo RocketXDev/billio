@@ -43,6 +43,8 @@ function Invoices() {
   const [sendSuccessRecipient, setSendSuccessRecipient] = useState("");
   const [sendSuccessMethod, setSendSuccessMethod] = useState("");
   const [sendError, setSendError] = useState("");
+  const [combinePrompt, setCombinePrompt] = useState<{ invoice: any; siblings: any[] } | null>(null);
+  const [sendingCombined, setSendingCombined] = useState(false);
 
   // Invoices Creation States
   const [showAddInvoice, setShowAddInvoice] = useState(false);
@@ -124,7 +126,7 @@ function Invoices() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("invoices")
-        .select(`*, students(student_name, email, phone_number, parent_name, parent_phone), invoice_lessons(lessons(lesson_date))`)
+        .select(`*, students(student_name, email, phone_number, parent_name, parent_email, parent_phone), invoice_lessons(lessons(lesson_date))`)
         .eq("coach_id", coachId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -829,17 +831,32 @@ function Invoices() {
     const cycle: Record<string, string> = { unbilled: "billed", billed: "paid", paid: "unbilled" };
     const next = cycle[invoice.status || "unbilled"] || "unbilled";
     setStatusUpdatingId(invoice.id);
+
+    // A combined invoice shares invoice_group_id with its siblings — cycling
+    // the pill on any one of them moves the whole group together, forward or
+    // backward, so the group's status can't drift out of sync.
+    let groupIds = [invoice.id];
+    if (invoice.invoice_group_id) {
+      const { data: siblings } = await supabase
+        .from("invoices")
+        .select("id")
+        .eq("invoice_group_id", invoice.invoice_group_id);
+      if (siblings && siblings.length > 0) groupIds = siblings.map((s: any) => s.id);
+    }
+
     const { data, error } = await supabase
       .from("invoices")
       .update({ status: next })
-      .eq("id", invoice.id)
+      .in("id", groupIds)
       .eq("coach_id", coachId)
-      .select("*, students(student_name, email, phone_number, parent_name, parent_phone)")
-      .single();
+      .select("*, students(student_name, email, phone_number, parent_name, parent_phone)");
     if (!error && data) {
-      queryClient.setQueryData<any[]>(["invoices", coachId], (prev) => (prev ?? []).map((inv) => inv.id === invoice.id ? data : inv));
+      queryClient.setQueryData<any[]>(["invoices", coachId], (prev) => (prev ?? []).map((inv) => {
+        const updated = data.find((d: any) => d.id === inv.id);
+        return updated || inv;
+      }));
       const { data: lessonLinks } = await supabase
-        .from("invoice_lessons").select("lesson_id").eq("invoice_id", invoice.id);
+        .from("invoice_lessons").select("lesson_id").in("invoice_id", groupIds);
       const lessonIds = (lessonLinks || []).map((l: any) => l.lesson_id);
       if (lessonIds.length > 0) {
         await supabase.from("lessons").update({ billing_status: next }).in("id", lessonIds);
@@ -1113,6 +1130,56 @@ function Invoices() {
       data.recipientPhone || data.recipientEmail || "recipient"
     );
 
+    setSendSuccessMethod(data.deliveryMethod || "email");
+  }
+
+  function last10Digits(phone: string) {
+    return String(phone || "").replace(/\D/g, "").slice(-10);
+  }
+
+  // Other students under this coach who share this invoice's parent phone
+  // AND parent email (both non-empty) and currently have their own pending
+  // invoice — eligible to fold into one combined send. A sibling whose
+  // parent_email differs is left out here rather than blocking the whole
+  // prompt, so the ones that do match can still be combined.
+  function findBillableSiblings(invoice: any): any[] {
+    const parentDigits = last10Digits(invoice.students?.parent_phone);
+    const parentEmail = (invoice.students?.parent_email || "").trim().toLowerCase();
+    if (!parentDigits || !parentEmail) return [];
+
+    return (invoicesData || []).filter((inv: any) =>
+      inv.id !== invoice.id &&
+      (inv.status || "unbilled") === "unbilled" &&
+      inv.student_id !== invoice.student_id &&
+      last10Digits(inv.students?.parent_phone) === parentDigits &&
+      (inv.students?.parent_email || "").trim().toLowerCase() === parentEmail
+    );
+  }
+
+  async function sendCombinedInvoice(invoiceIds: string[]) {
+    if (sendingCombined || sendingInvoiceId) return;
+
+    setSendingCombined(true);
+    setSendError("");
+    setSendSuccessRecipient("");
+
+    const { data, error } = await supabase.functions.invoke(
+      "send-combined-invoice",
+      { body: { invoiceIds } }
+    );
+
+    setSendingCombined(false);
+    setCombinePrompt(null);
+
+    if (error || data?.error) {
+      setSendError(data?.error || error?.message || "Combined invoice could not be sent. Please try again.");
+      return;
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["invoices", coachId] });
+    queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
+
+    setSendSuccessRecipient(data.recipientPhone || data.recipientEmail || "recipient");
     setSendSuccessMethod(data.deliveryMethod || "email");
   }
 
@@ -1418,7 +1485,12 @@ function Invoices() {
                           </button>
                           <button type="button" className="invoice-send-btn"
                             disabled={sendingInvoiceId === invoice.id}
-                            onClick={(e) => { e.stopPropagation(); sendInvoice(invoice); }}>
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const siblings = findBillableSiblings(invoice);
+                              if (siblings.length > 0) setCombinePrompt({ invoice, siblings });
+                              else sendInvoice(invoice);
+                            }}>
                             {sendingInvoiceId === invoice.id ? "..." : <FaPaperPlane />}
                           </button>
                         </div>
@@ -1975,6 +2047,72 @@ function Invoices() {
                   Delete Invoice
                 </button>
               </form>
+            </div>
+          </div>
+        )}
+        {combinePrompt && (
+          <div
+            className="invoice-success-overlay"
+            onClick={() => setCombinePrompt(null)}
+          >
+            <div
+              className="invoice-success-card"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="invoice-success-icon">
+                ✓
+              </div>
+
+              <h2>Combine Invoices?</h2>
+
+              <p>
+                {combinePrompt.invoice.students?.parent_name || "This parent"} has{" "}
+                {combinePrompt.siblings.length + 1} pending invoices. Send one combined
+                message instead of {combinePrompt.siblings.length + 1} separate ones?
+              </p>
+
+              <div className="invoice-combine-list">
+                {[combinePrompt.invoice, ...combinePrompt.siblings].map((inv) => (
+                  <div key={inv.id} className="invoice-combine-row">
+                    <span>{inv.students?.student_name || inv.student_name}</span>
+                    <span>{formatMoney(inv.total)}</span>
+                  </div>
+                ))}
+                <div className="invoice-combine-row invoice-combine-total">
+                  <span>Total</span>
+                  <span>
+                    {formatMoney(
+                      [combinePrompt.invoice, ...combinePrompt.siblings].reduce(
+                        (sum, inv) => sum + Number(inv.total || 0),
+                        0
+                      )
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                disabled={sendingCombined}
+                onClick={() => {
+                  const all = [combinePrompt.invoice, ...combinePrompt.siblings];
+                  sendCombinedInvoice(all.map((inv) => inv.id));
+                }}
+              >
+                {sendingCombined ? "Sending..." : "Send Combined"}
+              </button>
+
+              <button
+                type="button"
+                disabled={sendingCombined}
+                onClick={() => {
+                  const inv = combinePrompt.invoice;
+                  setCombinePrompt(null);
+                  sendInvoice(inv);
+                }}
+              >
+                Send Just This One
+              </button>
             </div>
           </div>
         )}

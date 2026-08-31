@@ -62,6 +62,9 @@ export default function MarkInvoicePaid({
   const [invoice, setInvoice] = useState<any>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [marking, setMarking] = useState(false);
+  // Set when this invoice was part of a combined send (invoice_group_id) —
+  // its siblings, so paid-status can be shown/marked across the whole group.
+  const [groupInvoices, setGroupInvoices] = useState<any[] | null>(null);
 
   useEffect(() => {
     if (mode === "student") {
@@ -97,6 +100,7 @@ export default function MarkInvoicePaid({
       }
 
       setInvoice(data.invoice);
+      setGroupInvoices(data.group || null);
       setState(data.already_paid ? "already_paid" : "confirm");
     } catch (err: any) {
       setErrorMsg(err.message || "Something went wrong.");
@@ -109,7 +113,7 @@ export default function MarkInvoicePaid({
     try {
       const { data, error } = await supabase
         .from("invoices")
-        .select("id, invoice_number, total, status, due_date, students(student_name)")
+        .select("id, invoice_number, total, status, due_date, invoice_group_id, students(student_name)")
         .eq("id", invoiceId)
         .single();
 
@@ -120,6 +124,15 @@ export default function MarkInvoicePaid({
       }
 
       setInvoice(data);
+
+      if (data.invoice_group_id) {
+        const { data: siblings } = await supabase
+          .from("invoices")
+          .select("id, invoice_number, total, students(student_name)")
+          .eq("invoice_group_id", data.invoice_group_id);
+        if (siblings && siblings.length > 1) setGroupInvoices(siblings);
+      }
+
       setState(data.status === "paid" ? "already_paid" : "confirm");
     } catch (err: any) {
       setErrorMsg(err.message || "Something went wrong.");
@@ -147,10 +160,15 @@ export default function MarkInvoicePaid({
         }
 
         setInvoice(data.invoice);
+        setGroupInvoices(data.group || null);
         setState("success");
         onPaid?.(data.invoice?.id || invoiceId || "");
       } else {
-        // Coach flow — direct authenticated writes.
+        // Coach flow — direct authenticated writes. If this invoice was part
+        // of a combined send, cascade the same write to every sibling so the
+        // group's paid status can't end up split between members.
+        const targetIds = groupInvoices ? groupInvoices.map((g) => g.id) : [invoiceId];
+
         const { error: invoiceError } = await supabase
           .from("invoices")
           .update({
@@ -158,14 +176,14 @@ export default function MarkInvoicePaid({
             paid_at: new Date().toISOString(),
             paid_via: "coach_manual",
           })
-          .eq("id", invoiceId);
+          .in("id", targetIds);
 
         if (invoiceError) throw invoiceError;
 
         const { data: invoiceLessons, error: lessonsLookupError } = await supabase
           .from("invoice_lessons")
           .select("lesson_id")
-          .eq("invoice_id", invoiceId);
+          .in("invoice_id", targetIds);
 
         if (lessonsLookupError) throw lessonsLookupError;
 
@@ -213,6 +231,40 @@ export default function MarkInvoicePaid({
   const studentName = invoice?.students?.student_name || invoice?.student_name || "Student";
   const invoiceNumber = invoice?.invoice_number || "Invoice";
   const total = invoice ? `$${Number(invoice.total || 0).toFixed(2)}` : "";
+  const groupTotal = groupInvoices
+    ? groupInvoices.reduce((sum, g) => sum + Number(g.total || 0), 0)
+    : null;
+
+  // Same card in all three states — a combined invoice shows every
+  // student's subtotal plus the grand total instead of a single amount.
+  function invoiceCardBody(showDueDate: boolean) {
+    if (groupInvoices) {
+      return (
+        <div className="mip-invoice-card">
+          {groupInvoices.map((g) => (
+            <div key={g.id} className="mip-invoice-group-row">
+              <span>{g.students?.student_name || "Student"}</span>
+              <span>${Number(g.total || 0).toFixed(2)}</span>
+            </div>
+          ))}
+          <div className="mip-invoice-amount">${groupTotal!.toFixed(2)}</div>
+          {showDueDate && invoice?.due_date && (
+            <div className="mip-invoice-due">Due date was {invoice.due_date}</div>
+          )}
+        </div>
+      );
+    }
+    return (
+      <div className="mip-invoice-card">
+        <div className="mip-invoice-number">{invoiceNumber}</div>
+        <div className="mip-invoice-student">{studentName}</div>
+        <div className="mip-invoice-amount">{total}</div>
+        {showDueDate && invoice?.due_date && (
+          <div className="mip-invoice-due">Due date was {invoice.due_date}</div>
+        )}
+      </div>
+    );
+  }
 
   const card = (
     <div className="mip-card">
@@ -224,18 +276,11 @@ export default function MarkInvoicePaid({
           <div className="mip-icon warning">?</div>
           <h2 className="mip-title">Mark Invoice as Paid?</h2>
 
-          <div className="mip-invoice-card">
-            <div className="mip-invoice-number">{invoiceNumber}</div>
-            <div className="mip-invoice-student">{studentName}</div>
-            <div className="mip-invoice-amount">{total}</div>
-            {invoice?.due_date && (
-              <div className="mip-invoice-due">Due date was {invoice.due_date}</div>
-            )}
-          </div>
+          {invoiceCardBody(true)}
 
           <p className="mip-subtitle">
-            Confirming will mark this invoice as paid and update all linked {term.lower}
-            statuses in Billio.
+            Confirming will mark {groupInvoices ? "these invoices" : "this invoice"} as paid
+            and update all linked {term.lower} statuses in Billio.
           </p>
 
           <button
@@ -270,15 +315,11 @@ export default function MarkInvoicePaid({
           <div className="mip-icon success">✓</div>
           <h2 className="mip-title">Invoice Marked as Paid</h2>
 
-          <div className="mip-invoice-card">
-            <div className="mip-invoice-number">{invoiceNumber}</div>
-            <div className="mip-invoice-student">{studentName}</div>
-            <div className="mip-invoice-amount">{total}</div>
-          </div>
+          {invoiceCardBody(false)}
 
           <p className="mip-subtitle">
-            This invoice has been marked as paid and {term.lower} statuses have been
-            updated in Billio.
+            {groupInvoices ? "These invoices have" : "This invoice has"} been marked as
+            paid and {term.lower} statuses have been updated in Billio.
           </p>
 
           <button type="button" className="mip-btn-primary" onClick={dismiss}>
@@ -293,14 +334,11 @@ export default function MarkInvoicePaid({
           <div className="mip-icon info">✓</div>
           <h2 className="mip-title">Already Paid</h2>
 
-          <div className="mip-invoice-card">
-            <div className="mip-invoice-number">{invoiceNumber}</div>
-            <div className="mip-invoice-student">{studentName}</div>
-            <div className="mip-invoice-amount">{total}</div>
-          </div>
+          {invoiceCardBody(false)}
 
           <p className="mip-subtitle">
-            This invoice was already marked as paid in Billio.
+            {groupInvoices ? "These invoices were" : "This invoice was"} already marked as
+            paid in Billio.
           </p>
 
           <button type="button" className="mip-btn-primary" onClick={dismiss}>

@@ -408,6 +408,38 @@
   font-weight: 800;
 }
 
+.invoice-success-card button + button {
+  margin-top: 10px;
+  background: transparent;
+  color: var(--secondary-text);
+  border: 1px solid var(--border);
+}
+
+.invoice-combine-list {
+  margin: 0 0 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 4px 14px;
+  text-align: left;
+}
+
+.invoice-combine-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  font-size: 14px;
+  color: var(--main-text);
+  border-bottom: 1px solid var(--border);
+}
+
+.invoice-combine-row:last-child {
+  border-bottom: none;
+}
+
+.invoice-combine-total {
+  font-weight: 800;
+}
+
 /* ADD INVOICE SHEET */
 
 .invoices-add-overlay {

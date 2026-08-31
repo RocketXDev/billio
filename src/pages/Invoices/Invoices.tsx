@@ -1138,22 +1138,25 @@ function Invoices() {
   }
 
   // Other students under this coach who share this invoice's parent phone
-  // AND parent email (both non-empty) and currently have their own pending
-  // invoice — eligible to fold into one combined send. A sibling whose
-  // parent_email differs is left out here rather than blocking the whole
-  // prompt, so the ones that do match can still be combined.
+  // (the only requirement — matches "parent phone number is equal and not
+  // null or empty") and currently have their own pending invoice. A sibling
+  // is excluded only on a genuine email *conflict* — both this invoice's and
+  // that sibling's parent_email are non-empty and different — not merely
+  // because an email is missing, since most students won't have one on file.
   function findBillableSiblings(invoice: any): any[] {
     const parentDigits = last10Digits(invoice.students?.parent_phone);
-    const parentEmail = (invoice.students?.parent_email || "").trim().toLowerCase();
-    if (!parentDigits || !parentEmail) return [];
+    if (!parentDigits) return [];
+    const anchorEmail = (invoice.students?.parent_email || "").trim().toLowerCase();
 
-    return (invoicesData || []).filter((inv: any) =>
-      inv.id !== invoice.id &&
-      (inv.status || "unbilled") === "unbilled" &&
-      inv.student_id !== invoice.student_id &&
-      last10Digits(inv.students?.parent_phone) === parentDigits &&
-      (inv.students?.parent_email || "").trim().toLowerCase() === parentEmail
-    );
+    return (invoicesData || []).filter((inv: any) => {
+      if (inv.id === invoice.id) return false;
+      if ((inv.status || "unbilled") !== "unbilled") return false;
+      if (inv.student_id === invoice.student_id) return false;
+      if (last10Digits(inv.students?.parent_phone) !== parentDigits) return false;
+      const siblingEmail = (inv.students?.parent_email || "").trim().toLowerCase();
+      if (anchorEmail && siblingEmail && anchorEmail !== siblingEmail) return false;
+      return true;
+    });
   }
 
   async function sendCombinedInvoice(invoiceIds: string[]) {

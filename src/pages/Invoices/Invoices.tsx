@@ -2177,7 +2177,7 @@ function Invoices() {
               <h2>Failed</h2>
 
               <p>
-                Please add student's info before sending invoices
+                {sendError || "Please add student's info before sending invoices"}
               </p>
 
               <button

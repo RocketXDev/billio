@@ -582,10 +582,14 @@ function Lessons() {
       : [lessonDate];
 
     const studentCount = resolvedStudentIds.length;
+    // The rate entered is always an hourly rate — the lesson's total is
+    // that rate scaled to the actual duration, and "split total" divides
+    // THAT total across students, not the raw hourly figure.
+    const lessonTotal = Number(hourlyRate) * (Number(durationMinutes) / 60);
     const perStudentRate =
       billingMode === "split_total"
-        ? Number((Number(hourlyRate) / studentCount).toFixed(2))
-        : Number(hourlyRate) * (Number(durationMinutes) / 60);
+        ? Number((lessonTotal / studentCount).toFixed(2))
+        : lessonTotal;
 
     const lessonRows = occurrences.flatMap((date) =>
       resolvedStudentIds.map((studentId) => ({
@@ -2280,7 +2284,7 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                 <label htmlFor="hourlyRate">
                   {isGroup
                     ? billingMode === "split_total"
-                      ? `Total Rate (split across ${groupStudents.length || "N"} students)`
+                      ? `Hourly Rate (total split across ${groupStudents.length || "N"} students)`
                       : "Rate Per Student"
                     : "Hourly Rate"}
                 </label>

@@ -403,10 +403,15 @@ export default function GroupLessons() {
       if (occurrences.length > 0) {
         const rateAmount = Number(formHourlyRate);
         const studentCount = resolvedIds.length;
+        // The rate entered is always an hourly rate (the quick-select chips
+        // above are the coach's hourly rate presets) — the lesson's total
+        // is that rate scaled to the actual duration, and "split total"
+        // divides THAT total across students, not the raw hourly figure.
+        const lessonTotal = rateAmount * Number(formDuration) / 60;
         const perStudentRate =
           billingMode === "split_total"
-            ? Number((rateAmount / studentCount).toFixed(2))
-            : Number((rateAmount * Number(formDuration) / 60).toFixed(2));
+            ? Number((lessonTotal / studentCount).toFixed(2))
+            : Number(lessonTotal.toFixed(2));
 
         const lessonRows = occurrences.flatMap((date) =>
           resolvedIds
@@ -680,7 +685,7 @@ export default function GroupLessons() {
               <div className="input-block">
                 <label>
                   {billingMode === "split_total"
-                    ? `Total Rate (split across ${groupStudents.length || "N"} students)`
+                    ? `Hourly Rate (total split across ${groupStudents.length || "N"} students)`
                     : "Rate Per Student"}
                 </label>
                 {rateOptions.length > 0 && (

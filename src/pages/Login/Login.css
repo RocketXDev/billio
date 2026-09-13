@@ -415,3 +415,64 @@
     padding: 68px 64px 58px;
   }
 }
+
+/* Referral invite note on the signup form */
+.signup-referral-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 18px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: var(--accent-tint);
+  border: 1px solid #c7d2fe;
+  color: var(--primary-purple);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.signup-referral-note svg {
+  flex-shrink: 0;
+  font-size: 15px;
+}
+
+/* "Have a referral code?" toggle — deliberately understated, since it's
+   optional and most people arrive through a link with it already filled in. */
+.signup-referral-toggle {
+  width: auto;
+  height: auto;
+  margin: -6px 0 4px;
+  padding: 0;
+  align-self: flex-start;
+  background: transparent;
+  border: none;
+  color: var(--primary-purple);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.signup-referral-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 7px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--secondary-text);
+}
+
+.signup-referral-status.valid {
+  color: #16a34a;
+}
+
+.signup-referral-status.invalid {
+  color: var(--secondary-text);
+}
+
+.signup-referral-status svg {
+  flex-shrink: 0;
+}

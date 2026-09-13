@@ -1,0 +1,463 @@
+/* REFERRALS PAGE */
+
+.ref-page {
+  width: 100%;
+  min-height: 100vh;
+  background: var(--main-bg);
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 90px;
+}
+
+.ref-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 18px 0;
+}
+
+.ref-logo {
+  width: 88px;
+  height: auto;
+}
+
+.ref-body {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 24px 18px 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Hero ── */
+.ref-hero {
+  text-align: center;
+  padding: 8px 0 6px;
+}
+
+.ref-hero-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-grad);
+  color: #fff;
+  font-size: 22px;
+  box-shadow: 0 12px 28px rgba(59, 51, 217, 0.32);
+}
+
+.ref-title {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.7px;
+  color: var(--main-text);
+  margin: 0 0 10px;
+  line-height: 1.2;
+}
+
+.ref-subtitle {
+  font-size: 15px;
+  color: var(--secondary-text);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ── Cards ── */
+.ref-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+}
+
+.ref-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--main-text);
+  margin: 0 0 12px;
+  letter-spacing: -0.2px;
+}
+
+/* ── Progress ── */
+.ref-progress-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ref-progress-count {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--primary-purple);
+  letter-spacing: -1px;
+  flex-shrink: 0;
+}
+
+.ref-progress-count span {
+  font-size: 18px;
+  color: var(--secondary-text);
+}
+
+.ref-progress-head p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--secondary-text);
+}
+
+.ref-progress-track {
+  display: flex;
+  gap: 6px;
+  margin: 16px 0 18px;
+}
+
+.ref-progress-step {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: #e9ebf5;
+  transition: background 0.25s ease;
+}
+
+.ref-progress-step.filled {
+  background: var(--accent-grad);
+}
+
+.ref-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.ref-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-align: center;
+}
+
+.ref-stat strong {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--main-text);
+}
+
+.ref-stat span {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--secondary-text);
+}
+
+/* ── Share ── */
+.ref-link-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 12px 12px 14px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.ref-link {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--main-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ref-copy-btn {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  color: var(--primary-purple);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ref-copy-btn.copied {
+  background: #dcfce7;
+  border-color: #bbf7d0;
+  color: #16a34a;
+}
+
+.ref-share-btn {
+  width: 100%;
+  margin: 12px 0 0;
+  padding: 15px;
+  border: none;
+  border-radius: 14px;
+  background: var(--accent-grad);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(59, 51, 217, 0.28);
+}
+
+.ref-share-btn:active {
+  transform: translateY(1px);
+}
+
+.ref-code-note {
+  margin: 12px 0 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--secondary-text);
+}
+
+.ref-code-note strong {
+  color: var(--main-text);
+  letter-spacing: 1.5px;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* ── Reward earned ── */
+.ref-reward-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  align-items: start;
+  border-color: #c7d2fe;
+  background: linear-gradient(180deg, #f5f3ff 0%, #ffffff 60%);
+}
+
+.ref-reward-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-tint);
+  color: var(--primary-purple);
+  font-size: 18px;
+}
+
+.ref-reward-card .ref-card-title {
+  margin-bottom: 6px;
+}
+
+.ref-reward-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--secondary-text);
+}
+
+.ref-reward-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 8px 0 0;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: var(--primary-purple);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ref-reward-chip.applied {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+/* ── Activity ── */
+.ref-activity {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ref-activity li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.ref-activity li:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.ref-activity-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #cbd5e1;
+}
+
+.ref-activity-dot.qualified {
+  background: #16a34a;
+  box-shadow: 0 0 0 3px #dcfce7;
+}
+
+.ref-activity-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ref-activity-info strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--main-text);
+}
+
+.ref-activity-info span {
+  font-size: 12px;
+  color: var(--secondary-text);
+}
+
+/* ── How it works ── */
+.ref-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ref-steps li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.ref-step-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-tint);
+  color: var(--primary-purple);
+  font-size: 13px;
+}
+
+.ref-steps strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--main-text);
+  margin-bottom: 3px;
+}
+
+.ref-steps p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--secondary-text);
+}
+
+.ref-fineprint {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--secondary-text);
+  text-align: center;
+  opacity: 0.85;
+}
+
+/* ── Referral entry points on other pages ── */
+.ref-promo {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid #c7d2fe;
+  background: linear-gradient(180deg, #f5f3ff 0%, #ffffff 70%);
+  text-decoration: none;
+  color: var(--main-text);
+}
+
+.ref-promo-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-grad);
+  color: #fff;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.ref-promo h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.ref-promo p {
+  margin: 3px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--secondary-text);
+}
+
+.ref-promo-arrow {
+  color: var(--secondary-text);
+  font-size: 13px;
+}
+
+@media (min-width: 769px) {
+  .ref-header {
+    display: none;
+  }
+
+  .ref-page {
+    padding-bottom: 60px;
+  }
+
+  .ref-body {
+    max-width: 700px;
+    padding: 32px 40px 0;
+    gap: 18px;
+  }
+}

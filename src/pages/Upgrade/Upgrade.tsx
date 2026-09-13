@@ -1,8 +1,10 @@
 // src/pages/Upgrade.tsx
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { usePlan } from "../../hooks/usePlan";
+import { applyReferralRewards } from "../../hooks/useReferrals";
+import { REFERRALS_PER_REWARD } from "../../lib/referral";
 import {
   FaCrown,
   FaCheck,
@@ -24,8 +26,11 @@ import {
   FaUsers,
   FaFileInvoiceDollar,
   FaEllipsisH,
+  FaGift,
+  FaChevronRight,
 } from "react-icons/fa";
 import "./Upgrade.css"
+import "../Referrals/Referrals.css"
 
 const STRIPE_PRICE_ID = "price_1TfMTxAuitLEKeV99TEkxqSp";
 const PRO_PRICE = "$9.99";
@@ -106,6 +111,14 @@ function Upgrade() {
       }
     }
     loadCoach();
+  }, []);
+
+  // A free month earned from referrals is only credited once something calls
+  // Stripe. This page is where a coach checks on billing, so cash in anything
+  // outstanding while they're here — the function is a no-op when there's
+  // nothing pending.
+  useEffect(() => {
+    applyReferralRewards();
   }, []);
 
   async function handleUpgrade() {
@@ -299,6 +312,20 @@ function Upgrade() {
             </div>
           </div>
         )}
+
+        {/* Referral program */}
+        <Link to="/referrals" className="ref-promo">
+          <span className="ref-promo-icon"><FaGift /></span>
+          <div>
+            <h3>Invite {REFERRALS_PER_REWARD}, get a month free</h3>
+            <p>
+              {isPro
+                ? `Every ${REFERRALS_PER_REWARD} coaches who start Pro on your link waives a month of your bill.`
+                : `Refer ${REFERRALS_PER_REWARD} coaches and we'll waive your first month after the trial.`}
+            </p>
+          </div>
+          <FaChevronRight className="ref-promo-arrow" />
+        </Link>
 
         {/* CTA */}
         {!isPro && (

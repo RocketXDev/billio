@@ -196,6 +196,24 @@
   color: var(--main-text);
 }
 
+/* Rows carrying a trailing badge need a 4th track, otherwise the chevron
+   wraps onto a second grid row. */
+.more-list-item.has-badge {
+  grid-template-columns: auto 1fr auto auto;
+  gap: 10px;
+}
+
+.more-list-item .more-list-badge {
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--accent-tint);
+  color: var(--primary-purple);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
 /* Profile row */
 .more-profile-row {
   display: flex;

@@ -15,7 +15,8 @@ import {
   FaSignOutAlt,
   FaBell,
   FaTrash,
-  FaEllipsisH
+  FaEllipsisH,
+  FaGift
 } from "react-icons/fa";
 
 type Props = { children: React.ReactNode };
@@ -39,6 +40,7 @@ function DesktopLayout({ children }: Props) {
     "/profile": "Profile",
     "/settings": "Settings",
     "/upgrade": "Upgrade",
+    "/referrals": "Refer & Earn",
     "/more": "More",
     "/earnings-dashboard": "Earnings",
     "/recurring-lessons": `Recurring ${term.plural}`,
@@ -156,6 +158,9 @@ function DesktopLayout({ children }: Props) {
           </NavLink>
           <NavLink to="/upgrade" className={navLinkClass}>
             <FaCrown /> Upgrade
+          </NavLink>
+          <NavLink to="/referrals" className={navLinkClass}>
+            <FaGift /> Refer &amp; Earn
           </NavLink>
         </nav>
 

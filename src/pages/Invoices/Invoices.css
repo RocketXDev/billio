@@ -707,6 +707,27 @@
   line-height: 1.4;
 }
 
+.bulk-generate-quick-ranges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bulk-generate-quick-ranges button {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid #c7d2fe;
+  background: #eef2ff;
+  color: var(--primary-purple);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bulk-generate-quick-ranges button:active {
+  transform: scale(0.96);
+}
+
 .invoice-date-range-wrapper {
   position: relative;
   width: 100%;

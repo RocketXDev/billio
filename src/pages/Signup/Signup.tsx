@@ -1,9 +1,15 @@
 import '../Login/Login.css';
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FaEye, FaEyeSlash, FaCheckCircle } from "react-icons/fa";
+import { FaEye, FaEyeSlash, FaCheckCircle, FaGift, FaTimesCircle } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
 import { PROFESSIONS } from "../../lib/professions";
+import {
+    clearStoredReferralCode,
+    getStoredReferralCode,
+    lookupReferralCode,
+    storeReferralCode,
+} from "../../lib/referral";
 
 function Signup() {
     const navigate = useNavigate();
@@ -16,10 +22,60 @@ function Signup() {
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
 
+    // App.tsx stashes `?ref=CODE` from whichever public page the invite link
+    // landed on. That's the starting value; the field stays editable so
+    // someone who was given a code verbally can type it in themselves.
+    const [linkedCode] = useState(() => getStoredReferralCode());
+    const [referralCode, setReferralCode] = useState(linkedCode);
+    const [showReferralField, setShowReferralField] = useState(!!linkedCode);
+    const [referralCheck, setReferralCheck] = useState<
+        { state: "idle" | "checking" } | { state: "valid"; name: string } | { state: "invalid" }
+    >({ state: "idle" });
+
+    // Debounced so a code isn't looked up on every keystroke. Codes are 7
+    // characters, so anything shorter is still mid-typing.
+    useEffect(() => {
+        const trimmed = referralCode.trim();
+
+        if (trimmed.length < 4) {
+            setReferralCheck({ state: "idle" });
+            return;
+        }
+
+        setReferralCheck({ state: "checking" });
+
+        // `cancelled` covers the request that's already in flight when the
+        // next keystroke lands — clearing the timer alone would still let a
+        // stale answer overwrite a newer one.
+        let cancelled = false;
+
+        const timer = window.setTimeout(async () => {
+            const result = await lookupReferralCode(trimmed);
+            if (cancelled) return;
+            setReferralCheck(
+                result.valid ? { state: "valid", name: result.name } : { state: "invalid" }
+            );
+        }, 400);
+
+        return () => {
+            cancelled = true;
+            window.clearTimeout(timer);
+        };
+    }, [referralCode]);
+
     async function handleSignup(e: any) {
         e.preventDefault();
         setLoading(true);
         setMessage("");
+
+        let enteredCode = "";
+        if (referralCode.trim()) {
+            enteredCode = storeReferralCode(referralCode);
+        } else {
+            // They deleted a code that arrived from a link. Respect that
+            // rather than quietly re-attaching the stored copy at first login.
+            clearStoredReferralCode();
+        }
 
         const { error } = await supabase.auth.signUp({
             email,
@@ -30,6 +86,11 @@ function Signup() {
                 full_name: fullName,
                 role: "coach",
                 profession,
+                // Second copy of the referral code: localStorage can be gone
+                // by the time they confirm the email and first sign in (a
+                // different browser profile, cleared storage), and user
+                // metadata survives all of that.
+                ...(enteredCode ? { referral_code: enteredCode } : {}),
             },
             },
         });
@@ -58,6 +119,15 @@ function Signup() {
                     />
 
                     <h1 className="mb-form-title">Sign Up</h1>
+
+                    {linkedCode && (
+                        <div className="signup-referral-note">
+                            <FaGift />
+                            <span>
+                                You were invited to Billio — your 30-day Pro trial is ready.
+                            </span>
+                        </div>
+                    )}
 
                     <form onSubmit={handleSignup}>
                         <div className="input-block">
@@ -117,6 +187,45 @@ function Signup() {
                                 </button>
                             </div>
                         </div>
+
+                        {showReferralField ? (
+                            <div className="input-block">
+                                <label htmlFor="referralCode">Referral code (optional)</label>
+                                <input
+                                    id="referralCode"
+                                    type="text"
+                                    autoCapitalize="characters"
+                                    autoComplete="off"
+                                    spellCheck={false}
+                                    placeholder="e.g. K7QM2XP"
+                                    value={referralCode}
+                                    onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                                />
+
+                                {referralCheck.state === "checking" && (
+                                    <p className="signup-referral-status">Checking code…</p>
+                                )}
+                                {referralCheck.state === "valid" && (
+                                    <p className="signup-referral-status valid">
+                                        <FaCheckCircle /> Referred by {referralCheck.name}
+                                    </p>
+                                )}
+                                {referralCheck.state === "invalid" && (
+                                    <p className="signup-referral-status invalid">
+                                        <FaTimesCircle /> We don't recognise that code — check it, or
+                                        leave it blank.
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            <button
+                                type="button"
+                                className="signup-referral-toggle"
+                                onClick={() => setShowReferralField(true)}
+                            >
+                                Have a referral code?
+                            </button>
+                        )}
 
                         {message && <p className="error-message">{message}</p>}
 

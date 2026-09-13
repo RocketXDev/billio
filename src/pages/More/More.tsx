@@ -15,6 +15,7 @@ import {
   FaArrowLeft,
   FaLock,
   FaThumbtack,
+  FaGift,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import "./More.css";
@@ -49,7 +50,7 @@ export default function More() {
     {
       icon: "👤",
       title: "Account Options",
-      text: "Manage your Billio account here — upgrade to Pro or review your subscription, and adjust your profile or app settings.",
+      text: "Manage your Billio account here — upgrade to Pro or review your subscription, invite other coaches to earn free months of Pro, and adjust your profile or app settings.",
       target: "account",
     },
     {
@@ -194,6 +195,11 @@ export default function More() {
           </Link>
           <Link to="/upgrade" className="more-list-item">
             <FaCrown /><span>Subscription</span><FaChevronRight />
+          </Link>
+          <Link to="/referrals" className="more-list-item has-badge">
+            <FaGift /><span>Refer &amp; Earn</span>
+            <span className="more-list-badge">Free month</span>
+            <FaChevronRight />
           </Link>
           <Link to="/profile" className="more-list-item">
             <FaUser /><span>Profile</span><FaChevronRight />

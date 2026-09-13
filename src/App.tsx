@@ -35,6 +35,8 @@ import GroupLessons from "./pages/GroupLessons/GroupLessons";
 import GoogleCalendar from "./pages/GoogleCalendar/GoogleCalendar";
 import EarningsDashboard from "./pages/EarningsDashboard/EarningsDashboard";
 import PdfInvoice from "./pages/PdfInvoice/PdfInvoice";
+import Referrals from "./pages/Referrals/Referrals";
+import { captureReferralCode } from "./lib/referral";
 
 const SITE_URL = "https://www.mybillioapp.com";
 
@@ -96,6 +98,14 @@ function App() {
     twitterDescription: document.querySelector('meta[name="twitter:description"]')?.getAttribute("content") ?? "",
     twitterImage: document.querySelector('meta[name="twitter:image"]')?.getAttribute("content") ?? "",
   });
+
+  // A referral link (`?ref=CODE`) can land on any public route — the landing
+  // page, /signup, or /login. Stash the code here, once, wherever it arrives;
+  // it gets attached to the coach record after they sign up and reach the
+  // dashboard, which can be several sessions later.
+  useEffect(() => {
+    captureReferralCode(location.search);
+  }, [location.search]);
 
   // This is a client-rendered SPA with one index.html for every route, so
   // there's no per-page canonical tag from the server. Keep a single
@@ -361,6 +371,17 @@ function App() {
           <ProtectedRoute>
             <DesktopLayout>
               <Upgrade />
+            </DesktopLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/referrals"
+        element={
+          <ProtectedRoute>
+            <DesktopLayout>
+              <Referrals />
             </DesktopLayout>
           </ProtectedRoute>
         }

@@ -61,6 +61,17 @@ function Invoices() {
   const [isClosingCalendar, setIsClosingCalendar] = useState(false);
   const [billAllMode, setBillAllMode] = useState(false);
 
+  // Bulk invoice generation (all students, one date range)
+  const [showBulkGenerate, setShowBulkGenerate] = useState(false);
+  const [bulkRangeStart, setBulkRangeStart] = useState("");
+  const [bulkRangeEnd, setBulkRangeEnd] = useState("");
+  const [isBulkGenerating, setIsBulkGenerating] = useState(false);
+  const [bulkGenerateResult, setBulkGenerateResult] = useState<{
+    invoiceCount: number;
+    studentCount: number;
+  } | null>(null);
+  const [bulkGenerateError, setBulkGenerateError] = useState("");
+
   // Invoices Editing
   const [showEditInvoice, setShowEditInvoice] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<any>(null);
@@ -580,6 +591,135 @@ function Invoices() {
     setSelectedLessonIds([]);
     setShowDateRangePicker(false);
     setBillAllMode(false);
+  }
+
+  function closeBulkGenerate() {
+    if (isBulkGenerating) return;
+    setShowBulkGenerate(false);
+    setBulkRangeStart("");
+    setBulkRangeEnd("");
+    setBulkGenerateError("");
+  }
+
+  function applyBulkQuickRange(preset: "thisWeek" | "lastWeek" | "thisMonth" | "lastMonth") {
+    const toValue = (d: Date) => d.toLocaleDateString("en-CA");
+    const now = new Date();
+    let start: Date;
+    let end: Date;
+
+    if (preset === "thisWeek" || preset === "lastWeek") {
+      const day = now.getDay();
+      const diffToMonday = day === 0 ? -6 : 1 - day;
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMonday);
+      if (preset === "lastWeek") start.setDate(start.getDate() - 7);
+      end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+    } else {
+      const monthOffset = preset === "lastMonth" ? -1 : 0;
+      start = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+      end = new Date(now.getFullYear(), now.getMonth() + monthOffset + 1, 0);
+    }
+
+    setBulkRangeStart(toValue(start));
+    setBulkRangeEnd(toValue(end));
+  }
+
+  // Groups every unbilled lesson in the date range by student and creates one
+  // invoice per student, mirroring handleCreateInvoice's per-invoice logic
+  // but across the whole roster instead of a single selected student.
+  async function handleGenerateAllInvoices(e: any) {
+    e.preventDefault();
+
+    if (!coachId || !bulkRangeStart || !bulkRangeEnd || isBulkGenerating) return;
+
+    setBulkGenerateError("");
+    setIsBulkGenerating(true);
+
+    try {
+      const { data: lessons, error } = await supabase
+        .from("lessons")
+        .select("*")
+        .eq("coach_id", coachId)
+        .eq("billing_status", "unbilled")
+        .gte("lesson_date", bulkRangeStart)
+        .lte("lesson_date", bulkRangeEnd)
+        .order("lesson_date", { ascending: true })
+        .order("start_time", { ascending: true });
+
+      if (error) {
+        console.log("Load unbilled lessons for bulk generate error:", error);
+        setBulkGenerateError("Something went wrong loading lessons. Please try again.");
+        return;
+      }
+
+      const lessonsByStudent = new Map<string, any[]>();
+      for (const lesson of lessons || []) {
+        const existing = lessonsByStudent.get(lesson.student_id) || [];
+        existing.push(lesson);
+        lessonsByStudent.set(lesson.student_id, existing);
+      }
+
+      if (lessonsByStudent.size === 0) {
+        setBulkGenerateResult({ invoiceCount: 0, studentCount: 0 });
+        setShowBulkGenerate(false);
+        setBulkRangeStart("");
+        setBulkRangeEnd("");
+        return;
+      }
+
+      let invoiceCount = 0;
+
+      for (const [studentId, studentLessons] of lessonsByStudent) {
+        const total = studentLessons.reduce(
+          (sum, lesson) => sum + Number(lesson.rate || 0),
+          0
+        );
+
+        const { data: invoiceData, error: invoiceError } = await supabase
+          .from("invoices")
+          .insert({
+            invoice_number: generateInvoiceNumber(),
+            coach_id: coachId,
+            student_id: studentId,
+            status: "unbilled",
+            subtotal: total,
+            total,
+            issue_date: new Date().toISOString().split("T")[0],
+            notes: null,
+          })
+          .select("id")
+          .single();
+
+        if (invoiceError) {
+          console.log("Bulk create invoice error:", invoiceError);
+          continue;
+        }
+
+        const invoiceLessonRows = studentLessons.map((lesson) => ({
+          invoice_id: invoiceData.id,
+          lesson_id: lesson.id,
+        }));
+
+        const { error: linkError } = await supabase
+          .from("invoice_lessons")
+          .insert(invoiceLessonRows);
+
+        if (linkError) {
+          console.log("Bulk invoice lesson link error:", linkError);
+          continue;
+        }
+
+        invoiceCount += 1;
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["invoices", coachId] });
+
+      setBulkGenerateResult({ invoiceCount, studentCount: lessonsByStudent.size });
+      setShowBulkGenerate(false);
+      setBulkRangeStart("");
+      setBulkRangeEnd("");
+    } finally {
+      setIsBulkGenerating(false);
+    }
   }
 
   async function openEditInvoice(invoice: any) {
@@ -1442,6 +1582,19 @@ function Invoices() {
                       </button>
 
                       <button
+                        type="button"
+                        className="invoices-log-btn"
+                        aria-disabled={showTutorial}
+                        title="Generate invoices for all students"
+                        onClick={(e) => {
+                          if (showTutorial) { e.preventDefault(); return; }
+                          setShowBulkGenerate(true);
+                        }}
+                      >
+                        <FaUsers />
+                      </button>
+
+                      <button
                       ref={addInvoiceBtnRef}
                       type="button"
                       className={`invoices-add-btn${showTutorial && tutorialStep === 1 ? " tutorial-highlighted" : ""}`}
@@ -1967,6 +2120,108 @@ function Invoices() {
                   {isSaving ? "Creating..." : "Create Invoice"}
                 </button>
               </form>
+            </div>
+          </div>
+        )}
+        {showBulkGenerate && (
+          <div className="invoices-add-overlay" onClick={closeBulkGenerate}>
+            <div
+              className="invoices-add-sheet"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="invoices-add-header">
+                <h2>Generate Invoices for All Students</h2>
+                <button type="button" onClick={closeBulkGenerate}>
+                  ×
+                </button>
+              </div>
+
+              <form onSubmit={handleGenerateAllInvoices} className="invoices-add-form">
+                <p className="invoice-billall-hint">
+                  Creates one invoice per student for every unbilled {term.lowerPlural} in this date range. Students with no unbilled {term.lowerPlural} are skipped.
+                </p>
+
+                <div className="input-block">
+                  <label>Quick Select</label>
+                  <div className="bulk-generate-quick-ranges">
+                    <button type="button" onClick={() => applyBulkQuickRange("thisWeek")}>
+                      This Week
+                    </button>
+                    <button type="button" onClick={() => applyBulkQuickRange("lastWeek")}>
+                      Last Week
+                    </button>
+                    <button type="button" onClick={() => applyBulkQuickRange("thisMonth")}>
+                      This Month
+                    </button>
+                    <button type="button" onClick={() => applyBulkQuickRange("lastMonth")}>
+                      Last Month
+                    </button>
+                  </div>
+                </div>
+
+                <div className="input-block">
+                  <label>Start Date</label>
+                  <input
+                    type="date"
+                    value={bulkRangeStart}
+                    max={bulkRangeEnd || undefined}
+                    onChange={(e) => setBulkRangeStart(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="input-block">
+                  <label>End Date</label>
+                  <input
+                    type="date"
+                    value={bulkRangeEnd}
+                    min={bulkRangeStart || undefined}
+                    onChange={(e) => setBulkRangeEnd(e.target.value)}
+                    required
+                  />
+                </div>
+
+                {bulkGenerateError && (
+                  <p className="invoice-student-error">{bulkGenerateError}</p>
+                )}
+
+                <button
+                  type="submit"
+                  className="invoices-save-btn"
+                  disabled={isBulkGenerating || !bulkRangeStart || !bulkRangeEnd}
+                >
+                  {isBulkGenerating ? "Generating..." : "Generate Invoices"}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+        {bulkGenerateResult && (
+          <div
+            className="invoice-success-overlay"
+            onClick={() => setBulkGenerateResult(null)}
+          >
+            <div
+              className="invoice-success-card"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="invoice-success-icon">✓</div>
+
+              <h2>
+                {bulkGenerateResult.invoiceCount === 0
+                  ? "Nothing to Bill"
+                  : "Invoices Generated"}
+              </h2>
+
+              <p>
+                {bulkGenerateResult.invoiceCount === 0
+                  ? `No unbilled ${term.lowerPlural} were found in that date range.`
+                  : `Created ${bulkGenerateResult.invoiceCount} invoice${bulkGenerateResult.invoiceCount === 1 ? "" : "s"} for ${bulkGenerateResult.studentCount} student${bulkGenerateResult.studentCount === 1 ? "" : "s"}.`}
+              </p>
+
+              <button type="button" onClick={() => setBulkGenerateResult(null)}>
+                Done
+              </button>
             </div>
           </div>
         )}

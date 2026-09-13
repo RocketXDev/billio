@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
 import {
@@ -25,6 +25,7 @@ import { useLessonTerm } from "../../hooks/useLessonTerm";
 import { InstallBanner, InstallGuide } from "../../components/InstallGuide/InstallGuide";
 import { useInstallPrompt } from "../../hooks/useInstallPrompt";
 import { createInstallNotification } from "../../lib/installNotification";
+import { claimStoredReferral } from "../../lib/referral";
 import { getDefaultLessonTerm } from "../../lib/professions";
 import {
   DndContext,
@@ -324,6 +325,15 @@ function Dashboard() {
     setAddLessonSpotlightRect(null);
     setShowDashboardTutorial(true);
   }
+
+  // The referral code was stored back when the invite link was opened —
+  // possibly in a different session, before this coach existed. The dashboard
+  // is the first place a coach row is guaranteed to exist, so attach it here.
+  // claimStoredReferral is a no-op once there's nothing left to claim.
+  useEffect(() => {
+    if (!coachId) return;
+    claimStoredReferral();
+  }, [coachId]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -1196,13 +1206,35 @@ function Dashboard() {
       )
     : [];
 
-    const recentInvoices = [...invoices]
-      .sort(
-        (a, b) =>
-          new Date(b.created_at).getTime() -
-          new Date(a.created_at).getTime()
-      )
-      .slice(0, 3);
+    // "Recent Invoices" only cares about invoices still needing attention —
+    // paid ones are done and clutter the widget. If everything's paid, the
+    // widget says so instead of listing invoices.
+    const openInvoices = invoices.filter(
+      (invoice) => (invoice.status || "unbilled") !== "paid"
+    );
+    const allInvoicesPaid = invoices.length > 0 && openInvoices.length === 0;
+
+    // A stable key for the current set of open invoices — used so the random
+    // pick below only re-rolls when the actual set changes, not on every
+    // unrelated re-render (that's what made the widget look like it kept
+    // swapping invoices for no reason).
+    const openInvoiceIdsKey = openInvoices
+      .map((invoice) => invoice.id)
+      .sort()
+      .join(",");
+
+    const recentInvoices = useMemo(() => {
+      if (openInvoices.length <= 3) return openInvoices;
+
+      const pool = [...openInvoices];
+      const picked: any[] = [];
+      while (picked.length < 3 && pool.length > 0) {
+        const index = Math.floor(Math.random() * pool.length);
+        picked.push(pool.splice(index, 1)[0]);
+      }
+      return picked;
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [openInvoiceIdsKey]);
 
     const unpaidInvoices = invoices.filter(
       (invoice) => invoice.status === "unbilled" || invoice.status === "billed"
@@ -1552,7 +1584,11 @@ function Dashboard() {
         </button>
       </div>
 
-      {recentInvoices.length === 0 ? (
+      {allInvoicesPaid ? (
+        <p className="empty-lessons">
+          All invoices have been paid.
+        </p>
+      ) : recentInvoices.length === 0 ? (
         <p className="empty-lessons">
           No invoices yet.
         </p>

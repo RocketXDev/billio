@@ -1213,6 +1213,75 @@
 .calendar-time-icon.billed   { background: #eff6ff; color: #3b82f6; }
 .calendar-time-icon.paid     { background: #ecfdf5; color: #22c55e; }
 
+/* ── GROUP SESSION — unifies the per-student lesson rows a group class is
+   stored as into one row that expands on click, instead of N look-alike
+   rows. The collapsed header reuses .calendar-detail-row / .lesson-page-row
+   as-is, so it looks like any other lesson row, not a callout. ── */
+
+.group-session-wrap {
+  border-bottom: 1px solid var(--border);
+}
+
+.group-session-wrap:last-child {
+  border-bottom: none;
+}
+
+.group-session-wrap .calendar-detail-row,
+.group-session-wrap .lesson-page-row {
+  border-bottom: none;
+}
+
+.group-session-header-row {
+  grid-template-columns: 82px 1fr auto !important;
+}
+
+.calendar-time-icon.group {
+  background: #eef2ff;
+  color: var(--primary-purple);
+}
+
+.group-session-chevron {
+  color: var(--secondary-text);
+  font-size: 13px;
+  flex-shrink: 0;
+  transition: transform 0.18s ease;
+}
+
+.group-session-chevron.expanded {
+  transform: rotate(180deg);
+}
+
+.group-session-members {
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 10px 54px;
+}
+
+.group-session-member {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+}
+
+.group-session-member + .group-session-member {
+  border-top: 1px solid var(--border);
+}
+
+.group-session-member-name {
+  flex: 1;
+  color: var(--main-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.group-session-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
 .calendar-billing-label {
   display: inline-flex;
   font-size: 13px;

@@ -8,6 +8,7 @@ import {
   FaPlus,
   FaChevronLeft,
   FaChevronRight,
+  FaChevronDown,
   FaCalendarAlt,
   FaList,
   FaClock,
@@ -138,6 +139,25 @@ function Lessons() {
   const [groupStudents, setGroupStudents] = useState<{ id: string | null; name: string }[]>([]);
   const [groupStudentInput, setGroupStudentInput] = useState("");
   const [billingMode, setBillingMode] = useState<"per_student" | "split_total">("per_student");
+  // "new" creates a brand new Group Class (More > Group Classes); any other
+  // value is the id of an existing one, so this session gets attached to it
+  // instead of spawning a duplicate class every time.
+  const [selectedGroupClassId, setSelectedGroupClassId] = useState<string>("new");
+
+  // Group lesson states (edit form) — editing a group session for real,
+  // not just the first student's row.
+  const [showEditGroupLesson, setShowEditGroupLesson] = useState(false);
+  const [editingGroupMembers, setEditingGroupMembers] = useState<any[] | null>(null);
+  const [editGroupStudents, setEditGroupStudents] = useState<{ id: string | null; name: string }[]>([]);
+  const [editGroupStudentInput, setEditGroupStudentInput] = useState("");
+  const [editGroupDate, setEditGroupDate] = useState("");
+  const [editGroupStartTime, setEditGroupStartTime] = useState("");
+  const [editGroupDuration, setEditGroupDuration] = useState("");
+  const [editGroupLessonType, setEditGroupLessonType] = useState("");
+  const [editGroupBillingMode, setEditGroupBillingMode] = useState<"per_student" | "split_total">("per_student");
+  const [editGroupRate, setEditGroupRate] = useState("");
+  const [editGroupNotes, setEditGroupNotes] = useState("");
+  const [isSavingGroupEdit, setIsSavingGroupEdit] = useState(false);
 
   // Edit series states
   const [editSeriesMode, setEditSeriesMode] = useState(false);
@@ -147,6 +167,7 @@ function Lessons() {
   const [seriesEndDate, setSeriesEndDate] = useState("");
 
   const [viewingLesson, setViewingLesson] = useState<any>(null);
+  const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(new Set());
 
   // History sheet
   const [showLessonHistory, setShowLessonHistory] = useState(false);
@@ -165,6 +186,8 @@ function Lessons() {
   const [isDeletingSeries, setIsDeletingSeries] = useState(false);
   const [showDeleteSeriesModal, setShowDeleteSeriesModal] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
+  const [groupSessionToDelete, setGroupSessionToDelete] = useState<any[] | null>(null);
+  const [isDeletingGroupSession, setIsDeletingGroupSession] = useState(false);
 
   // Lessons tutorial
   const [showLessonsTutorial, setShowLessonsTutorial] = useState(false);
@@ -213,6 +236,25 @@ function Lessons() {
 
   useEffect(() => { if (lessonsData) setLessons(lessonsData); }, [lessonsData]);
   useEffect(() => { if (!coachId && !identityLoading) window.location.href = "/login"; }, [coachId, identityLoading]);
+
+  // Same query key/shape as the Group Classes page (More > Group Classes) —
+  // lets "Make Group" here attach a session to an existing class instead of
+  // always minting a new one.
+  const { data: groupClassesData } = useQuery({
+    queryKey: ["group-lessons", coachId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("group_lessons")
+        .select("*, group_lesson_students(student_id, students(student_name))")
+        .eq("coach_id", coachId)
+        .eq("active", true)
+        .order("start_date", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!coachId,
+  });
+  const groupClasses = groupClassesData ?? [];
 
   const { data: eventsData } = useQuery({
     queryKey: ["events", coachId],
@@ -542,40 +584,66 @@ function Lessons() {
       resolvedStudentIds.push(newStudent.id);
     }
 
-    const groupPayload = {
-      coach_id: coachId,
-      title: lessonType || null,
-      start_time: startTime,
-      duration_minutes: Number(durationMinutes),
-      lesson_type: lessonType || null,
-      billing_mode: billingMode,
-      rate_amount: Number(hourlyRate),
-      frequency: isRecurring ? recurringFrequency : "once",
-      days_of_week: isRecurring ? recurringDays : [],
-      start_date: lessonDate,
-      end_date: isRecurring ? recurringEndDate : null,
-      notes: notes || null,
-      active: true,
-      updated_at: new Date().toISOString(),
-    };
+    let groupLessonId = selectedGroupClassId;
 
-    const { data: newGroup, error: groupError } = await supabase
-      .from("group_lessons")
-      .insert(groupPayload)
-      .select()
-      .single();
+    if (selectedGroupClassId === "new") {
+      const groupPayload = {
+        coach_id: coachId,
+        title: lessonType || null,
+        start_time: startTime,
+        duration_minutes: Number(durationMinutes),
+        lesson_type: lessonType || null,
+        billing_mode: billingMode,
+        rate_amount: Number(hourlyRate),
+        frequency: isRecurring ? recurringFrequency : "once",
+        days_of_week: isRecurring ? recurringDays : [],
+        start_date: lessonDate,
+        end_date: isRecurring ? recurringEndDate : null,
+        notes: notes || null,
+        active: true,
+        updated_at: new Date().toISOString(),
+      };
 
-    if (groupError || !newGroup) {
-      console.log("Group lesson create error:", groupError);
-      return;
+      const { data: newGroup, error: groupError } = await supabase
+        .from("group_lessons")
+        .insert(groupPayload)
+        .select()
+        .single();
+
+      if (groupError || !newGroup) {
+        console.log("Group lesson create error:", groupError);
+        return;
+      }
+
+      groupLessonId = newGroup.id;
+
+      const rosterRows = resolvedStudentIds.map((studentId) => ({
+        group_lesson_id: groupLessonId,
+        student_id: studentId,
+      }));
+      const { error: rosterError } = await supabase.from("group_lesson_students").insert(rosterRows);
+      if (rosterError) console.log("Group roster insert error:", rosterError);
+    } else {
+      // Attaching a one-off session to an existing Group Class instead of
+      // minting a new one — but if the coach added someone new for today,
+      // fold them into that class's persistent roster too, so the two views
+      // (this page and More > Group Classes) stay in sync.
+      const existingGroup = groupClasses.find((g: any) => g.id === selectedGroupClassId);
+      const existingRosterIds = new Set(
+        (existingGroup?.group_lesson_students || []).map((gs: any) => gs.student_id)
+      );
+      const newRosterIds = resolvedStudentIds.filter((id) => !existingRosterIds.has(id));
+
+      if (newRosterIds.length > 0) {
+        const newRosterRows = newRosterIds.map((studentId) => ({
+          group_lesson_id: groupLessonId,
+          student_id: studentId,
+        }));
+        const { error: rosterError } = await supabase.from("group_lesson_students").insert(newRosterRows);
+        if (rosterError) console.log("Group roster update error:", rosterError);
+        else queryClient.invalidateQueries({ queryKey: ["group-lessons", coachId] });
+      }
     }
-
-    const rosterRows = resolvedStudentIds.map((studentId) => ({
-      group_lesson_id: newGroup.id,
-      student_id: studentId,
-    }));
-    const { error: rosterError } = await supabase.from("group_lesson_students").insert(rosterRows);
-    if (rosterError) console.log("Group roster insert error:", rosterError);
 
     const occurrences = isRecurring
       ? generateOccurrences(lessonDate, recurringEndDate, recurringFrequency, recurringDays)
@@ -604,7 +672,7 @@ function Lessons() {
         billing_status: "unbilled",
         notes: notes || null,
         is_recurring: isRecurring,
-        group_lesson_id: newGroup.id,
+        group_lesson_id: groupLessonId,
       }))
     );
 
@@ -651,6 +719,7 @@ function Lessons() {
         setGroupStudents([]);
         setGroupStudentInput("");
         setBillingMode("per_student");
+        setSelectedGroupClassId("new");
         setShowAddLesson(false);
         return;
       }
@@ -923,6 +992,66 @@ function Lessons() {
     setRecurringEndDate("");
   }
 
+  function openEditGroupSession(members: any[]) {
+    const first = members[0];
+    setEditingGroupMembers(members);
+    setEditGroupStudents(
+      members.map((lesson) => ({
+        id: lesson.student_id,
+        name: lesson.students?.student_name || lesson.student_name || "Student",
+      }))
+    );
+    setEditGroupStudentInput("");
+    setEditGroupDate(first.lesson_date || "");
+    setEditGroupStartTime(first.start_time?.slice(0, 5) || "");
+    setEditGroupDuration(String(first.duration_minutes || "30"));
+    setEditGroupLessonType(first.lesson_type || "");
+
+    // hourly_rate is only stored for per_student mode (split_total stores
+    // null there — see handleCreateGroupLesson) — reconstruct the hourly
+    // total the coach originally typed from the per-student `rate` and the
+    // group's size at the time, so re-saving without changes doesn't shift
+    // everyone's total.
+    const isPerStudent = first.hourly_rate != null;
+    const durationHours = Number(first.duration_minutes || 0) / 60;
+    const impliedRate = isPerStudent
+      ? Number(first.hourly_rate)
+      : durationHours > 0
+      ? Number(((Number(first.rate || 0) * members.length) / durationHours).toFixed(2))
+      : Number(first.rate || 0);
+
+    setEditGroupBillingMode(isPerStudent ? "per_student" : "split_total");
+    setEditGroupRate(String(impliedRate || ""));
+    setEditGroupNotes(first.notes || "");
+    setShowEditGroupLesson(true);
+  }
+
+  function closeEditGroupLesson() {
+    setShowEditGroupLesson(false);
+    setEditingGroupMembers(null);
+    setEditGroupStudents([]);
+    setEditGroupStudentInput("");
+    setEditGroupDate("");
+    setEditGroupStartTime("");
+    setEditGroupDuration("");
+    setEditGroupLessonType("");
+    setEditGroupBillingMode("per_student");
+    setEditGroupRate("");
+    setEditGroupNotes("");
+  }
+
+  function addEditGroupStudent(entry: { id: string | null; name: string }) {
+    const cleanName = entry.name.trim();
+    if (!cleanName) return;
+    if (editGroupStudents.some((s) => s.name.toLowerCase() === cleanName.toLowerCase())) return;
+    setEditGroupStudents((prev) => [...prev, { id: entry.id, name: cleanName }]);
+    setEditGroupStudentInput("");
+  }
+
+  function removeEditGroupStudent(name: string) {
+    setEditGroupStudents((prev) => prev.filter((s) => s.name !== name));
+  }
+
   async function handleUpdateLesson(e: any) {
     e.preventDefault();
     if (isSaving) return;
@@ -1127,6 +1256,244 @@ function Lessons() {
 
   }
 
+  // Deletes every per-student lesson row for one group session (the members
+  // already scoped to a single day by buildLessonDisplayGroups) — not the
+  // group_lessons series definition, since that's shared with any other
+  // occurrence dates of the same recurring group class.
+  async function handleDeleteGroupSession(members: any[]) {
+    if (isDeletingGroupSession) return;
+    setIsDeletingGroupSession(true);
+
+    try {
+      const lessonIds = members.map((lesson) => lesson.id);
+
+      for (const lessonId of lessonIds) {
+        await cleanupInvoicesAfterLessonDelete(lessonId);
+      }
+
+      const { error } = await supabase
+        .from("lessons")
+        .delete()
+        .in("id", lessonIds)
+        .eq("coach_id", coachId);
+
+      if (error) {
+        console.log("Delete group session error:", error);
+        return;
+      }
+
+      setLessons((prev) => prev.filter((lesson) => !lessonIds.includes(lesson.id)));
+      syncToGoogle("lesson", lessonIds);
+      queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
+      setGroupSessionToDelete(null);
+
+    } finally {
+      setIsDeletingGroupSession(false);
+    }
+  }
+
+  // Edits a whole group session at once: add/remove members, change the
+  // rate or billing mode, move the date/time — instead of only ever
+  // touching the first student's lesson row. Members who stay get their
+  // row updated, dropped members get their row deleted (with the usual
+  // invoice cleanup), and newly added members get a fresh row inserted —
+  // all sharing the session's existing group_lesson_id so it keeps reading
+  // as one group instead of forking into a second one.
+  async function handleUpdateGroupSession(e: any) {
+    e.preventDefault();
+    if (isSavingGroupEdit || !editingGroupMembers || !coachId) return;
+
+    if (editGroupStudents.length === 0) {
+      alert("Please add at least one student.");
+      return;
+    }
+    if (!editGroupRate) {
+      alert("Please enter a rate.");
+      return;
+    }
+
+    setIsSavingGroupEdit(true);
+
+    try {
+      const groupLessonId = editingGroupMembers[0].group_lesson_id;
+
+      const { data: existingLinks, error: existingStudentError } = await supabase
+        .from("coach_students")
+        .select(`
+          student_id,
+          students (
+            id,
+            student_name
+          )
+        `)
+        .eq("coach_id", coachId);
+
+      if (existingStudentError) {
+        console.log("Student lookup error:", existingStudentError);
+        return;
+      }
+
+      const resolvedStudentIds: string[] = [];
+
+      for (const entry of editGroupStudents) {
+        if (entry.id) {
+          resolvedStudentIds.push(entry.id);
+          continue;
+        }
+
+        const existingLink = existingLinks?.find(
+          (link: any) =>
+            link.students?.student_name?.trim().toLowerCase() === entry.name.toLowerCase()
+        );
+
+        if (existingLink) {
+          resolvedStudentIds.push(existingLink.student_id);
+          continue;
+        }
+
+        const { data: newStudent, error: newStudentError } = await supabase
+          .from("students")
+          .insert({ student_name: entry.name, active: true })
+          .select()
+          .single();
+
+        if (newStudentError || !newStudent) {
+          console.log("Student create error:", newStudentError);
+          return;
+        }
+
+        const { error: linkError } = await supabase
+          .from("coach_students")
+          .insert({ coach_id: coachId, student_id: newStudent.id });
+
+        if (linkError) {
+          console.log("Coach-student link error:", linkError);
+          return;
+        }
+
+        resolvedStudentIds.push(newStudent.id);
+      }
+
+      const finalIdSet = new Set(resolvedStudentIds);
+      const originalByStudentId = new Map(
+        editingGroupMembers.map((m: any) => [m.student_id, m])
+      );
+
+      const toRemove = editingGroupMembers.filter((m: any) => !finalIdSet.has(m.student_id));
+      const toKeep = editingGroupMembers.filter((m: any) => finalIdSet.has(m.student_id));
+      const toAddIds = resolvedStudentIds.filter((id) => !originalByStudentId.has(id));
+
+      const studentCount = resolvedStudentIds.length;
+      const lessonTotal = Number(editGroupRate) * (Number(editGroupDuration) / 60);
+      const perStudentRate =
+        editGroupBillingMode === "split_total"
+          ? Number((lessonTotal / studentCount).toFixed(2))
+          : lessonTotal;
+      const hourlyRateField = editGroupBillingMode === "per_student" ? Number(editGroupRate) : null;
+
+      for (const member of toRemove) {
+        await cleanupInvoicesAfterLessonDelete(member.id);
+      }
+
+      if (toRemove.length > 0) {
+        const { error: removeError } = await supabase
+          .from("lessons")
+          .delete()
+          .in("id", toRemove.map((m: any) => m.id))
+          .eq("coach_id", coachId);
+        if (removeError) console.log("Remove group member error:", removeError);
+      }
+
+      if (toKeep.length > 0) {
+        const { error: updateError } = await supabase
+          .from("lessons")
+          .update({
+            lesson_date: editGroupDate,
+            start_time: editGroupStartTime,
+            duration_minutes: Number(editGroupDuration),
+            lesson_type: editGroupLessonType || null,
+            hourly_rate: hourlyRateField,
+            rate: perStudentRate,
+            notes: editGroupNotes || null,
+          })
+          .in("id", toKeep.map((m: any) => m.id))
+          .eq("coach_id", coachId);
+        if (updateError) console.log("Update group members error:", updateError);
+      }
+
+      let insertedIds: string[] = [];
+      if (toAddIds.length > 0) {
+        const newRows = toAddIds.map((studentId) => ({
+          coach_id: coachId,
+          student_id: studentId,
+          lesson_date: editGroupDate,
+          start_time: editGroupStartTime,
+          duration_minutes: Number(editGroupDuration),
+          lesson_type: editGroupLessonType || null,
+          hourly_rate: hourlyRateField,
+          rate: perStudentRate,
+          billing_status: "unbilled",
+          notes: editGroupNotes || null,
+          is_recurring: false,
+          group_lesson_id: groupLessonId,
+        }));
+
+        const { data: insertedLessons, error: insertError } = await supabase
+          .from("lessons").insert(newRows).select("id");
+
+        if (insertError) {
+          console.log("Add group member error:", insertError);
+        } else {
+          insertedIds = (insertedLessons || []).map((l: any) => l.id);
+        }
+
+        // Fold newly added members into the Group Class's persistent roster
+        // (More > Group Classes) too, not just this one occurrence.
+        const rosterRows = toAddIds.map((studentId) => ({
+          group_lesson_id: groupLessonId,
+          student_id: studentId,
+        }));
+        const { error: rosterError } = await supabase.from("group_lesson_students").insert(rosterRows);
+        if (rosterError) console.log("Group roster update error:", rosterError);
+      }
+
+      // Keep the Group Class definition's rate/billing/title in sync so the
+      // More section reflects what was actually just charged — but leave its
+      // start_time/duration/recurrence untouched, since this edit is scoped
+      // to one occurrence, not "the whole series moved to a new time."
+      if (groupLessonId) {
+        const { error: classUpdateError } = await supabase
+          .from("group_lessons")
+          .update({
+            title: editGroupLessonType || null,
+            lesson_type: editGroupLessonType || null,
+            billing_mode: editGroupBillingMode,
+            rate_amount: Number(editGroupRate),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", groupLessonId)
+          .eq("coach_id", coachId);
+        if (classUpdateError) console.log("Group class update error:", classUpdateError);
+      }
+
+      syncToGoogle("lesson", [
+        ...toKeep.map((m: any) => m.id),
+        ...insertedIds,
+        ...toRemove.map((m: any) => m.id),
+      ]);
+
+      queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
+      queryClient.invalidateQueries({ queryKey: ["coach-students", coachId] });
+      queryClient.invalidateQueries({ queryKey: ["students", coachId] });
+      queryClient.invalidateQueries({ queryKey: ["group-lessons", coachId] });
+
+      closeEditGroupLesson();
+
+    } finally {
+      setIsSavingGroupEdit(false);
+    }
+  }
+
   async function handleDeleteSeries() {
     if (isDeletingSeries || !seriesData) return;
     setIsDeletingSeries(true);
@@ -1235,6 +1602,17 @@ function Lessons() {
         )
       : [];
 
+  const editGroupStudentMatches =
+    editGroupStudentInput.trim().length > 0
+      ? coachStudents.filter(
+          (link: any) =>
+            link.students?.student_name
+              ?.toLowerCase()
+              .includes(editGroupStudentInput.trim().toLowerCase()) &&
+            !editGroupStudents.some((s) => s.id === link.student_id)
+        )
+      : [];
+
   function addGroupStudent(entry: { id: string | null; name: string }) {
     const cleanName = entry.name.trim();
     if (!cleanName) return;
@@ -1252,8 +1630,34 @@ function Lessons() {
       setGroupStudents([]);
       setGroupStudentInput("");
       setBillingMode("per_student");
+      setSelectedGroupClassId("new");
     }
     setIsGroup((prev) => !prev);
+  }
+
+  function selectGroupClass(groupId: string) {
+    setSelectedGroupClassId(groupId);
+
+    if (groupId === "new") {
+      setGroupStudents([]);
+      return;
+    }
+
+    const group = groupClasses.find((g: any) => g.id === groupId);
+    if (!group) return;
+
+    setGroupStudents(
+      (group.group_lesson_students || []).map((gs: any) => ({
+        id: gs.student_id,
+        name: gs.students?.student_name || "Student",
+      }))
+    );
+    setLessonType(group.title || group.lesson_type || "");
+    setStartTime(group.start_time || "");
+    setDurationMinutes(String(group.duration_minutes || settings.defaultLessonDuration));
+    setBillingMode(group.billing_mode || "per_student");
+    setHourlyRate(group.rate_amount != null ? String(group.rate_amount) : "");
+    setIsRecurring(false);
   }
 
   async function loadCoachStudents() {
@@ -1548,6 +1952,7 @@ function Lessons() {
     setRecurringFrequency("weekly");
     setRecurringDays([]);
     setRecurringEndDate("");
+    setSelectedGroupClassId("new");
   }
 
   function closeAddLesson() {
@@ -1609,6 +2014,234 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const selectedCalendarEvents = events.filter(
     (ev) => selectedCalendarDate >= ev.start_date && selectedCalendarDate <= ev.end_date
   );
+
+  // A group lesson is stored as one `lessons` row per student, all sharing
+  // group_lesson_id — collapse those back into a single display unit so a
+  // group class reads as one connected session instead of N unrelated rows.
+  function buildLessonDisplayGroups(lessonsForDay: any[]) {
+    const groups: { groupId: string | null; lessons: any[] }[] = [];
+    const groupIndexById = new Map<string, number>();
+
+    for (const lesson of lessonsForDay) {
+      const groupId = lesson.group_lesson_id;
+      if (groupId && groupIndexById.has(groupId)) {
+        groups[groupIndexById.get(groupId)!].lessons.push(lesson);
+        continue;
+      }
+      if (groupId) groupIndexById.set(groupId, groups.length);
+      groups.push({ groupId: groupId || null, lessons: [lesson] });
+    }
+
+    return groups;
+  }
+
+  function renderCalendarDetailRow(lesson: any) {
+    return (
+      <div key={lesson.id} className="calendar-detail-row" style={{ cursor: "pointer" }} onClick={() => setViewingLesson(lesson)}>
+        <div className={`calendar-time-icon ${lesson.billing_status || "unbilled"}`}>
+          <FaClock />
+        </div>
+
+        <div>
+          <strong>
+            {lesson.students?.student_name || lesson.student_name || "Student"} •{" "}
+            {formatTime(lesson.start_time)}
+          </strong>
+          <span>
+            {lesson.duration_minutes} min
+            {lesson.lesson_type ? ` • ${lesson.lesson_type}` : ""}
+            {" • $"}
+            {formatMoney(lesson.rate)}
+            {" • "}
+            <button
+              type="button"
+              className={`calendar-billing-label clickable-status ${lesson.billing_status || "unbilled"}`}
+              disabled={statusUpdatingId === lesson.id}
+              onClick={(e) => { e.stopPropagation(); quickUpdateStatus(lesson); }}
+            >
+              {statusUpdatingId === lesson.id ? "..." : (lesson.billing_status || "unbilled").charAt(0).toUpperCase() + (lesson.billing_status || "unbilled").slice(1)}
+            </button>
+          </span>
+        </div>
+
+        <button
+          type="button"
+          className="lesson-edit-btn"
+          onClick={(e) => { e.stopPropagation(); openEditLesson(lesson); }}
+        >
+          <FaEdit />
+        </button>
+      </div>
+    );
+  }
+
+  function renderLessonPageRow(lesson: any) {
+    return (
+      <div key={lesson.id} className="lesson-page-row" style={{ cursor: "pointer" }} onClick={() => setViewingLesson(lesson)}>
+        <div className="lesson-page-time">
+          <strong>{formatTime(lesson.start_time)}</strong>
+          <span>{lesson.duration_minutes} min</span>
+        </div>
+
+        <div className="lesson-page-info">
+          <strong>{lesson.students?.student_name || lesson.student_name || "Student"}</strong>
+          <span>${formatMoney(lesson.rate)}{lesson.lesson_type ? ` • ${lesson.lesson_type}` : ""}</span>
+        </div>
+
+        <button
+          type="button"
+          className={`lesson-billing-pill ${lesson.billing_status || "unbilled"}`}
+          onClick={(e) => { e.stopPropagation(); quickUpdateStatus(lesson); }}
+          disabled={statusUpdatingId === lesson.id}
+        >
+          {statusUpdatingId === lesson.id ? "..." : (lesson.billing_status || "unbilled").charAt(0).toUpperCase() + (lesson.billing_status || "unbilled").slice(1)}
+        </button>
+
+        <button
+          type="button"
+          className="lesson-edit-btn"
+          onClick={(e) => { e.stopPropagation(); openEditLesson(lesson); }}
+        >
+          <FaEdit />
+        </button>
+      </div>
+    );
+  }
+
+  function toggleGroupExpanded(groupId: string) {
+    setExpandedGroupIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
+      return next;
+    });
+  }
+
+  function renderGroupSessionMembers(members: any[]) {
+    return (
+      <div className="group-session-members">
+        {members.map((lesson) => (
+          <div
+            key={lesson.id}
+            className="group-session-member"
+            style={{ cursor: "pointer" }}
+            onClick={(e) => { e.stopPropagation(); setViewingLesson(lesson); }}
+          >
+            <span className="group-session-member-name">
+              {lesson.students?.student_name || lesson.student_name || "Student"}
+            </span>
+
+            <button
+              type="button"
+              className={`lesson-billing-pill ${lesson.billing_status || "unbilled"}`}
+              disabled={statusUpdatingId === lesson.id}
+              onClick={(e) => { e.stopPropagation(); quickUpdateStatus(lesson); }}
+            >
+              {statusUpdatingId === lesson.id ? "..." : (lesson.billing_status || "unbilled").charAt(0).toUpperCase() + (lesson.billing_status || "unbilled").slice(1)}
+            </button>
+
+            <button
+              type="button"
+              className="lesson-edit-btn"
+              onClick={(e) => { e.stopPropagation(); openEditLesson(lesson); }}
+            >
+              <FaEdit />
+            </button>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  function formatGroupMemberNames(members: any[]) {
+    const names = members.map(
+      (m) => m.students?.student_name || m.student_name || "Student"
+    );
+    const maxShown = 3;
+    if (names.length <= maxShown) return names.join(", ");
+    return `${names.slice(0, maxShown).join(", ")} +${names.length - maxShown} more`;
+  }
+
+  function renderGroupSession(members: any[], variant: "calendar" | "list") {
+    const first = members[0];
+    const groupId = first.group_lesson_id || first.id;
+    const isExpanded = expandedGroupIds.has(groupId);
+    const groupTotal = members.reduce((sum, m) => sum + Number(m.rate || 0), 0);
+    const namesLabel = formatGroupMemberNames(members);
+
+    if (variant === "calendar") {
+      return (
+        <div key={groupId} className="group-session-wrap">
+          <div
+            className="calendar-detail-row"
+            style={{ cursor: "pointer" }}
+            onClick={() => toggleGroupExpanded(groupId)}
+          >
+            <div className="calendar-time-icon group">
+              <FaUsers />
+            </div>
+
+            <div>
+              <strong>
+                {namesLabel} • {formatTime(first.start_time)}
+              </strong>
+              <span>
+                {first.duration_minutes} min • ${formatMoney(groupTotal)}
+              </span>
+            </div>
+
+            <div className="group-session-actions">
+              <button
+                type="button"
+                className="lesson-edit-btn"
+                onClick={(e) => { e.stopPropagation(); openEditGroupSession(members); }}
+              >
+                <FaEdit />
+              </button>
+
+              <FaChevronDown className={`group-session-chevron${isExpanded ? " expanded" : ""}`} />
+            </div>
+          </div>
+
+          {isExpanded && renderGroupSessionMembers(members)}
+        </div>
+      );
+    }
+
+    return (
+      <div key={groupId} className="group-session-wrap">
+        <div
+          className="lesson-page-row group-session-header-row"
+          style={{ cursor: "pointer" }}
+          onClick={() => toggleGroupExpanded(groupId)}
+        >
+          <div className="lesson-page-time">
+            <strong>{formatTime(first.start_time)}</strong>
+            <span>{first.duration_minutes} min</span>
+          </div>
+
+          <div className="lesson-page-info">
+            <strong>{namesLabel}</strong>
+            <span><FaUsers /> ${formatMoney(groupTotal)}</span>
+          </div>
+
+          <div className="group-session-actions">
+            <button
+              type="button"
+              className="lesson-edit-btn"
+              onClick={(e) => { e.stopPropagation(); openEditGroupSession(members); }}
+            >
+              <FaEdit />
+            </button>
+
+            <FaChevronDown className={`group-session-chevron${isExpanded ? " expanded" : ""}`} />
+          </div>
+        </div>
+
+        {isExpanded && renderGroupSessionMembers(members)}
+      </div>
+    );
+  }
 
   function hexToRgba(hex: string, alpha: number) {
     const r = parseInt(hex.slice(1, 3), 16);
@@ -1917,49 +2550,11 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                   {selectedCalendarLessons.length === 0 ? (
                       <p className="empty-lessons">No {term.lowerPlural} for this day.</p>
                     ) : (
-                      selectedCalendarLessons.map((lesson) => (
-                        <div key={lesson.id} className="calendar-detail-row" style={{ cursor: "pointer" }} onClick={() => setViewingLesson(lesson)}>
-                          <div
-                            className={`calendar-time-icon ${
-                              lesson.billing_status || "unbilled"
-                            }`}
-                          >
-                            <FaClock />
-                          </div>
-
-                          <div>
-                            <strong>
-                              {lesson.students?.student_name || lesson.student_name || "Student"} •{" "}
-                              {formatTime(lesson.start_time)}
-                            </strong>
-                            <span>
-                              {lesson.duration_minutes} min
-                              {lesson.lesson_type
-                                ? ` • ${lesson.lesson_type}`
-                                : ""}
-                              {" • $"}
-                              {formatMoney(lesson.rate)}
-                              {" • "}
-                              <button
-                                type="button"
-                                className={`calendar-billing-label clickable-status ${lesson.billing_status || "unbilled"}`}
-                                disabled={statusUpdatingId === lesson.id}
-                                onClick={(e) => { e.stopPropagation(); quickUpdateStatus(lesson); }}
-                              >
-                                {statusUpdatingId === lesson.id ? "..." : (lesson.billing_status || "unbilled").charAt(0).toUpperCase() + (lesson.billing_status || "unbilled").slice(1)}
-                              </button>
-                            </span>
-                          </div>
-
-                          <button
-                            type="button"
-                            className="lesson-edit-btn"
-                            onClick={(e) => { e.stopPropagation(); openEditLesson(lesson); }}
-                          >
-                            <FaEdit />
-                          </button>
-                        </div>
-                      ))
+                      buildLessonDisplayGroups(selectedCalendarLessons).map((group) =>
+                        group.groupId
+                          ? renderGroupSession(group.lessons, "calendar")
+                          : renderCalendarDetailRow(group.lessons[0])
+                      )
                     )}
                   </section>
                 </div>
@@ -2021,36 +2616,11 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                     </div>
                   ) : (
                     <div className="lesson-group-card">
-                      {selectedCalendarLessons.map((lesson) => (
-                        <div key={lesson.id} className="lesson-page-row" style={{ cursor: "pointer" }} onClick={() => setViewingLesson(lesson)}>
-                          <div className="lesson-page-time">
-                            <strong>{formatTime(lesson.start_time)}</strong>
-                            <span>{lesson.duration_minutes} min</span>
-                          </div>
-
-                          <div className="lesson-page-info">
-                            <strong>{lesson.students?.student_name || lesson.student_name || "Student"}</strong>
-                            <span>${formatMoney(lesson.rate)}{lesson.lesson_type ? ` • ${lesson.lesson_type}` : ""}</span>
-                          </div>
-
-                          <button
-                            type="button"
-                            className={`lesson-billing-pill ${lesson.billing_status || "unbilled"}`}
-                            onClick={(e) => { e.stopPropagation(); quickUpdateStatus(lesson); }}
-                            disabled={statusUpdatingId === lesson.id}
-                          >
-                            {statusUpdatingId === lesson.id ? "..." : (lesson.billing_status || "unbilled").charAt(0).toUpperCase() + (lesson.billing_status || "unbilled").slice(1)}
-                          </button>
-
-                          <button
-                            type="button"
-                            className="lesson-edit-btn"
-                            onClick={(e) => { e.stopPropagation(); openEditLesson(lesson); }}
-                          >
-                            <FaEdit />
-                          </button>
-                        </div>
-                      ))}
+                      {buildLessonDisplayGroups(selectedCalendarLessons).map((group) =>
+                        group.groupId
+                          ? renderGroupSession(group.lessons, "list")
+                          : renderLessonPageRow(group.lessons[0])
+                      )}
                     </div>
                   )}
                 </div>
@@ -2111,6 +2681,29 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                   <span className="lesson-recurring-toggle-knob" />
                 </button>
               </div>
+
+              {isGroup && (
+                <div className="input-block">
+                  <label htmlFor="groupClassSelect">Group Class</label>
+                  <select
+                    id="groupClassSelect"
+                    value={selectedGroupClassId}
+                    onChange={(e) => selectGroupClass(e.target.value)}
+                  >
+                    <option value="new">+ New Group Class</option>
+                    {groupClasses.map((group: any) => (
+                      <option key={group.id} value={group.id}>
+                        {group.title || `Group ${term.singular}`} ({(group.group_lesson_students || []).length} students)
+                      </option>
+                    ))}
+                  </select>
+                  {selectedGroupClassId !== "new" && (
+                    <p className="invoice-billall-hint">
+                      Adding a one-off session to this existing class — its roster, rate, and schedule are prefilled below.
+                    </p>
+                  )}
+                </div>
+              )}
 
               {isGroup ? (
                 <div className="input-block student-search-block">
@@ -2819,6 +3412,190 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
           </div>
         </div>
       )}
+      {showEditGroupLesson && editingGroupMembers && (
+        <div className="add-lesson-overlay" onClick={closeEditGroupLesson}>
+          <div className="add-lesson-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="add-lesson-header">
+              <div>
+                <h2>Edit Group {term.singular}</h2>
+                <span className="edit-lesson-recurring-badge">
+                  <FaUsers /> {editGroupStudents.length} students
+                </span>
+              </div>
+              <button type="button" onClick={closeEditGroupLesson}>×</button>
+            </div>
+
+            <form onSubmit={handleUpdateGroupSession} autoComplete="off" className="add-lesson-form">
+              <div className="input-block student-search-block">
+                <label htmlFor="editGroupStudentInput">Students</label>
+
+                {editGroupStudents.length > 0 && (
+                  <div className="group-student-chips">
+                    {editGroupStudents.map((s) => (
+                      <span key={s.name} className="group-student-chip">
+                        {s.name}
+                        {!s.id && <em>(new)</em>}
+                        <button type="button" onClick={() => removeEditGroupStudent(s.name)}>
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="group-student-add-row">
+                  <input
+                    id="editGroupStudentInput"
+                    type="text"
+                    value={editGroupStudentInput}
+                    onChange={(e) => setEditGroupStudentInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addEditGroupStudent({ id: null, name: editGroupStudentInput });
+                      }
+                    }}
+                    placeholder="Search or add a student"
+                    autoComplete="new-password"
+                    autoCorrect="off"
+                    autoCapitalize="words"
+                    spellCheck={false}
+                  />
+                  <button
+                    type="button"
+                    className="group-student-add-btn"
+                    onClick={() => addEditGroupStudent({ id: null, name: editGroupStudentInput })}
+                  >
+                    <FaPlus />
+                  </button>
+                </div>
+
+                {editGroupStudentMatches.length > 0 && (
+                  <div className="student-suggestions">
+                    {editGroupStudentMatches.map((link: any) => (
+                      <button
+                        key={link.student_id}
+                        type="button"
+                        className="student-suggestion"
+                        onClick={() =>
+                          addEditGroupStudent({ id: link.student_id, name: link.students.student_name })
+                        }
+                      >
+                        {link.students.student_name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="input-block">
+                <label htmlFor="editGroupDate">{term.singular} Date</label>
+                <input
+                  id="editGroupDate"
+                  type="date"
+                  value={editGroupDate}
+                  onChange={(e) => setEditGroupDate(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="input-block">
+                <label htmlFor="editGroupStartTime">Start Time</label>
+                <input
+                  id="editGroupStartTime"
+                  type="time"
+                  value={editGroupStartTime}
+                  onChange={(e) => setEditGroupStartTime(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="input-block">
+                <label htmlFor="editGroupDuration">Duration</label>
+                <input
+                  id="editGroupDuration"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={editGroupDuration}
+                  onChange={(e) => setEditGroupDuration(e.target.value.replace(/\D/g, ""))}
+                  required
+                />
+              </div>
+
+              <div className="input-block">
+                <label htmlFor="editGroupLessonType">{term.singular} Type</label>
+                <input
+                  id="editGroupLessonType"
+                  type="text"
+                  placeholder="Freestyle, jumps, choreography..."
+                  value={editGroupLessonType}
+                  onChange={(e) => setEditGroupLessonType(e.target.value)}
+                />
+              </div>
+
+              <div className="input-block">
+                <label>Billing</label>
+                <div className="rl-chip-group">
+                  <button
+                    type="button"
+                    className={`rl-chip${editGroupBillingMode === "per_student" ? " active" : ""}`}
+                    onClick={() => setEditGroupBillingMode("per_student")}
+                  >
+                    Charge each student
+                  </button>
+                  <button
+                    type="button"
+                    className={`rl-chip${editGroupBillingMode === "split_total" ? " active" : ""}`}
+                    onClick={() => setEditGroupBillingMode("split_total")}
+                  >
+                    Split total rate
+                  </button>
+                </div>
+              </div>
+
+              <div className="input-block">
+                <label htmlFor="editGroupRate">
+                  {editGroupBillingMode === "split_total"
+                    ? `Hourly Rate (total split across ${editGroupStudents.length || "N"} students)`
+                    : "Rate Per Student"}
+                </label>
+                <input
+                  id="editGroupRate"
+                  type="text"
+                  inputMode="decimal"
+                  value={editGroupRate ? `$${editGroupRate}` : ""}
+                  onChange={(e) => setEditGroupRate(e.target.value.replace(/[^0-9.]/g, ""))}
+                  placeholder="$100"
+                />
+              </div>
+
+              <div className="input-block">
+                <label htmlFor="editGroupNotes">Notes</label>
+                <textarea
+                  id="editGroupNotes"
+                  placeholder={`Optional ${term.lower} notes...`}
+                  value={editGroupNotes}
+                  onChange={(e) => setEditGroupNotes(e.target.value)}
+                />
+              </div>
+
+              <button type="submit" className="save-lesson-btn" disabled={isSavingGroupEdit}>
+                {isSavingGroupEdit ? "Saving..." : "Save Changes"}
+              </button>
+
+              <button
+                type="button"
+                className="delete-lesson-btn"
+                onClick={() => { setGroupSessionToDelete(editingGroupMembers); closeEditGroupLesson(); }}
+              >
+                <FaTrash />
+                Delete Group {term.singular}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
       {showDeleteSeriesModal && (
         <div className="billio-confirm-overlay" onClick={() => setShowDeleteSeriesModal(false)}>
           <div className="billio-confirm-card" onClick={(e) => e.stopPropagation()}>
@@ -2834,6 +3611,31 @@ const calendarWeekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
               <button type="button" className="billio-cancel-btn" onClick={() => setShowDeleteSeriesModal(false)}>Cancel</button>
               <button type="button" className="billio-danger-btn" disabled={isDeletingSeries} onClick={handleDeleteSeries}>
                 {isDeletingSeries ? "Deleting..." : "Delete Series"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {groupSessionToDelete && (
+        <div className="billio-confirm-overlay" onClick={() => setGroupSessionToDelete(null)}>
+          <div className="billio-confirm-card" onClick={(e) => e.stopPropagation()}>
+            <div className="billio-confirm-icon" style={{ background: "#fee2e2", color: "#dc2626" }}>
+              <FaTrash />
+            </div>
+            <h2>Delete Group {term.singular}?</h2>
+            <p>
+              This will delete this {term.lower} for all <strong>{groupSessionToDelete.length} students</strong> in the group: {formatGroupMemberNames(groupSessionToDelete)}.
+            </p>
+            <div className="billio-confirm-actions">
+              <button type="button" className="billio-cancel-btn" onClick={() => setGroupSessionToDelete(null)}>Cancel</button>
+              <button
+                type="button"
+                className="billio-danger-btn"
+                disabled={isDeletingGroupSession}
+                onClick={() => handleDeleteGroupSession(groupSessionToDelete)}
+              >
+                {isDeletingGroupSession ? "Deleting..." : "Delete Group " + term.singular}
               </button>
             </div>
           </div>

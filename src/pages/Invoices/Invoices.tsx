@@ -60,9 +60,9 @@ function Invoices() {
   const [rangeEnd, setRangeEnd] = useState("");
   const [isClosingCalendar, setIsClosingCalendar] = useState(false);
   const [billAllMode, setBillAllMode] = useState(false);
+  const [invoiceCreateMode, setInvoiceCreateMode] = useState<"single" | "bulk">("single");
 
   // Bulk invoice generation (all students, one date range)
-  const [showBulkGenerate, setShowBulkGenerate] = useState(false);
   const [bulkRangeStart, setBulkRangeStart] = useState("");
   const [bulkRangeEnd, setBulkRangeEnd] = useState("");
   const [isBulkGenerating, setIsBulkGenerating] = useState(false);
@@ -581,6 +581,7 @@ function Invoices() {
       : [];
 
   function closeAddInvoice() {
+    if (isBulkGenerating) return;
     setShowAddInvoice(false);
     setSelectedStudentId("");
     setStudentQuery("");
@@ -591,11 +592,7 @@ function Invoices() {
     setSelectedLessonIds([]);
     setShowDateRangePicker(false);
     setBillAllMode(false);
-  }
-
-  function closeBulkGenerate() {
-    if (isBulkGenerating) return;
-    setShowBulkGenerate(false);
+    setInvoiceCreateMode("single");
     setBulkRangeStart("");
     setBulkRangeEnd("");
     setBulkGenerateError("");
@@ -660,7 +657,8 @@ function Invoices() {
 
       if (lessonsByStudent.size === 0) {
         setBulkGenerateResult({ invoiceCount: 0, studentCount: 0 });
-        setShowBulkGenerate(false);
+        setShowAddInvoice(false);
+        setInvoiceCreateMode("single");
         setBulkRangeStart("");
         setBulkRangeEnd("");
         return;
@@ -714,7 +712,8 @@ function Invoices() {
       queryClient.invalidateQueries({ queryKey: ["invoices", coachId] });
 
       setBulkGenerateResult({ invoiceCount, studentCount: lessonsByStudent.size });
-      setShowBulkGenerate(false);
+      setShowAddInvoice(false);
+      setInvoiceCreateMode("single");
       setBulkRangeStart("");
       setBulkRangeEnd("");
     } finally {
@@ -1582,19 +1581,6 @@ function Invoices() {
                       </button>
 
                       <button
-                        type="button"
-                        className="invoices-log-btn"
-                        aria-disabled={showTutorial}
-                        title="Generate invoices for all students"
-                        onClick={(e) => {
-                          if (showTutorial) { e.preventDefault(); return; }
-                          setShowBulkGenerate(true);
-                        }}
-                      >
-                        <FaUsers />
-                      </button>
-
-                      <button
                       ref={addInvoiceBtnRef}
                       type="button"
                       className={`invoices-add-btn${showTutorial && tutorialStep === 1 ? " tutorial-highlighted" : ""}`}
@@ -1895,12 +1881,88 @@ function Invoices() {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="invoices-add-header">
-                <h2>Create Invoice</h2>
+                <h2>{invoiceCreateMode === "bulk" ? "Generate Invoices for All Students" : "Create Invoice"}</h2>
                 <button type="button" onClick={closeAddInvoice}>
                   ×
                 </button>
               </div>
 
+              <div className="invoice-create-mode-tabs">
+                <button
+                  type="button"
+                  className={invoiceCreateMode === "single" ? "active" : ""}
+                  onClick={() => setInvoiceCreateMode("single")}
+                >
+                  One Student
+                </button>
+                <button
+                  type="button"
+                  className={invoiceCreateMode === "bulk" ? "active" : ""}
+                  onClick={() => setInvoiceCreateMode("bulk")}
+                >
+                  All Students
+                </button>
+              </div>
+
+              {invoiceCreateMode === "bulk" ? (
+              <form onSubmit={handleGenerateAllInvoices} className="invoices-add-form">
+                <p className="invoice-billall-hint">
+                  Creates one invoice per student for every unbilled {term.lowerPlural} in this date range. Students with no unbilled {term.lowerPlural} are skipped.
+                </p>
+
+                <div className="input-block">
+                  <label>Quick Select</label>
+                  <div className="bulk-generate-quick-ranges">
+                    <button type="button" onClick={() => applyBulkQuickRange("thisWeek")}>
+                      This Week
+                    </button>
+                    <button type="button" onClick={() => applyBulkQuickRange("lastWeek")}>
+                      Last Week
+                    </button>
+                    <button type="button" onClick={() => applyBulkQuickRange("thisMonth")}>
+                      This Month
+                    </button>
+                    <button type="button" onClick={() => applyBulkQuickRange("lastMonth")}>
+                      Last Month
+                    </button>
+                  </div>
+                </div>
+
+                <div className="input-block">
+                  <label>Start Date</label>
+                  <input
+                    type="date"
+                    value={bulkRangeStart}
+                    max={bulkRangeEnd || undefined}
+                    onChange={(e) => setBulkRangeStart(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="input-block">
+                  <label>End Date</label>
+                  <input
+                    type="date"
+                    value={bulkRangeEnd}
+                    min={bulkRangeStart || undefined}
+                    onChange={(e) => setBulkRangeEnd(e.target.value)}
+                    required
+                  />
+                </div>
+
+                {bulkGenerateError && (
+                  <p className="invoice-student-error">{bulkGenerateError}</p>
+                )}
+
+                <button
+                  type="submit"
+                  className="invoices-save-btn"
+                  disabled={isBulkGenerating || !bulkRangeStart || !bulkRangeEnd}
+                >
+                  {isBulkGenerating ? "Generating..." : "Generate Invoices"}
+                </button>
+              </form>
+              ) : (
               <form onSubmit={handleCreateInvoice} className="invoices-add-form">
                 <div className="input-block student-search-block">
                   <label>Student</label>
@@ -2120,79 +2182,7 @@ function Invoices() {
                   {isSaving ? "Creating..." : "Create Invoice"}
                 </button>
               </form>
-            </div>
-          </div>
-        )}
-        {showBulkGenerate && (
-          <div className="invoices-add-overlay" onClick={closeBulkGenerate}>
-            <div
-              className="invoices-add-sheet"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="invoices-add-header">
-                <h2>Generate Invoices for All Students</h2>
-                <button type="button" onClick={closeBulkGenerate}>
-                  ×
-                </button>
-              </div>
-
-              <form onSubmit={handleGenerateAllInvoices} className="invoices-add-form">
-                <p className="invoice-billall-hint">
-                  Creates one invoice per student for every unbilled {term.lowerPlural} in this date range. Students with no unbilled {term.lowerPlural} are skipped.
-                </p>
-
-                <div className="input-block">
-                  <label>Quick Select</label>
-                  <div className="bulk-generate-quick-ranges">
-                    <button type="button" onClick={() => applyBulkQuickRange("thisWeek")}>
-                      This Week
-                    </button>
-                    <button type="button" onClick={() => applyBulkQuickRange("lastWeek")}>
-                      Last Week
-                    </button>
-                    <button type="button" onClick={() => applyBulkQuickRange("thisMonth")}>
-                      This Month
-                    </button>
-                    <button type="button" onClick={() => applyBulkQuickRange("lastMonth")}>
-                      Last Month
-                    </button>
-                  </div>
-                </div>
-
-                <div className="input-block">
-                  <label>Start Date</label>
-                  <input
-                    type="date"
-                    value={bulkRangeStart}
-                    max={bulkRangeEnd || undefined}
-                    onChange={(e) => setBulkRangeStart(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="input-block">
-                  <label>End Date</label>
-                  <input
-                    type="date"
-                    value={bulkRangeEnd}
-                    min={bulkRangeStart || undefined}
-                    onChange={(e) => setBulkRangeEnd(e.target.value)}
-                    required
-                  />
-                </div>
-
-                {bulkGenerateError && (
-                  <p className="invoice-student-error">{bulkGenerateError}</p>
-                )}
-
-                <button
-                  type="submit"
-                  className="invoices-save-btn"
-                  disabled={isBulkGenerating || !bulkRangeStart || !bulkRangeEnd}
-                >
-                  {isBulkGenerating ? "Generating..." : "Generate Invoices"}
-                </button>
-              </form>
+              )}
             </div>
           </div>
         )}

@@ -652,6 +652,35 @@
   font-weight: 500;
 }
 
+/* CREATE INVOICE — SINGLE VS ALL STUDENTS TABS */
+
+.invoice-create-mode-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  margin: 0 0 16px;
+  border-radius: 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+}
+
+.invoice-create-mode-tabs button {
+  flex: 1;
+  padding: 9px 10px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--secondary-text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.invoice-create-mode-tabs button.active {
+  background: var(--primary-purple);
+  color: white;
+}
+
 /* DATE RANGE */
 
 .invoice-billall-toggle-wrapper {

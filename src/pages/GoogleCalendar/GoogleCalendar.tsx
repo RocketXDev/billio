@@ -265,6 +265,7 @@ export default function GoogleCalendar() {
 
     await supabase.from("coach_students").insert({ coach_id: coachId, student_id: newStudent.id });
     queryClient.invalidateQueries({ queryKey: ["coach-students", coachId] });
+    queryClient.invalidateQueries({ queryKey: ["students", coachId] });
     return newStudent.id;
   }
 

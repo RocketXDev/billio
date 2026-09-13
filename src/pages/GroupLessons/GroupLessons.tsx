@@ -335,6 +335,7 @@ export default function GroupLessons() {
       if (!resolvedIds) { alert("Could not resolve the student roster."); return; }
 
       queryClient.invalidateQueries({ queryKey: ["coach-students", coachId] });
+      queryClient.invalidateQueries({ queryKey: ["students", coachId] });
 
       const groupPayload = {
         coach_id: coachId,

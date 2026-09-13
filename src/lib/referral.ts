@@ -28,6 +28,19 @@ export function captureReferralCode(search: string) {
   return code;
 }
 
+/**
+ * The code that applies to this page load: a `?ref=` on the current URL wins,
+ * otherwise whatever an earlier page stashed.
+ *
+ * Reads the URL directly rather than trusting App.tsx's capture effect to have
+ * run. Effects fire after render, so a form initialising its state from
+ * storage during its first render finds nothing on a direct hit to
+ * /signup?ref=CODE — which is exactly where invite links point.
+ */
+export function resolveReferralCode(search: string) {
+  return captureReferralCode(search) || getStoredReferralCode();
+}
+
 export function getStoredReferralCode() {
   try {
     return normalize(localStorage.getItem(STORAGE_KEY));

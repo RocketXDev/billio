@@ -619,6 +619,7 @@ function Lessons() {
 
     queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
     queryClient.invalidateQueries({ queryKey: ["coach-students", coachId] });
+    queryClient.invalidateQueries({ queryKey: ["students", coachId] });
     queryClient.invalidateQueries({ queryKey: ["group-lessons", coachId] });
   }
 
@@ -717,6 +718,9 @@ function Lessons() {
           console.log("Coach-student link error:", linkError);
           return;
         }
+
+        queryClient.invalidateQueries({ queryKey: ["students", coachId] });
+        queryClient.invalidateQueries({ queryKey: ["coach-students", coachId] });
       }
 
       if (isRecurring) {

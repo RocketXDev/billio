@@ -1,18 +1,19 @@
 import '../Login/Login.css';
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash, FaCheckCircle, FaGift, FaTimesCircle } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
 import { PROFESSIONS } from "../../lib/professions";
 import {
     clearStoredReferralCode,
-    getStoredReferralCode,
     lookupReferralCode,
+    resolveReferralCode,
     storeReferralCode,
 } from "../../lib/referral";
 
 function Signup() {
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("");
@@ -22,10 +23,14 @@ function Signup() {
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
 
-    // App.tsx stashes `?ref=CODE` from whichever public page the invite link
-    // landed on. That's the starting value; the field stays editable so
-    // someone who was given a code verbally can type it in themselves.
-    const [linkedCode] = useState(() => getStoredReferralCode());
+    // Prefilled from the invite link's `?ref=CODE`, falling back to a code
+    // stashed by an earlier page (someone who landed on "/" first). Resolved
+    // during render, not from an effect, so the field is already filled on the
+    // very first paint rather than appearing a beat later.
+    //
+    // Nothing to prefill means nothing shown: the field stays collapsed behind
+    // "Have a referral code?".
+    const [linkedCode] = useState(() => resolveReferralCode(location.search));
     const [referralCode, setReferralCode] = useState(linkedCode);
     const [showReferralField, setShowReferralField] = useState(!!linkedCode);
     const [referralCheck, setReferralCheck] = useState<
@@ -120,7 +125,10 @@ function Signup() {
 
                     <h1 className="mb-form-title">Sign Up</h1>
 
-                    {linkedCode && (
+                    {/* Hidden once the code turns out to be bad — "you were invited"
+                        sitting above "we don't recognise that code" is worse than
+                        showing nothing. */}
+                    {linkedCode && referralCheck.state !== "invalid" && (
                         <div className="signup-referral-note">
                             <FaGift />
                             <span>

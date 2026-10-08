@@ -20,6 +20,7 @@ import {
   FaBell,
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
+import { fetchAllRows } from "../../lib/fetchAllRows";
 import { useNavigate } from "react-router-dom";
 import { usePlan } from "../../hooks/usePlan";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
@@ -221,16 +222,19 @@ function Lessons() {
 
   const { data: lessonsData, isLoading: lessonsQueryLoading } = useQuery({
     queryKey: ["lessons", coachId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("lessons")
-        .select("*, students(student_name)")
-        .eq("coach_id", coachId)
-        .order("lesson_date", { ascending: true })
-        .order("start_time", { ascending: true });
-      if (error) throw error;
-      return data ?? [];
-    },
+    // Paged — a single select stops at Supabase's 1,000-row cap, which hid
+    // the newest lessons of coaches past 1,000 (see fetchAllRows).
+    queryFn: () =>
+      fetchAllRows((from, to) =>
+        supabase
+          .from("lessons")
+          .select("*, students(student_name)")
+          .eq("coach_id", coachId)
+          .order("lesson_date", { ascending: true })
+          .order("start_time", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to)
+      ),
     enabled: !!coachId,
   });
 

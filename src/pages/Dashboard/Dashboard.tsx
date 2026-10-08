@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
+import { fetchAllRows } from "../../lib/fetchAllRows";
 import {
   FaBars,
   FaBell,
@@ -198,16 +199,19 @@ function Dashboard() {
 
   const { data: lessonsData } = useQuery({
     queryKey: ["lessons", coachId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("lessons")
-        .select("*, students(student_name)")
-        .eq("coach_id", coachId)
-        .order("lesson_date", { ascending: true })
-        .order("start_time", { ascending: true });
-      if (error) throw error;
-      return data ?? [];
-    },
+    // Same paged fetch as Lessons.tsx — both share the ["lessons", coachId]
+    // cache entry, so they must return the same full list.
+    queryFn: () =>
+      fetchAllRows((from, to) =>
+        supabase
+          .from("lessons")
+          .select("*, students(student_name)")
+          .eq("coach_id", coachId)
+          .order("lesson_date", { ascending: true })
+          .order("start_time", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to)
+      ),
     enabled: !!coachId,
   });
   const lessons = lessonsData ?? [];

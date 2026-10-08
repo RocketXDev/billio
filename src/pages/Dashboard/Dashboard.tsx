@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
 import { fetchAllRows } from "../../lib/fetchAllRows";
+import { currentWeekBounds, lessonRangeQuery } from "../../lib/lessonRange";
 import {
   FaBars,
   FaBell,
@@ -197,21 +198,11 @@ function Dashboard() {
 
   const queryClient = useQueryClient();
 
+  // The Today and This Week cards are all that read lessons here, so load
+  // just this Monday–Sunday instead of the coach's whole history.
+  const lessonWeek = currentWeekBounds();
   const { data: lessonsData } = useQuery({
-    queryKey: ["lessons", coachId],
-    // Same paged fetch as Lessons.tsx — both share the ["lessons", coachId]
-    // cache entry, so they must return the same full list.
-    queryFn: () =>
-      fetchAllRows((from, to) =>
-        supabase
-          .from("lessons")
-          .select("*, students(student_name)")
-          .eq("coach_id", coachId)
-          .order("lesson_date", { ascending: true })
-          .order("start_time", { ascending: true })
-          .order("id", { ascending: true })
-          .range(from, to)
-      ),
+    ...lessonRangeQuery(coachId, lessonWeek.from, lessonWeek.to),
     enabled: !!coachId,
   });
   const lessons = lessonsData ?? [];

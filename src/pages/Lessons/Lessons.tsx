@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   FaHome,
   FaFileInvoiceDollar,
@@ -20,7 +20,7 @@ import {
   FaBell,
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
-import { fetchAllRows } from "../../lib/fetchAllRows";
+import { lessonMonthQuery, monthOf, shiftMonth } from "../../lib/lessonRange";
 import { useNavigate } from "react-router-dom";
 import { usePlan } from "../../hooks/usePlan";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
@@ -220,25 +220,41 @@ function Lessons() {
 
   const navigate = useNavigate();
 
-  const { data: lessonsData, isLoading: lessonsQueryLoading } = useQuery({
-    queryKey: ["lessons", coachId],
-    // Paged — a single select stops at Supabase's 1,000-row cap, which hid
-    // the newest lessons of coaches past 1,000 (see fetchAllRows).
-    queryFn: () =>
-      fetchAllRows((from, to) =>
-        supabase
-          .from("lessons")
-          .select("*, students(student_name)")
-          .eq("coach_id", coachId)
-          .order("lesson_date", { ascending: true })
-          .order("start_time", { ascending: true })
-          .order("id", { ascending: true })
-          .range(from, to)
-      ),
-    enabled: !!coachId,
+  // Lessons load a month at a time around the selected date (see
+  // lib/lessonRange). The month grid spills into the neighbouring months, so
+  // the selected month and both neighbours are loaded; two more months each
+  // way are prefetched in the background so moving either direction is
+  // already cached.
+  const visibleMonth = monthOf(selectedCalendarDate);
+  const lessonMonths = [shiftMonth(visibleMonth, -1), visibleMonth, shiftMonth(visibleMonth, 1)];
+  const lessonMonthQueries = useQueries({
+    queries: lessonMonths.map((month) => ({
+      ...lessonMonthQuery(coachId, month),
+      enabled: !!coachId,
+    })),
   });
+  const lessonsReady = lessonMonthQueries.every((q) => q.data !== undefined);
+  // Changes whenever the window moves or any of its months is refetched.
+  const lessonsSignature = lessonMonths
+    .map((month, i) => `${month}:${lessonMonthQueries[i].dataUpdatedAt}`)
+    .join("|");
 
-  useEffect(() => { if (lessonsData) setLessons(lessonsData); }, [lessonsData]);
+  // Only the very first load shows the page's loading card — after that,
+  // the previous lessons stay up while a not-yet-cached month arrives.
+  const [lessonsLoadedOnce, setLessonsLoadedOnce] = useState(false);
+
+  useEffect(() => {
+    if (!lessonsReady) return;
+    setLessons(lessonMonthQueries.flatMap((q) => q.data ?? []));
+    setLessonsLoadedOnce(true);
+  }, [lessonsSignature, lessonsReady]);
+
+  useEffect(() => {
+    if (!coachId) return;
+    for (const delta of [-2, 2]) {
+      queryClient.prefetchQuery(lessonMonthQuery(coachId, shiftMonth(visibleMonth, delta)));
+    }
+  }, [coachId, visibleMonth]);
   useEffect(() => { if (!coachId && !identityLoading) window.location.href = "/login"; }, [coachId, identityLoading]);
 
   // Same query key/shape as the Group Classes page (More > Group Classes) —
@@ -399,7 +415,7 @@ function Lessons() {
   // reports `isLoading: false` while the query is still `enabled: false` (i.e.
   // before coachId resolves), which would otherwise let the list render empty
   // before lessons actually arrive.
-  const loading = identityLoading || !coachId || lessonsQueryLoading || lessonsData === undefined;
+  const loading = identityLoading || !coachId || !lessonsLoadedOnce;
 
   useEffect(() => {
     if (!loading) {

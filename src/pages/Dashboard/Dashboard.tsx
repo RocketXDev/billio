@@ -232,15 +232,17 @@ function Dashboard() {
 
   const { data: invoicesData } = useQuery({
     queryKey: ["invoices", coachId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("invoices")
-        .select("*, students(student_name)")
-        .eq("coach_id", coachId)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
+    // Paged past Supabase's 1,000-row cap (see fetchAllRows).
+    queryFn: () =>
+      fetchAllRows((from, to) =>
+        supabase
+          .from("invoices")
+          .select("*, students(student_name)")
+          .eq("coach_id", coachId)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: true })
+          .range(from, to)
+      ),
     enabled: !!coachId,
   });
   const invoices = invoicesData ?? [];

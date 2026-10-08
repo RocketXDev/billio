@@ -22,6 +22,7 @@ import {
 } from "react-icons/fa";
 import { IoShareOutline } from "react-icons/io5";
 import { supabase } from "../../lib/supabaseClient";
+import { fetchAllRows } from "../../lib/fetchAllRows";
 import { usePlan } from "../../hooks/usePlan";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import { useSettings } from "../../hooks/useSettings";
@@ -134,15 +135,17 @@ function Invoices() {
 
   const { data: invoicesData, isLoading: invoicesLoading } = useQuery({
     queryKey: ["invoices", coachId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("invoices")
-        .select(`*, students(student_name, email, phone_number, parent_name, parent_email, parent_phone), invoice_lessons(lessons(lesson_date))`)
-        .eq("coach_id", coachId)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
+    // Paged past Supabase's 1,000-row cap (see fetchAllRows).
+    queryFn: () =>
+      fetchAllRows((from, to) =>
+        supabase
+          .from("invoices")
+          .select(`*, students(student_name, email, phone_number, parent_name, parent_email, parent_phone), invoice_lessons(lessons(lesson_date))`)
+          .eq("coach_id", coachId)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: true })
+          .range(from, to)
+      ),
     enabled: !!coachId,
   });
 

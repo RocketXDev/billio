@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
+import { showError, showWarning } from "../../lib/notify";
+import { findOrCreateStudentId } from "../../lib/students";
+import { cleanupInvoicesAfterLessonDelete } from "../../lib/invoiceSync";
+import { deleteNotification, markNotificationRead, notificationLink } from "../../lib/notifications";
 import { fetchAllRows } from "../../lib/fetchAllRows";
 import { currentWeekBounds, lessonRangeQuery } from "../../lib/lessonRange";
 import {
@@ -177,7 +181,6 @@ function Dashboard() {
   const [coachSmsConsent, setCoachSmsConsent] = useState(false);
 
   // Invoices
-  const [editingInvoiceStatusId, setEditingInvoiceStatusId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false); 
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -193,7 +196,7 @@ function Dashboard() {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
   const { shouldShow, remindLater } = useInstallPrompt();
-  const [showUpgradeToast, setShowUpgradeToast] = useState(false);
+  const [, setShowUpgradeToast] = useState(false);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
 
   const queryClient = useQueryClient();
@@ -222,7 +225,12 @@ function Dashboard() {
   const coachStudents = coachStudentsData ?? [];
 
   const { data: invoicesData } = useQuery({
-    queryKey: ["invoices", coachId],
+    // Own key, not the Invoices page's ["invoices", coachId]: this loads fewer
+    // fields, and sharing the cache entry let the Invoices page reuse this
+    // slimmer copy — hiding sibling Combine (needs parent phone/email) and
+    // mis-grouping past invoices (needs invoice_lessons dates). Still under
+    // the ["invoices", coachId] prefix, so existing invalidations refresh it.
+    queryKey: ["invoices", coachId, "dashboard"],
     // Paged past Supabase's 1,000-row cap (see fetchAllRows).
     queryFn: () =>
       fetchAllRows((from, to) =>
@@ -402,24 +410,35 @@ function Dashboard() {
       const metadataRole = user.user_metadata.role || "coach";
       const metadataProfession = user.user_metadata.profession || "coach";
 
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .upsert(
+      // Create the profile from the sign-up details only if it doesn't exist
+      // yet. This used to upsert on every Dashboard load, which wrote to the
+      // database on each visit and overwrote any name/email the coach had
+      // since changed on the Profile page with the original sign-up values.
+      const loadProfile = () =>
+        supabase.from("profiles").select("*").eq("user_id", user.id).maybeSingle();
+
+      let { data: profileData, error: profileError } = await loadProfile();
+
+      if (!profileData && !profileError) {
+        // ignoreDuplicates = ON CONFLICT DO NOTHING, so a second tab racing
+        // to create the same profile can't overwrite it; re-read either way.
+        const { error: insertError } = await supabase.from("profiles").upsert(
           {
             user_id: user.id,
             full_name: metadataFullName,
             email: user.email,
             role: metadataRole,
           },
-          {
-            onConflict: "user_id",
-          }
-        )
-        .select()
-        .single();
+          { onConflict: "user_id", ignoreDuplicates: true }
+        );
+        ({ data: profileData, error: profileError } = insertError
+          ? { data: null, error: insertError }
+          : await loadProfile());
+      }
 
-      if (profileError) {
-        console.log("Profile upsert error:", profileError);
+      if (profileError || !profileData) {
+        console.log("Profile load error:", profileError);
+        showError("load your account", profileError);
         setLoading(false);
         return;
       }
@@ -514,6 +533,7 @@ function Dashboard() {
 
         if (coachLookupError) {
           console.log("Coach lookup error:", coachLookupError);
+          showError("load your account", coachLookupError);
         }
 
         if (!coachData) {
@@ -533,6 +553,7 @@ function Dashboard() {
 
         if (coachInsertError) {
           console.log("Coach insert error:", coachInsertError);
+          showError("set up your account", coachInsertError);
         }
 
         if (newCoach) {
@@ -664,11 +685,13 @@ function Dashboard() {
       navigate("/upgrade");
     }
 
-    const { error } = await supabase
-      .from("notifications")
-      .update({ is_read: true })
-      .eq("id", notification.id);
+    const link = notificationLink(notification);
+    if (link) {
+      setNotificationsOpen(false);
+      navigate(link);
+    }
 
+    const error = await markNotificationRead(notification);
     if (error) {
       console.log("Mark notification read error:", error);
       return;
@@ -683,18 +706,12 @@ function Dashboard() {
     );
   }
 
-  async function deleteNotification(notificationId: string, notificationType?: string) {
-    if (notificationType === "tutorial_reset") {
-      localStorage.setItem("billio_tutorial_reset_notification_deleted", "1");
-    }
-
-    const { error } = await supabase
-      .from("notifications")
-      .delete()
-      .eq("id", notificationId);
+  async function handleDeleteNotification(notificationId: string, notificationType?: string) {
+    const error = await deleteNotification({ id: notificationId, type: notificationType });
 
     if (error) {
       console.log("Delete notification error:", error);
+      showError("delete the notification", error);
       return;
     }
 
@@ -707,13 +724,13 @@ function Dashboard() {
     e.preventDefault();
 
     if (!defaultHourlyRate || Number(defaultHourlyRate) <= 0) {
-    alert("Please enter your hourly rate before finishing setup.");
+    showWarning("Please enter your hourly rate before finishing setup.");
     return;
     }
 
     if (!coachId) return;
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("coaches")
       .update({
         visible_name: visibleName,
@@ -732,6 +749,7 @@ function Dashboard() {
 
     if (error) {
       console.log("Onboarding save error:", error);
+      showError("save your setup", error);
       return;
     }
 
@@ -846,72 +864,21 @@ function Dashboard() {
       const cleanStudentName = studentName.trim();
 
       if (!cleanStudentName) {
-        alert("Please enter a student name.");
+        showWarning("Please enter a student name.");
         return;
       }
 
-      const { data: existingLinks, error: existingStudentError } = await supabase
-        .from("coach_students")
-        .select(`
-          student_id,
-          students (
-            id,
-            student_name
-          )
-        `)
-        .eq("coach_id", coachId);
-
-      if (existingStudentError) {
-        console.log("Student lookup error:", existingStudentError);
+      const { id: finalStudentId, error: studentError } =
+        await findOrCreateStudentId(coachId, cleanStudentName, selectedStudentId);
+      if (studentError || !finalStudentId) {
+        showError("save the lesson", studentError);
         return;
-      }
-
-      const existingLink = existingLinks?.find((link: any) => {
-        return (
-          link.students?.student_name?.trim().toLowerCase() ===
-          cleanStudentName.toLowerCase()
-        );
-      });
-
-      let finalStudentId = existingLink?.student_id;
-      if (selectedStudentId) {
-        finalStudentId = selectedStudentId;
-      }
-
-      if (!finalStudentId) {
-        const { data: newStudent, error: newStudentError } = await supabase
-          .from("students")
-          .insert({
-            student_name: cleanStudentName,
-            active: true,
-          })
-          .select()
-          .single();
-
-        if (newStudentError) {
-          console.log("Student create error:", newStudentError);
-          return;
-        }
-
-        finalStudentId = newStudent.id;
-
-        const { error: linkError } = await supabase
-          .from("coach_students")
-          .insert({
-            coach_id: coachId,
-            student_id: finalStudentId,
-          });
-
-        if (linkError) {
-          console.log("Coach-student link error:", linkError);
-          return;
-        }
       }
 
       if (isRecurring) {
-        if (recurringDays.length === 0) { alert("Please select at least one day."); return; }
-        if (!recurringEndDate) { alert("Please select an end date."); return; }
-        if (recurringEndDate <= lessonDate) { alert("End date must be after start date."); return; }
+        if (recurringDays.length === 0) { showWarning("Please select at least one day."); return; }
+        if (!recurringEndDate) { showWarning("Please select an end date."); return; }
+        if (recurringEndDate <= lessonDate) { showWarning("End date must be after start date."); return; }
 
         const seriesPayload = {
           coach_id: coachId,
@@ -937,6 +904,7 @@ function Dashboard() {
 
         if (seriesError || !newSeries) {
           console.log("Series create error:", seriesError);
+          showError("save the lesson", seriesError);
           return;
         }
 
@@ -959,7 +927,7 @@ function Dashboard() {
             recurring_occurrence_date: date,
           }));
           const { error: lessonError } = await supabase.from("lessons").insert(lessonRows);
-          if (lessonError) console.log("Recurring lesson insert error:", lessonError);
+          if (lessonError) { console.log("Recurring lesson insert error:", lessonError); showError("save the lesson", lessonError); }
         }
 
         queryClient.invalidateQueries({ queryKey: ["recurring-lessons", coachId] });
@@ -980,6 +948,7 @@ function Dashboard() {
 
         if (lessonError) {
           console.log("Lesson create error:", lessonError);
+          showError("save the lesson", lessonError);
           return;
         }
       }
@@ -1063,6 +1032,7 @@ function Dashboard() {
 
       if (error) {
         console.log("Update dashboard lesson error:", error);
+        showError("update the lesson", error);
         return;
       }
 
@@ -1082,7 +1052,9 @@ function Dashboard() {
 
     try {
 
-      await cleanupInvoicesAfterLessonDelete(lessonId);
+      const invoiceCleanupError = await cleanupInvoicesAfterLessonDelete(lessonId, coachId);
+
+      if (invoiceCleanupError) showError("update the related invoice", invoiceCleanupError);
 
       const { error } = await supabase
         .from("lessons")
@@ -1092,6 +1064,7 @@ function Dashboard() {
 
       if (error) {
         console.log("Delete dashboard lesson error:", error);
+        showError("delete the lesson", error);
         return;
       }
 
@@ -1233,126 +1206,12 @@ function Dashboard() {
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [openInvoiceIdsKey]);
 
-    const unpaidInvoices = invoices.filter(
-      (invoice) => invoice.status === "unbilled" || invoice.status === "billed"
-    );
-
-    const paidInvoices = invoices.filter(
-      (invoice) => invoice.status === "paid"
-    );
-
-    const totalUnpaid = unpaidInvoices.reduce(
-      (sum, invoice) => sum + Number(invoice.total || 0),
-      0
-    );
-
-    const totalPaid = paidInvoices.reduce(
-      (sum, invoice) => sum + Number(invoice.total || 0),
-      0
-    );
 
     function formatStatus(status: string | null) {
       if (!status) return "No status";
 
       return status.charAt(0).toUpperCase() + status.slice(1);
     }
-
-  function getInvoiceStatusFromLessons(lessons: any[]) {
-    if (lessons.length === 0) return "unbilled";
-
-    const statuses = lessons.map(
-      (lesson) => lesson.billing_status || "unbilled"
-    );
-
-    if (statuses.every((status) => status === "paid")) {
-      return "paid";
-    }
-
-    if (statuses.every((status) => status === "billed")) {
-      return "billed";
-    }
-
-    if (statuses.some((status) => status === "unbilled")) {
-      return "unbilled";
-    }
-
-    return "billed";
-  }
-
-  async function cleanupInvoicesAfterLessonDelete(lessonId: string) {
-    if (!coachId) return;
-
-    const { data: invoiceLinks, error: linkError } = await supabase
-      .from("invoice_lessons")
-      .select("invoice_id")
-      .eq("lesson_id", lessonId);
-
-    if (linkError) {
-      console.log("Find invoice links error:", linkError);
-      return;
-    }
-
-    if (!invoiceLinks || invoiceLinks.length === 0) return;
-
-    for (const link of invoiceLinks) {
-      const invoiceId = link.invoice_id;
-
-      const { data: remainingLinks, error: remainingError } = await supabase
-        .from("invoice_lessons")
-        .select(`
-          lesson_id,
-          lessons (
-            id,
-            rate,
-            billing_status
-          )
-        `)
-        .eq("invoice_id", invoiceId)
-        .neq("lesson_id", lessonId);
-
-      if (remainingError) {
-        console.log("Remaining invoice lessons error:", remainingError);
-        continue;
-      }
-
-      if (!remainingLinks || remainingLinks.length === 0) {
-        const { error: deleteInvoiceError } = await supabase
-          .from("invoices")
-          .delete()
-          .eq("id", invoiceId)
-          .eq("coach_id", coachId);
-
-        if (deleteInvoiceError) {
-          console.log("Delete empty invoice error:", deleteInvoiceError);
-        }
-
-        continue;
-      }
-
-      const remainingLessons = remainingLinks.map((row: any) => row.lessons);
-
-      const newTotal = remainingLessons.reduce(
-        (sum: number, lesson: any) => sum + Number(lesson.rate || 0),
-        0
-      );
-
-      const newStatus = getInvoiceStatusFromLessons(remainingLessons);
-
-      const { error: updateInvoiceError } = await supabase
-        .from("invoices")
-        .update({
-          subtotal: newTotal,
-          total: newTotal,
-          status: newStatus,
-        })
-        .eq("id", invoiceId)
-        .eq("coach_id", coachId);
-
-      if (updateInvoiceError) {
-        console.log("Update invoice after lesson delete error:", updateInvoiceError);
-      }
-    }
-  }
 
   function resetLessonForm() {
     setStudentName("");
@@ -1882,7 +1741,7 @@ function Dashboard() {
                         className="notification-delete"
                         onClick={(e) => {
                           e.stopPropagation();
-                          deleteNotification(notification.id, notification.type);
+                          handleDeleteNotification(notification.id, notification.type);
                         }}
                       >
                         <FaTrash/>

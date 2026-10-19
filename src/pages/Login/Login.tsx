@@ -14,7 +14,6 @@ function Login() {
     const [message, setMessage] = useState("");
 
     const [showPassword, setShowPassword] = useState(false);
-    const [resetMode, setResetMode] = useState(false);
 
     async function handleLogin(e:React.FormEvent<HTMLFormElement>) {
         e.preventDefault();

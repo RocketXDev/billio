@@ -19,6 +19,8 @@ import {
   FaSpinner,
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
+import { showError, showWarning } from "../../lib/notify";
+import { cleanupInvoicesAfterLessonDelete } from "../../lib/invoiceSync";
 import { usePlan } from "../../hooks/usePlan";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import { useLessonTerm } from "../../hooks/useLessonTerm";
@@ -217,7 +219,7 @@ function Students() {
       const cleanStudentName = studentName.trim();
 
       if (!cleanStudentName) {
-        alert("Please enter a student name.");
+        showWarning("Please enter a student name.");
         return;
       }
 
@@ -228,7 +230,7 @@ function Students() {
       );
 
       if (existingStudent) {
-        alert("This student already exists.");
+        showWarning("This student already exists.");
         return;
       }
 
@@ -249,7 +251,7 @@ function Students() {
         .single();
 
       if (studentError) {
-        alert("Error saving student: " + studentError.message);
+        showError("save the student", studentError);
         return;
       }
 
@@ -264,7 +266,7 @@ function Students() {
         });
 
       if (linkError) {
-        alert("Error linking student: " + linkError.message);
+        showError("save the student", linkError);
         return;
       }
 
@@ -565,7 +567,7 @@ function Students() {
         .single();
 
       if (error) {
-        alert("Error saving lesson: " + error.message);
+        showError("save the lesson", error);
         return;
       }
 
@@ -589,6 +591,11 @@ function Students() {
 
     try {
 
+      // Same as the Lessons page: take the lesson off its invoices first
+      // (previously skipped here, leaving invoices with a stale total).
+      const invoiceCleanupError = await cleanupInvoicesAfterLessonDelete(lessonId, coachId);
+      if (invoiceCleanupError) showError("update the related invoice", invoiceCleanupError);
+
       const { error } = await supabase
       .from("lessons")
       .delete()
@@ -597,12 +604,23 @@ function Students() {
 
       if (error) {
         console.log("Delete student lesson error:", error);
+        showError("delete the lesson", error);
         return;
       }
 
       setStudentLessons((prev) =>
         prev.filter((lesson) => lesson.id !== lessonId)
       );
+      queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
+      queryClient.invalidateQueries({ queryKey: ["invoices", coachId] });
+
+      // The open student's invoice list is local state, not the query cache —
+      // reload it so a removed or re-totalled invoice shows without a refresh.
+      if (selectedStudent?.id) {
+        const { data: invoices, error: invoicesError } = await fetchStudentInvoices(selectedStudent.id);
+        if (invoicesError) showError("refresh this student's invoices", invoicesError);
+        else setStudentInvoices(invoices || []);
+      }
 
     } finally {
       setIsDeleting(false);
@@ -624,7 +642,7 @@ function Students() {
       const cleanStudentName = studentName.trim();
 
       if (!cleanStudentName) {
-        alert("Please enter a student name.");
+        showWarning("Please enter a student name.");
         return;
       }
 
@@ -636,7 +654,7 @@ function Students() {
       );
 
       if (existingStudent) {
-        alert("This student already exists.");
+        showWarning("This student already exists.");
         return;
       }
 
@@ -658,7 +676,7 @@ function Students() {
         .single();
 
       if (studentError) {
-        alert("Error saving student: " + studentError.message);
+        showError("save the student", studentError);
         return;
       }
 
@@ -673,7 +691,7 @@ function Students() {
         .eq("student_id", editingStudent.id);
 
       if (linkError) {
-        alert("Error saving preferences: " + linkError.message);
+        showError("save the student's preferences", linkError);
         return;
       }
 
@@ -697,6 +715,12 @@ function Students() {
     }
 
     closeEditStudent();
+  }
+
+  function fetchStudentInvoices(studentId: string) {
+    return supabase.from("invoices").select("*, invoice_lessons(lessons(lesson_date))")
+      .eq("coach_id", coachId).eq("student_id", studentId)
+      .order("created_at", { ascending: false });
   }
 
   async function openStudentDetails(link: any) {
@@ -724,15 +748,13 @@ function Students() {
         .eq("coach_id", coachId).eq("student_id", student.id)
         .order("lesson_date", { ascending: false })
         .order("start_time", { ascending: false }),
-      supabase.from("invoices").select("*, invoice_lessons(lessons(lesson_date))")
-        .eq("coach_id", coachId).eq("student_id", student.id)
-        .order("created_at", { ascending: false }),
+      fetchStudentInvoices(student.id),
     ]);
 
-    if (lessonsResult.error) console.log("Student lessons error:", lessonsResult.error);
+    if (lessonsResult.error) { console.log("Student lessons error:", lessonsResult.error); showError("load this student's history", lessonsResult.error); }
     else setStudentLessons(lessonsResult.data || []);
 
-    if (invoicesResult.error) console.log("Student invoices error:", invoicesResult.error);
+    if (invoicesResult.error) { console.log("Student invoices error:", invoicesResult.error); showError("load this student's history", invoicesResult.error); }
     else setStudentInvoices(invoicesResult.data || []);
 
     setDetailLoading(false);
@@ -853,6 +875,7 @@ function Students() {
 
       if (error) {
         console.log("Archive student error:", error);
+        showError("archive the student", error);
         return;
       }
 
@@ -894,6 +917,7 @@ function Students() {
 
       if (error) {
         console.log("Restore student error:", error);
+        showError("restore the student", error);
         return;
       }
 
@@ -933,6 +957,7 @@ function Students() {
 
       if (lessonsNameError) {
         console.log("Snapshot student name onto lessons error:", lessonsNameError);
+        showError("delete the student", lessonsNameError);
         return;
       }
 
@@ -944,6 +969,7 @@ function Students() {
 
       if (invoicesNameError) {
         console.log("Snapshot student name onto invoices error:", invoicesNameError);
+        showError("delete the student", invoicesNameError);
         return;
       }
 
@@ -955,6 +981,7 @@ function Students() {
 
       if (linkError) {
         console.log("Delete coach student link error:", linkError);
+        showError("delete the student", linkError);
         return;
       }
 
@@ -965,6 +992,7 @@ function Students() {
 
       if (studentError) {
         console.log("Delete student error:", studentError);
+        showError("delete the student", studentError);
         return;
       }
 

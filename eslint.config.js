@@ -19,4 +19,10 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    // Test fakes stand in for untyped Supabase responses.
+    files: ['tests/**/*.ts'],
+    languageOptions: { globals: globals.node },
+    rules: { '@typescript-eslint/no-explicit-any': 'off' },
+  },
 ])

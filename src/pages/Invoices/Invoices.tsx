@@ -10,7 +10,6 @@ import {
   FaPlus,
   FaPaperPlane,
   FaEdit,
-  FaFilter,
   FaReceipt,
   FaClock,
   FaWallet,
@@ -22,6 +21,8 @@ import {
 } from "react-icons/fa";
 import { IoShareOutline } from "react-icons/io5";
 import { supabase } from "../../lib/supabaseClient";
+import { showError } from "../../lib/notify";
+import { invoiceStatusFromLessons } from "../../lib/invoiceSync";
 import { fetchAllRows } from "../../lib/fetchAllRows";
 import { usePlan } from "../../hooks/usePlan";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
@@ -39,8 +40,6 @@ function Invoices() {
   const term = useLessonTerm();
   const queryClient = useQueryClient();
 
-  const [selectedFilter, setSelectedFilter] = useState("all");
-  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [sendSuccessRecipient, setSendSuccessRecipient] = useState("");
   const [sendSuccessMethod, setSendSuccessMethod] = useState("");
   const [sendError, setSendError] = useState("");
@@ -76,7 +75,6 @@ function Invoices() {
   // Invoices Editing
   const [showEditInvoice, setShowEditInvoice] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<any>(null);
-  const [editInvoiceNumber, setEditInvoiceNumber] = useState("");
   const [editInvoiceStatus, setEditInvoiceStatus] = useState("");
   const [editIssueDate, setEditIssueDate] = useState("");
   const [editDueDate, setEditDueDate] = useState("");
@@ -121,7 +119,6 @@ function Invoices() {
 
   // Loading
   const [isSaving, setIsSaving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
 
   // Tutorial
@@ -291,10 +288,6 @@ function Invoices() {
     return `${displayHours}:${minutesStr.padStart(2, "0")} ${period}`;
   }
 
-  const filteredInvoices =
-    selectedFilter === "all"
-      ? invoices
-      : invoices.filter((invoice) => invoice.status === selectedFilter);
 
   const now = new Date();
 
@@ -365,6 +358,7 @@ function Invoices() {
 
     if (error) {
       console.log("Load invoice students error:", error);
+      showError("load your students", error);
       return;
     }
 
@@ -387,6 +381,7 @@ function Invoices() {
 
     if (error) {
       console.log("Load invoice lessons error:", error);
+      showError("load lessons for this invoice", error);
       return;
     }
 
@@ -411,6 +406,7 @@ function Invoices() {
 
     if (error) {
       console.log("Load all unbilled lessons error:", error);
+      showError("load unbilled lessons", error);
       return;
     }
 
@@ -479,6 +475,7 @@ function Invoices() {
 
       if (invoiceError) {
         console.log("Create invoice error:", invoiceError);
+        showError("create the invoice", invoiceError);
         return;
       }
 
@@ -493,6 +490,7 @@ function Invoices() {
 
       if (linkError) {
         console.log("Invoice lesson link error:", linkError);
+        showError("attach lessons to the invoice", linkError);
         return;
       }
 
@@ -692,6 +690,7 @@ function Invoices() {
 
         if (invoiceError) {
           console.log("Bulk create invoice error:", invoiceError);
+          showError("create some of the invoices", invoiceError);
           continue;
         }
 
@@ -706,6 +705,7 @@ function Invoices() {
 
         if (linkError) {
           console.log("Bulk invoice lesson link error:", linkError);
+          showError("create some of the invoices", linkError);
           continue;
         }
 
@@ -750,6 +750,7 @@ function Invoices() {
 
     if (error) {
       console.log("Load invoice lessons error:", error);
+      showError("load this invoice's lessons", error);
       setEditInvoiceLessons([]);
       setEditSelectedLessonIds([]);
     } else {
@@ -821,6 +822,7 @@ function Invoices() {
 
       if (deleteInvoiceError) {
         console.log("Delete empty invoice error:", deleteInvoiceError);
+        showError("update the invoice", deleteInvoiceError);
         return;
       }
 
@@ -848,6 +850,7 @@ function Invoices() {
 
     if (deleteLinksError) {
       console.log("Delete old invoice lesson links error:", deleteLinksError);
+      showError("update the invoice", deleteLinksError);
       return;
     }
 
@@ -862,6 +865,7 @@ function Invoices() {
 
     if (linkError) {
       console.log("Update invoice lessons error:", linkError);
+      showError("update the invoice", linkError);
       return;
     }
 
@@ -901,7 +905,7 @@ function Invoices() {
       : selectedLessons;
 
     const finalInvoiceStatus =
-      getInvoiceStatusFromLessons(finalSelectedLessons);
+      invoiceStatusFromLessons(finalSelectedLessons);
 
     const { data: updatedInvoice, error: invoiceError } = await supabase
       .from("invoices")
@@ -929,6 +933,7 @@ function Invoices() {
 
     if (invoiceError) {
       console.log("Update invoice error:", invoiceError);
+      showError("update the invoice", invoiceError);
       return;
     }
 
@@ -939,7 +944,6 @@ function Invoices() {
 
   async function handleDeleteInvoice(invoiceId: string) {
 
-    const lessonIds = editInvoiceLessons.map((lesson) => lesson.id);
 
     const { error } = await supabase
       .from("invoices")
@@ -949,6 +953,7 @@ function Invoices() {
 
     if (error) {
       console.log("Delete invoice error:", error);
+      showError("delete the invoice", error);
       return;
     }
 
@@ -1009,23 +1014,6 @@ function Invoices() {
     setStatusUpdatingId(null);
   }
 
-  function getInvoiceStatusFromLessons(lessons: any[]) {
-    if (lessons.length === 0) return "unbilled";
-
-    const statuses = lessons.map(
-      (lesson) => lesson.billing_status || "unbilled"
-    );
-
-    if (statuses.every((status) => status === "paid")) {
-      return "paid";
-    }
-
-    if (statuses.some((status) => status === "unbilled")) {
-      return "unbilled";
-    }
-
-    return "billed";
-  }
   async function openInvoiceDetailView(invoice: any) {
     setInvoiceDetailView(invoice);
     setInvoiceDetailViewLoading(true);
@@ -1526,6 +1514,7 @@ function Invoices() {
 
     if (error) {
       console.log("Save invoice settings error:", error);
+      showError("save your invoice settings", error);
       return;
     }
 
@@ -1773,7 +1762,7 @@ function Invoices() {
                             </span>
 
                             <strong>
-                              {Object.values(weeks).reduce(
+                              {(Object.values(weeks) as any[]).reduce(
                                 (sum: number, week: any) =>
                                   sum + week.invoices.length,
                                 0

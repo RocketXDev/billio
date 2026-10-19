@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
+import { findOrCreateStudentId } from "../../lib/students";
 import "./CoachingTimer.css";
 import {
   FaArrowLeft
@@ -162,37 +163,13 @@ export default function CoachingTimer() {
 
   async function getOrCreateStudent(): Promise<string | null> {
     if (!coachId) return null;
-    const cleanName = studentName.trim();
-
-    if (selectedStudentId) return selectedStudentId;
-
-    const existingLink = coachStudents.find((link: any) =>
-      link.students?.student_name?.trim().toLowerCase() === cleanName.toLowerCase()
-    );
-    if (existingLink) return existingLink.student_id;
-
-    const { data: newStudent, error: studentError } = await supabase
-      .from("students")
-      .insert({ student_name: cleanName, active: true })
-      .select()
-      .single();
-
-    if (studentError || !newStudent) {
-      setMessage(`Could not create student: ${studentError?.message}`);
+    const { id, created, error } = await findOrCreateStudentId(coachId, studentName, selectedStudentId);
+    if (error || !id) {
+      setMessage(`Could not save the student: ${(error as { message?: string } | null)?.message ?? "unknown error"}`);
       return null;
     }
-
-    const { error: linkError } = await supabase
-      .from("coach_students")
-      .insert({ coach_id: coachId, student_id: newStudent.id });
-
-    if (linkError) {
-      setMessage(`Could not link student: ${linkError?.message}`);
-      return null;
-    }
-
-    queryClient.invalidateQueries({ queryKey: ["coach-students", coachId] });
-    return newStudent.id;
+    if (created) queryClient.invalidateQueries({ queryKey: ["coach-students", coachId] });
+    return id;
   }
 
   async function saveLesson() {

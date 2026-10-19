@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
+import { showError, confirmDialog } from "../../lib/notify";
 import { fetchAllRows } from "../../lib/fetchAllRows";
 import { useNavigate } from "react-router-dom";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
@@ -147,7 +148,7 @@ function PdfInvoice() {
 
       if (error || !data?.signedUrl) {
         placeholder?.close();
-        alert("Could not open this PDF: " + (error?.message || "Unknown error."));
+        showError("open this PDF", error);
         return;
       }
 
@@ -172,7 +173,7 @@ function PdfInvoice() {
         .createSignedUrl(invoice.pdf_path, 300);
 
       if (error || !data?.signedUrl) {
-        alert("Could not download this PDF: " + (error?.message || "Unknown error."));
+        showError("download this PDF", error);
         return;
       }
 
@@ -189,7 +190,7 @@ function PdfInvoice() {
       a.remove();
       URL.revokeObjectURL(blobUrl);
     } catch (e: any) {
-      alert("Could not download this PDF: " + (e?.message || "Unknown error."));
+      showError("download this PDF", e);
     } finally {
       setDownloadingPdfId(null);
     }
@@ -207,6 +208,7 @@ function PdfInvoice() {
 
       if (error) {
         console.log("Delete invoice error:", error);
+        showError("delete the invoice", error);
         return;
       }
 
@@ -390,7 +392,7 @@ function PdfInvoice() {
       .eq("id", id)
       .single();
     if (error || !data) {
-      alert("Couldn't load draft.");
+      showError("load the draft");
       return;
     }
 
@@ -444,10 +446,10 @@ function PdfInvoice() {
 
   async function deleteDraft(id: string, e: React.MouseEvent) {
     e.stopPropagation();
-    if (!confirm("Delete this saved invoice?")) return;
+    if (!(await confirmDialog({ title: "Delete this saved invoice?", message: "This can't be undone.", confirmLabel: "Delete", destructive: true }))) return;
     const { error } = await supabase.from("event_invoices").delete().eq("id", id);
     if (error) {
-      alert("Couldn't delete: " + error.message);
+      showError("delete the saved invoice", error);
       return;
     }
     if (currentDraftId === id) startNewInvoice();
@@ -630,7 +632,7 @@ function PdfInvoice() {
       .from("brand-logos")
       .upload(path, file, { upsert: true });
     if (error) {
-      alert("Logo upload failed: " + error.message);
+      showError("upload your logo", error);
       return;
     }
     const { data } = supabase.storage.from("brand-logos").getPublicUrl(path);
@@ -660,7 +662,7 @@ function PdfInvoice() {
     );
     setBrandSaving(false);
     if (error) {
-      alert("Couldn't save brand settings: " + error.message);
+      showError("save your brand settings", error);
       return;
     }
     setShowBrand(false);
@@ -714,7 +716,7 @@ function PdfInvoice() {
 
     setSaving(false);
     if (error) {
-      alert("Couldn't save invoice: " + error.message);
+      showError("save the invoice", error);
       return;
     }
     await loadDrafts(userId);
@@ -896,7 +898,7 @@ function PdfInvoice() {
 
       doc.save(`${invoiceNumber}.pdf`);
     } catch (e: any) {
-      alert("PDF generation failed: " + (e?.message || e));
+      showError("generate the PDF", e);
     } finally {
       setGenerating(false);
     }

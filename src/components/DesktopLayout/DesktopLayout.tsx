@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
+import { showError } from "../../lib/notify";
+import { deleteNotification, markNotificationRead, notificationLink } from "../../lib/notifications";
 import "./DesktopLayout.css";
 import { PullToRefresh } from "../PullToRefresh/PullToRefresh";
 import { useLessonTerm } from "../../hooks/useLessonTerm";
@@ -28,7 +30,7 @@ function DesktopLayout({ children }: Props) {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
-  const [initials, setInitials] = useState("?");
+  const [, setInitials] = useState("?");
   const [notifications, setNotifications] = useState<any[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);
 
@@ -105,19 +107,26 @@ function DesktopLayout({ children }: Props) {
     if (notification.type === "subscription_expiring") {
       navigate("/upgrade");
     }
-    await supabase
-      .from("notifications")
-      .update({ is_read: true })
-      .eq("id", notification.id);
+    const link = notificationLink(notification);
+    if (link) {
+      setNotifOpen(false);
+      navigate(link);
+    }
+    const error = await markNotificationRead(notification);
+    if (error) return;
     setNotifications((prev) =>
       prev.map((n) => (n.id === notification.id ? { ...n, is_read: true } : n))
     );
   }
 
-  async function deleteNotif(id: string, e: React.MouseEvent) {
+  async function deleteNotif(notification: any, e: React.MouseEvent) {
     e.stopPropagation();
-    await supabase.from("notifications").delete().eq("id", id);
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    const error = await deleteNotification(notification);
+    if (error) {
+      showError("delete the notification", error);
+      return;
+    }
+    setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
   }
 
   return (
@@ -233,7 +242,7 @@ function DesktopLayout({ children }: Props) {
                               </span>
                               <button
                                 className="desktop-notif-delete"
-                                onClick={(e) => deleteNotif(n.id, e)}
+                                onClick={(e) => deleteNotif(n, e)}
                               >
                                 <FaTrash />
                               </button>

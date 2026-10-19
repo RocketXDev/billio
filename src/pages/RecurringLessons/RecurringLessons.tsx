@@ -6,6 +6,8 @@ import {
   FaHome, FaCalendarAlt, FaUsers, FaFileInvoiceDollar, FaEllipsisH,
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
+import { showError, showWarning } from "../../lib/notify";
+import { findOrCreateStudentId } from "../../lib/students";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import { useLessonTerm } from "../../hooks/useLessonTerm";
 import "./RecurringLessons.css";
@@ -249,40 +251,23 @@ export default function RecurringLessons() {
     }, 220);
   }
 
-  async function getOrCreateStudent(): Promise<string | null> {
-    if (!coachId) return null;
-    if (selectedStudentId) return selectedStudentId;
-    const cleanName = studentName.trim();
-    if (!cleanName) return null;
-
-    // Check existing
-    const existing = coachStudents.find((link: any) =>
-      link.students?.student_name?.trim().toLowerCase() === cleanName.toLowerCase()
-    );
-    if (existing) return existing.student_id;
-
-    // Create new
-    const { data: newStudent, error } = await supabase
-      .from("students").insert({ student_name: cleanName, active: true }).select().single();
-    if (error || !newStudent) return null;
-
-    await supabase.from("coach_students").insert({ coach_id: coachId, student_id: newStudent.id });
-    queryClient.invalidateQueries({ queryKey: ["coach-students", coachId] });
-    queryClient.invalidateQueries({ queryKey: ["students", coachId] });
-    return newStudent.id;
-  }
-
   async function handleSave() {
     if (isSaving) return;
-    if (!studentName.trim() && !selectedStudentId) { alert("Please enter or select a student."); return; }
-    if (formDays.length === 0) { alert("Please select at least one day."); return; }
-    if (!rangeStart || !rangeEnd) { alert("Please select a date range."); return; }
-    if (rangeEnd <= rangeStart) { alert("End date must be after start date."); return; }
+    if (!studentName.trim() && !selectedStudentId) { showWarning("Please enter or select a student."); return; }
+    if (formDays.length === 0) { showWarning("Please select at least one day."); return; }
+    if (!rangeStart || !rangeEnd) { showWarning("Please select a date range."); return; }
+    if (rangeEnd <= rangeStart) { showWarning("End date must be after start date."); return; }
 
     setIsSaving(true);
     try {
-      const studentId = await getOrCreateStudent();
-      if (!studentId) { alert("Could not resolve student."); return; }
+      if (!coachId) return;
+      const { id: studentId, created, error: studentError } =
+        await findOrCreateStudentId(coachId, studentName, selectedStudentId);
+      if (studentError || !studentId) { showError("set up the student", studentError); return; }
+      if (created) {
+        queryClient.invalidateQueries({ queryKey: ["coach-students", coachId] });
+        queryClient.invalidateQueries({ queryKey: ["students", coachId] });
+      }
 
       const seriesPayload = {
         coach_id: coachId,
@@ -312,7 +297,7 @@ export default function RecurringLessons() {
       } else {
         const { data: newSeries, error } = await supabase
           .from("recurring_lessons").insert(seriesPayload).select().single();
-        if (error || !newSeries) { alert("Could not create series: " + error?.message); return; }
+        if (error || !newSeries) { showError("create the series", error); return; }
         seriesId = newSeries.id;
       }
 
@@ -341,7 +326,7 @@ export default function RecurringLessons() {
         }));
 
         const { error: lessonError } = await supabase.from("lessons").insert(lessonRows);
-        if (lessonError) console.log("Lesson insert error:", lessonError);
+        if (lessonError) { console.log("Lesson insert error:", lessonError); showError("create the series lessons", lessonError); }
       }
 
       queryClient.invalidateQueries({ queryKey: ["recurring-lessons", coachId] });

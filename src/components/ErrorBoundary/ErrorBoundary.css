@@ -1,0 +1,39 @@
+.crash-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--main-bg);
+}
+
+.crash-card {
+  max-width: 400px;
+  box-shadow: var(--shadow-lg);
+}
+
+.crash-detail {
+  display: block;
+  margin: -8px 0 20px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--secondary-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  text-align: left;
+  word-break: break-word;
+}
+
+.crash-reload-btn {
+  height: 48px;
+  margin: 0;
+  border: none;
+  border-radius: 15px;
+  background: var(--accent-grad);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}

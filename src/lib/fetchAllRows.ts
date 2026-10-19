@@ -12,8 +12,8 @@
 // column such as id) or rows can repeat/skip across page boundaries.
 const PAGE_SIZE = 1000;
 
-export async function fetchAllRows<T = any>(
-  buildPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: any }>
+export async function fetchAllRows<T>(
+  buildPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>
 ): Promise<T[]> {
   const rows: T[] = [];
   for (;;) {

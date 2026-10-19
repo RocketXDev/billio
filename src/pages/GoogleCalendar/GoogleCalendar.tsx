@@ -6,6 +6,8 @@ import {
   FaHome, FaCalendarAlt, FaUsers, FaFileInvoiceDollar, FaEllipsisH,
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
+import { showError, showWarning } from "../../lib/notify";
+import { findOrCreateStudentId } from "../../lib/students";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import { useSettings } from "../../hooks/useSettings";
 import { useLessonTerm } from "../../hooks/useLessonTerm";
@@ -220,7 +222,7 @@ export default function GoogleCalendar() {
       if (imp.kind === "lesson") {
         const studentId = studentIdOverride || studentChoice[imp.id];
         if (!studentId) {
-          alert("Please choose or create a student first.");
+          showWarning("Please choose or create a student first.");
           return;
         }
         await callFunction("approve-import", { importId: imp.id, studentId, hourlyRate: rateChoice[imp.id] || null });
@@ -250,23 +252,21 @@ export default function GoogleCalendar() {
     }
   }
 
-  async function resolveStudentForImport(importId: string): Promise<string | null> {
+  // `failed` = an error popup was already shown; `id: null` alone = no name typed.
+  async function resolveStudentForImport(importId: string): Promise<{ id: string | null; failed: boolean }> {
     const typed = (studentNameInput[importId] || "").trim();
-    if (!typed) return null;
+    if (!typed || !coachId) return { id: null, failed: false };
 
-    const existing = coachStudents.find(
-      (link: any) => link.students?.student_name?.trim().toLowerCase() === typed.toLowerCase()
-    );
-    if (existing) return existing.student_id;
-
-    const { data: newStudent, error } = await supabase
-      .from("students").insert({ student_name: typed, active: true }).select().single();
-    if (error || !newStudent) return null;
-
-    await supabase.from("coach_students").insert({ coach_id: coachId, student_id: newStudent.id });
-    queryClient.invalidateQueries({ queryKey: ["coach-students", coachId] });
-    queryClient.invalidateQueries({ queryKey: ["students", coachId] });
-    return newStudent.id;
+    const { id, created, error } = await findOrCreateStudentId(coachId, typed);
+    if (error || !id) {
+      showError("add the student", error);
+      return { id: null, failed: true };
+    }
+    if (created) {
+      queryClient.invalidateQueries({ queryKey: ["coach-students", coachId] });
+      queryClient.invalidateQueries({ queryKey: ["students", coachId] });
+    }
+    return { id, failed: false };
   }
 
   function formatTime(hoursStr: string, minutesStr: string) {
@@ -532,9 +532,10 @@ export default function GoogleCalendar() {
                         disabled={approvingId === imp.id}
                         onClick={async () => {
                           if (imp.kind === "lesson" && !studentChoice[imp.id]) {
-                            const resolvedId = await resolveStudentForImport(imp.id);
+                            const { id: resolvedId, failed } = await resolveStudentForImport(imp.id);
+                            if (failed) return;
                             if (!resolvedId) {
-                              alert("Please enter a student name.");
+                              showWarning("Please enter a student name.");
                               return;
                             }
                             await handleApprove(imp, resolvedId);

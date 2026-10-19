@@ -10,6 +10,8 @@ import {
   FaTimes,
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
+import { findOrCreateStudentId } from "../../lib/students";
+import { cleanupInvoicesAfterLessonDelete } from "../../lib/invoiceSync";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import { useSettings } from "../../hooks/useSettings";
 import { useLessonTerm } from "../../hooks/useLessonTerm";
@@ -285,27 +287,12 @@ export default function AiAssistant() {
     const clean = studentName.trim();
     if (!clean || !coachId) throw new Error("Could not determine the student.");
 
-    const existingLink = coachStudents.find(
-      (link: any) => link.students?.student_name?.trim().toLowerCase() === clean.toLowerCase()
-    );
-    if (existingLink) return existingLink.student_id;
-
-    const { data: newStudent, error: studentError } = await supabase
-      .from("students")
-      .insert({ student_name: clean, active: true })
-      .select()
-      .single();
-    if (studentError || !newStudent) {
-      throw new Error(studentError?.message || "Could not create student.");
+    const { id, created, error } = await findOrCreateStudentId(coachId, clean);
+    if (error || !id) {
+      throw new Error((error as { message?: string } | null)?.message || "Could not create student.");
     }
-
-    const { error: linkError } = await supabase
-      .from("coach_students")
-      .insert({ coach_id: coachId, student_id: newStudent.id });
-    if (linkError) throw new Error(linkError.message);
-
-    queryClient.invalidateQueries({ queryKey: ["coach-students", coachId] });
-    return newStudent.id;
+    if (created) queryClient.invalidateQueries({ queryKey: ["coach-students", coachId] });
+    return id;
   }
 
   async function createLessonFromDraft(data: any): Promise<string> {
@@ -473,41 +460,11 @@ export default function AiAssistant() {
     if (ownError) throw new Error(ownError.message);
     if (!ownedLesson) throw new Error(`Could not find that ${term.lower}.`);
 
-    // Only invoices that are actually this coach's own (inner-join + filter
-    // on the embedded invoices row) are eligible for cleanup below.
-    const { data: invoiceLinks, error: linksError } = await supabase
-      .from("invoice_lessons")
-      .select("invoice_id, invoices!inner(coach_id)")
-      .eq("lesson_id", lessonId)
-      .eq("invoices.coach_id", coachId);
-    if (linksError) throw new Error(linksError.message);
-
-    for (const link of invoiceLinks || []) {
-      const { data: remaining, error: remainingError } = await supabase
-        .from("invoice_lessons")
-        .select("lesson_id, lessons(rate, billing_status)")
-        .eq("invoice_id", link.invoice_id)
-        .neq("lesson_id", lessonId);
-      if (remainingError) throw new Error(remainingError.message);
-
-      if (!remaining || remaining.length === 0) {
-        await supabase.from("invoices").delete().eq("id", link.invoice_id).eq("coach_id", coachId);
-      } else {
-        const total = remaining.reduce((sum: number, r: any) => sum + Number(r.lessons?.rate || 0), 0);
-        const statuses = remaining.map((r: any) => r.lessons?.billing_status || "unbilled");
-        const status = statuses.every((s: string) => s === "paid")
-          ? "paid"
-          : statuses.every((s: string) => s === "billed")
-          ? "billed"
-          : statuses.some((s: string) => s === "unbilled")
-          ? "unbilled"
-          : "billed";
-        await supabase
-          .from("invoices")
-          .update({ subtotal: total, total, status })
-          .eq("id", link.invoice_id)
-          .eq("coach_id", coachId);
-      }
+    // Take the lesson off this coach's invoices (re-total, or delete an
+    // invoice left empty) before deleting it — shared with the Lessons page.
+    const invoiceError = await cleanupInvoicesAfterLessonDelete(lessonId, coachId);
+    if (invoiceError) {
+      throw new Error((invoiceError as { message?: string }).message || "Could not update the invoice.");
     }
 
     const { error } = await supabase.from("lessons").delete().eq("id", lessonId).eq("coach_id", coachId);
@@ -639,7 +596,7 @@ export default function AiAssistant() {
     if (data.parent_phone !== undefined) updates.parent_phone = data.parent_phone || null;
     if (data.notes !== undefined) updates.notes = data.notes || null;
 
-    const { error } = await supabase.from("students").update(updates).eq("id", link.students.id);
+    const { error } = await supabase.from("students").update(updates).eq("id", (link as any).students.id);
     if (error) throw new Error(error.message);
 
     queryClient.invalidateQueries({ queryKey: ["coach-students", coachId] });

@@ -1,7 +1,6 @@
 import './ComingSoon.css';
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  FaArrowLeft,
   FaTools,
 } from "react-icons/fa";
 

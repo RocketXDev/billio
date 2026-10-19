@@ -469,3 +469,202 @@
     margin: 28px 0 12px;
   }
 }
+/* ── Export records ── */
+.ed-export-entry {
+  width: 100%;
+  height: auto; /* global button rule forces 50px */
+  min-height: 76px;
+  line-height: 1.35;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0;
+  padding: 16px;
+  text-align: left;
+  background: var(--card-bg);
+  color: var(--main-text);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+  cursor: pointer;
+}
+
+.ed-export-entry-icon {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-tint);
+  color: var(--primary-purple);
+  font-size: 20px;
+}
+
+.ed-export-entry strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.ed-export-entry small {
+  display: block;
+  margin-top: 2px;
+  color: var(--secondary-text);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.ed-export-card {
+  max-width: 420px;
+  text-align: left;
+  box-shadow: var(--shadow-lg);
+}
+
+.ed-export-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ed-export-head h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.ed-export-close {
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--secondary-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.ed-export-card p.ed-export-intro {
+  margin: 8px 0 18px;
+  font-size: 14px;
+}
+
+.ed-export-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--main-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ed-export-periods {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.ed-export-period {
+  height: 42px;
+  margin: 0;
+  padding: 0;
+  border-radius: 13px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--secondary-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ed-export-period.active {
+  background: var(--accent-grad);
+  border-color: transparent;
+  color: white;
+}
+
+.ed-export-dates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.ed-export-dates label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--secondary-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ed-export-dates input {
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--main-text);
+  font-size: 14px;
+}
+
+.ed-export-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.ed-export-option {
+  width: 100%;
+  height: auto; /* global button rule forces 50px */
+  min-height: 68px;
+  line-height: 1.35;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 14px;
+  text-align: left;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--main-text);
+  cursor: pointer;
+}
+
+.ed-export-option svg {
+  flex: 0 0 auto;
+  font-size: 24px;
+  color: #16a34a;
+}
+
+.ed-export-option strong {
+  display: block;
+  font-size: 15px;
+}
+
+.ed-export-option small {
+  display: block;
+  font-weight: 400;
+  margin-top: 2px;
+  color: var(--secondary-text);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+.ed-export-option:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.ed-export-entry:focus-visible,
+.ed-export-option:focus-visible,
+.ed-export-period:focus-visible,
+.ed-export-close:focus-visible {
+  outline: 3px solid var(--shadow);
+  outline-offset: 2px;
+}

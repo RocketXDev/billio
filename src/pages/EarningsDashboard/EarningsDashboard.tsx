@@ -4,11 +4,12 @@ import { useNavigate } from "react-router-dom";
 import {
   FaArrowLeft, FaHome, FaCalendarAlt, FaUsers,
   FaFileInvoiceDollar, FaEllipsisH, FaTrophy,
-  FaChartBar, FaExclamationCircle,
+  FaChartBar, FaExclamationCircle, FaFileCsv,
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import { useLessonTerm } from "../../hooks/useLessonTerm";
+import ExportRecordsDialog from "./ExportRecordsDialog";
 import "./EarningsDashboard.css";
 
 export default function EarningsDashboard() {
@@ -16,6 +17,7 @@ export default function EarningsDashboard() {
   const { coachId, identityLoading } = useCoachIdentity();
   const term = useLessonTerm();
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+  const [showExport, setShowExport] = useState(false);
 
   useEffect(() => { if (!coachId && !identityLoading) navigate("/login"); }, [coachId, identityLoading]);
 
@@ -360,8 +362,22 @@ export default function EarningsDashboard() {
           )}
         </div>
 
+        {/* ── Export ── */}
+        <div className="ed-section-label">Your records</div>
+        <button type="button" className="ed-export-entry" onClick={() => setShowExport(true)}>
+          <span className="ed-export-entry-icon" aria-hidden="true"><FaFileCsv /></span>
+          <span>
+            <strong>Export to spreadsheet</strong>
+            <small>Download your {term.lowerPlural} and earnings for any period as a CSV</small>
+          </span>
+        </button>
+
         <div style={{ height: 20 }} />
       </div>
+
+      {showExport && coachId && (
+        <ExportRecordsDialog coachId={coachId} term={term} onClose={() => setShowExport(false)} />
+      )}
 
       <nav className="bottom-nav">
         <div className="nav-item" onClick={() => navigate("/dashboard")}><FaHome /><span>Dashboard</span></div>

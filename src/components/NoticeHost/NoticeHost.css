@@ -1,0 +1,95 @@
+/* Layered on the shared .billio-confirm-* dialog styles (styles/layout.css). */
+
+/* Above every page modal, bottom sheet and tutorial spotlight. */
+.notice-overlay {
+  z-index: 10000;
+  animation: notice-fade 0.15s ease-out;
+}
+
+.notice-card {
+  box-shadow: var(--shadow-lg);
+  animation: notice-pop 0.18s ease-out;
+}
+
+.notice-card h2 {
+  font-size: 21px;
+}
+
+.notice-card p {
+  margin-bottom: 18px;
+}
+
+.notice-error .notice-icon {
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: 26px;
+}
+
+.notice-warning .notice-icon {
+  background: #fef3c7;
+  color: #d97706;
+  font-size: 28px;
+}
+
+.notice-info .notice-icon {
+  background: var(--accent-tint);
+  color: var(--primary-purple);
+  font-size: 28px;
+}
+
+.notice-detail {
+  display: block;
+  margin: -6px 0 18px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--secondary-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: left;
+  word-break: break-word;
+  user-select: text;
+  max-height: 96px;
+  overflow-y: auto;
+}
+
+.notice-primary-btn {
+  height: 48px;
+  margin: 0;
+  border: none;
+  border-radius: 15px;
+  background: var(--accent-grad);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.notice-ok-btn {
+  width: 100%;
+}
+
+.notice-primary-btn:focus-visible,
+.notice-card .billio-cancel-btn:focus-visible,
+.notice-card .billio-danger-btn:focus-visible {
+  outline: 3px solid var(--shadow);
+  outline-offset: 2px;
+}
+
+@keyframes notice-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes notice-pop {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notice-overlay,
+  .notice-card {
+    animation: none;
+  }
+}

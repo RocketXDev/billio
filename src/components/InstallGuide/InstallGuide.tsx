@@ -1,5 +1,4 @@
 // src/components/InstallGuide/InstallGuide.tsx
-import { useState } from "react";
 import { useInstallPrompt } from "../../hooks/useInstallPrompt";
 import "./InstallGuide.css";
 

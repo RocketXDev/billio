@@ -1,42 +1,45 @@
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { useEffect, useRef } from "react";
-import Login from './pages/Login/Login';
-import Signup from './pages/Signup/Signup';
-import Dashboard from './pages/Dashboard/Dashboard';
+import { Routes, Route, useLocation } from "react-router-dom";
+import { Suspense, useEffect, useRef } from "react";
 import ProtectedRoute from './pages/ProtectedRoute/ProtectedRoute';
-import EmailConfirmed from "./pages/EmailConfirmed/EmailConfirmed";
-import VerifyEmail from "./pages/VerifyEmail/VerifyEmail";
-import UpdatePassword from "./pages/UpdatePassword/UpdatePassword";
-import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
-import PasswordUpdated from "./pages/PasswordUpdated/PasswordUpdated";
-import Lessons from "./pages/Lessons/Lessons";
-import Students from "./pages/Students/Students";
-import Invoices from "./pages/Invoices/Invoices";
-import Profile from "./pages/Profile/Profile";
-import ComingSoon from "./pages/ComingSoon/ComingSoon";
-import Privacy from "./pages/Privacy/Privacy";
-import Terms from "./pages/Terms/Terms";
 import LandingPage from "./pages/LandingPage/LandingPage";
-import AppEntry from "./pages/AppEntry/AppEntry";
-import SmsOptIn from "./pages/SmsOptIn/SmsOptIn";
-import Upgrade from "./pages/Upgrade/Upgrade";
 import DesktopLayout from "./components/DesktopLayout/DesktopLayout";
-import Support from "./pages/Support/Support";
-import More from "./pages/More/More";
-import CoachingTimer from "./pages/CoachingTimer/CoachingTimer";
-import AiAssistant from "./pages/AiAssistant/AiAssistant";
-import About from "./pages/About/About";
-import BlogIndex from "./pages/Blog/BlogIndex";
-import BlogPost from "./pages/Blog/BlogPost";
-import Settings from "./pages/Settings/Settings";
-import MarkInvoicePaid from "./pages/MarkInvoicePaid/MarkInvoicePaid";
-import RecurringLessons from "./pages/RecurringLessons/RecurringLessons";
-import GroupLessons from "./pages/GroupLessons/GroupLessons";
-import GoogleCalendar from "./pages/GoogleCalendar/GoogleCalendar";
-import EarningsDashboard from "./pages/EarningsDashboard/EarningsDashboard";
-import PdfInvoice from "./pages/PdfInvoice/PdfInvoice";
-import Referrals from "./pages/Referrals/Referrals";
 import { captureReferralCode } from "./lib/referral";
+import { lazyPage } from "./lib/lazyPage";
+
+// The landing page ships in the main bundle (first thing visitors see);
+// every other page downloads on first visit (see lib/lazyPage).
+const Login = lazyPage(() => import("./pages/Login/Login"));
+const Signup = lazyPage(() => import("./pages/Signup/Signup"));
+const Dashboard = lazyPage(() => import("./pages/Dashboard/Dashboard"));
+const EmailConfirmed = lazyPage(() => import("./pages/EmailConfirmed/EmailConfirmed"));
+const VerifyEmail = lazyPage(() => import("./pages/VerifyEmail/VerifyEmail"));
+const UpdatePassword = lazyPage(() => import("./pages/UpdatePassword/UpdatePassword"));
+const ForgotPassword = lazyPage(() => import("./pages/ForgotPassword/ForgotPassword"));
+const PasswordUpdated = lazyPage(() => import("./pages/PasswordUpdated/PasswordUpdated"));
+const Lessons = lazyPage(() => import("./pages/Lessons/Lessons"));
+const Students = lazyPage(() => import("./pages/Students/Students"));
+const Invoices = lazyPage(() => import("./pages/Invoices/Invoices"));
+const Profile = lazyPage(() => import("./pages/Profile/Profile"));
+const Privacy = lazyPage(() => import("./pages/Privacy/Privacy"));
+const Terms = lazyPage(() => import("./pages/Terms/Terms"));
+const AppEntry = lazyPage(() => import("./pages/AppEntry/AppEntry"));
+const SmsOptIn = lazyPage(() => import("./pages/SmsOptIn/SmsOptIn"));
+const Upgrade = lazyPage(() => import("./pages/Upgrade/Upgrade"));
+const Support = lazyPage(() => import("./pages/Support/Support"));
+const More = lazyPage(() => import("./pages/More/More"));
+const CoachingTimer = lazyPage(() => import("./pages/CoachingTimer/CoachingTimer"));
+const AiAssistant = lazyPage(() => import("./pages/AiAssistant/AiAssistant"));
+const About = lazyPage(() => import("./pages/About/About"));
+const BlogIndex = lazyPage(() => import("./pages/Blog/BlogIndex"));
+const BlogPost = lazyPage(() => import("./pages/Blog/BlogPost"));
+const Settings = lazyPage(() => import("./pages/Settings/Settings"));
+const MarkInvoicePaid = lazyPage(() => import("./pages/MarkInvoicePaid/MarkInvoicePaid"));
+const RecurringLessons = lazyPage(() => import("./pages/RecurringLessons/RecurringLessons"));
+const GroupLessons = lazyPage(() => import("./pages/GroupLessons/GroupLessons"));
+const GoogleCalendar = lazyPage(() => import("./pages/GoogleCalendar/GoogleCalendar"));
+const EarningsDashboard = lazyPage(() => import("./pages/EarningsDashboard/EarningsDashboard"));
+const PdfInvoice = lazyPage(() => import("./pages/PdfInvoice/PdfInvoice"));
+const Referrals = lazyPage(() => import("./pages/Referrals/Referrals"));
 
 const SITE_URL = "https://www.mybillioapp.com";
 
@@ -185,6 +188,7 @@ function App() {
   }, [location.pathname]);
 
   return (
+    <Suspense fallback={<div className="route-loading" aria-busy="true" />}>
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<Login />} />
@@ -388,6 +392,7 @@ function App() {
       />
 
     </Routes>
+    </Suspense>
   );
 }
 

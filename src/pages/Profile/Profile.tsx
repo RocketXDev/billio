@@ -13,6 +13,7 @@ import {
   FaLock,
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
+import { showError } from "../../lib/notify";
 import Cropper from "react-easy-crop";
 import { usePlan } from "../../hooks/usePlan";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
@@ -43,7 +44,7 @@ function Profile() {
 
   // Avatar related states
   const [avatarPath, setAvatarPath] = useState("");
-  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
+  const [, setSelectedAvatarFile] = useState<File | null>(null);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
   const [showCropper, setShowCropper] = useState(false);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -112,6 +113,7 @@ function Profile() {
 
       if (profileError) {
         console.log("Profile update error:", profileError);
+        showError("save your profile", profileError);
         return;
       }
 
@@ -133,6 +135,7 @@ function Profile() {
 
       if (coachError) {
         console.log("Coach update error:", coachError);
+        showError("save your profile", coachError);
         return;
       }
 
@@ -142,43 +145,6 @@ function Profile() {
     }
   }
 
-  async function handleAvatarUpload(e: any) {
-    const file = e.target.files?.[0];
-
-    if (!file || !coachId) return;
-
-    const fileExt = file.name.split(".").pop();
-    const filePath = `${coachId}/avatar.${fileExt}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("coach-avatars")
-      .upload(filePath, file, {
-        upsert: true,
-      });
-
-    if (uploadError) {
-      console.log("Avatar upload error:", uploadError);
-      return;
-    }
-
-    const { data } = supabase.storage
-      .from("coach-avatars")
-      .getPublicUrl(filePath);
-
-    const publicUrl = data.publicUrl;
-
-    setAvatarUrl(publicUrl);
-
-    await supabase
-      .from("coaches")
-      .update({
-        avatar_url: publicUrl,
-        avatar_path: filePath
-      })
-      .eq("id", coachId);
-
-    queryClient.invalidateQueries({ queryKey: ["coach-profile", coachId] });
-  }
 
   function handleAvatarSelect(e: any) {
     const file = e.target.files?.[0];
@@ -214,6 +180,7 @@ function Profile() {
 
       console.log("Storage delete data:", data);
       console.log("Storage delete error:", storageError);
+      showError("remove your photo", storageError);
 
       if (storageError) return;
     }
@@ -228,6 +195,7 @@ function Profile() {
 
     if (coachError) {
       console.log("Coach avatar clear error:", coachError);
+      showError("remove your photo", coachError);
       return;
     }
 
@@ -300,6 +268,7 @@ function Profile() {
 
     if (uploadError) {
       console.log("Avatar upload error:", uploadError);
+      showError("upload your photo", uploadError);
       return;
     }
 

@@ -6,6 +6,9 @@ import {
   FaHome, FaCalendarAlt, FaUsers, FaFileInvoiceDollar, FaEllipsisH,
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
+import { showError, showWarning } from "../../lib/notify";
+import { isRegeneratableScheduleLesson } from "../../lib/groupSchedule";
+import { resolveStudentIds } from "../../lib/students";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import { useLessonTerm } from "../../hooks/useLessonTerm";
 import "../RecurringLessons/RecurringLessons.css";
@@ -276,63 +279,24 @@ export default function GroupLessons() {
     }, 220);
   }
 
-  async function resolveRosterIds(): Promise<string[] | null> {
-    if (!coachId) return null;
-
-    const { data: existingLinks, error } = await supabase
-      .from("coach_students")
-      .select("student_id, students(id, student_name)")
-      .eq("coach_id", coachId);
-
-    if (error) return null;
-
-    const resolvedIds: string[] = [];
-
-    for (const entry of groupStudents) {
-      if (entry.id) {
-        resolvedIds.push(entry.id);
-        continue;
-      }
-
-      const existing = existingLinks?.find(
-        (link: any) =>
-          link.students?.student_name?.trim().toLowerCase() === entry.name.toLowerCase()
-      );
-      if (existing) {
-        resolvedIds.push(existing.student_id);
-        continue;
-      }
-
-      const { data: newStudent, error: newStudentError } = await supabase
-        .from("students")
-        .insert({ student_name: entry.name, active: true })
-        .select()
-        .single();
-      if (newStudentError || !newStudent) return null;
-
-      await supabase.from("coach_students").insert({ coach_id: coachId, student_id: newStudent.id });
-      resolvedIds.push(newStudent.id);
-    }
-
-    return resolvedIds;
-  }
-
   async function handleSave() {
     if (isSaving) return;
-    if (groupStudents.length === 0) { alert("Please add at least one student."); return; }
-    if (!formHourlyRate) { alert("Please enter a rate."); return; }
+    if (groupStudents.length === 0) { showWarning("Please add at least one student."); return; }
+    if (!formHourlyRate) { showWarning("Please enter a rate."); return; }
     if (formFrequency === "once") {
-      if (!formDate) { alert("Please select a date."); return; }
+      if (!formDate) { showWarning("Please select a date."); return; }
     } else {
-      if (formDays.length === 0) { alert("Please select at least one day."); return; }
-      if (!rangeStart || !rangeEnd) { alert("Please select a date range."); return; }
-      if (rangeEnd <= rangeStart) { alert("End date must be after start date."); return; }
+      if (formDays.length === 0) { showWarning("Please select at least one day."); return; }
+      if (!rangeStart || !rangeEnd) { showWarning("Please select a date range."); return; }
+      if (rangeEnd <= rangeStart) { showWarning("End date must be after start date."); return; }
     }
 
     setIsSaving(true);
     try {
-      const resolvedIds = await resolveRosterIds();
-      if (!resolvedIds) { alert("Could not resolve the student roster."); return; }
+      if (!coachId) return;
+      const roster = await resolveStudentIds(coachId, groupStudents);
+      if (roster.error || !roster.ids) { showError("set up the class roster", roster.error); return; }
+      const resolvedIds = roster.ids;
 
       queryClient.invalidateQueries({ queryKey: ["coach-students", coachId] });
       queryClient.invalidateQueries({ queryKey: ["students", coachId] });
@@ -356,34 +320,43 @@ export default function GroupLessons() {
 
       let groupId = editingGroup?.id;
       const today = new Date().toLocaleDateString("en-CA");
-      const existingBilledKeys = new Set<string>();
+      // (date, student) pairs that already have a lesson in this class and
+      // must not get a second one when the schedule is regenerated below.
+      const keptLessonKeys = new Set<string>();
 
       if (editingGroup) {
-        await supabase.from("group_lessons").update(groupPayload).eq("id", groupId);
-
-        const { data: existingRows } = await supabase
+        const { data: existingRows, error: existingError } = await supabase
           .from("lessons")
-          .select("lesson_date, student_id, billing_status")
+          .select("id, lesson_date, start_time, student_id, billing_status, is_recurring")
           .eq("group_lesson_id", groupId);
+        if (existingError) { showError(`save the group ${term.lower}`, existingError); return; }
 
-        (existingRows || []).forEach((r: any) => {
-          if (r.billing_status !== "unbilled") {
-            existingBilledKeys.add(`${r.lesson_date}_${r.student_id}`);
-          }
-        });
+        // Only rebuild what the old schedule generated — sessions attached
+        // from the Lessons page and one-off time changes stay put (see
+        // lib/groupSchedule).
+        const toDelete: string[] = [];
+        for (const r of existingRows || []) {
+          if (isRegeneratableScheduleLesson(r, editingGroup, today)) toDelete.push(r.id);
+          else keptLessonKeys.add(`${r.lesson_date}_${r.student_id}`);
+        }
 
-        await supabase
-          .from("lessons")
-          .delete()
-          .eq("group_lesson_id", groupId)
-          .eq("billing_status", "unbilled")
-          .gte("lesson_date", today);
+        const { error: updateError } = await supabase.from("group_lessons").update(groupPayload).eq("id", groupId);
+        if (updateError) { showError(`save the group ${term.lower}`, updateError); return; }
 
-        await supabase.from("group_lesson_students").delete().eq("group_lesson_id", groupId);
+        // Chunked so a long class's ids don't overflow the request URL.
+        for (let i = 0; i < toDelete.length; i += 100) {
+          const { error: deleteError } = await supabase
+            .from("lessons").delete().in("id", toDelete.slice(i, i + 100));
+          if (deleteError) { showError(`save the group ${term.lower}`, deleteError); return; }
+        }
+
+        const { error: rosterClearError } = await supabase
+          .from("group_lesson_students").delete().eq("group_lesson_id", groupId);
+        if (rosterClearError) { showError(`save the group ${term.lower}`, rosterClearError); return; }
       } else {
         const { data: newGroup, error } = await supabase
           .from("group_lessons").insert(groupPayload).select().single();
-        if (error || !newGroup) { alert(`Could not create group ${term.lower}: ` + error?.message); return; }
+        if (error || !newGroup) { showError(`create the group ${term.lower}`, error); return; }
         groupId = newGroup.id;
       }
 
@@ -391,7 +364,8 @@ export default function GroupLessons() {
         group_lesson_id: groupId,
         student_id: studentId,
       }));
-      await supabase.from("group_lesson_students").insert(rosterRows);
+      const { error: rosterError } = await supabase.from("group_lesson_students").insert(rosterRows);
+      if (rosterError) showError(`save the group ${term.lower}`, rosterError);
 
       let occurrences: string[] = [];
       if (formFrequency === "once") {
@@ -416,7 +390,7 @@ export default function GroupLessons() {
 
         const lessonRows = occurrences.flatMap((date) =>
           resolvedIds
-            .filter((studentId) => !existingBilledKeys.has(`${date}_${studentId}`))
+            .filter((studentId) => !keptLessonKeys.has(`${date}_${studentId}`))
             .map((studentId) => ({
               coach_id: coachId,
               student_id: studentId,
@@ -435,7 +409,7 @@ export default function GroupLessons() {
 
         if (lessonRows.length > 0) {
           const { error: lessonError } = await supabase.from("lessons").insert(lessonRows);
-          if (lessonError) console.log("Group lesson rows insert error:", lessonError);
+          if (lessonError) { console.log("Group lesson rows insert error:", lessonError); showError("create the class sessions", lessonError); }
         }
       }
 
@@ -452,13 +426,16 @@ export default function GroupLessons() {
     setIsDeleting(true);
     try {
       const today = new Date().toLocaleDateString("en-CA");
-      await supabase.from("group_lessons").update({ active: false }).eq("id", deletingId);
-      await supabase
+      const { error: deactivateError } = await supabase
+        .from("group_lessons").update({ active: false }).eq("id", deletingId);
+      if (deactivateError) { showError(`delete the group ${term.lower}`, deactivateError); return; }
+      const { error: lessonsError } = await supabase
         .from("lessons")
         .delete()
         .eq("group_lesson_id", deletingId)
         .eq("billing_status", "unbilled")
         .gte("lesson_date", today);
+      if (lessonsError) showError(`delete the group ${term.lower}'s upcoming sessions`, lessonsError);
       queryClient.invalidateQueries({ queryKey: ["group-lessons", coachId] });
       queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
       setShowDeleteModal(false);

@@ -464,3 +464,10 @@
   cursor: not-allowed;
   pointer-events: none;
 }
+
+/* Blank page-coloured placeholder while a lazily-loaded page downloads. */
+.route-loading {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--main-bg);
+}

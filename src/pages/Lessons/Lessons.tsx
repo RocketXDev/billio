@@ -20,6 +20,9 @@ import {
   FaBell,
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
+import { showError, showWarning } from "../../lib/notify";
+import { findOrCreateStudentId, resolveStudentIds } from "../../lib/students";
+import { cleanupInvoicesAfterLessonDelete, syncInvoiceStatusFromLesson } from "../../lib/invoiceSync";
 import { lessonMonthQuery, monthOf, shiftMonth } from "../../lib/lessonRange";
 import { useNavigate } from "react-router-dom";
 import { usePlan } from "../../hooks/usePlan";
@@ -372,6 +375,7 @@ function Lessons() {
 
     if (coachError) {
       console.log("Save lesson reminder settings error:", coachError);
+      showError("save reminder settings", coachError);
       setSavingReminderSettings(false);
       return;
     }
@@ -387,6 +391,7 @@ function Lessons() {
 
     if (clearError) {
       console.log("Clear reminder students error:", clearError);
+      showError("save reminder settings", clearError);
       setSavingReminderSettings(false);
       return;
     }
@@ -400,6 +405,7 @@ function Lessons() {
 
       if (enableError) {
         console.log("Enable reminder students error:", enableError);
+        showError("save reminder settings", enableError);
         setSavingReminderSettings(false);
         return;
       }
@@ -530,78 +536,29 @@ function Lessons() {
     setIsRecurring((prev) => !prev);
   }
 
-  async function handleCreateGroupLesson() {
-    if (!coachId) return;
+  // Resolves true only when the group lesson was actually saved, so the
+  // caller keeps the form open (with the coach's input) on any failure.
+  async function handleCreateGroupLesson(): Promise<boolean> {
+    if (!coachId) return false;
 
     if (groupStudents.length === 0) {
-      alert("Please add at least one student.");
-      return;
+      showWarning("Please add at least one student.");
+      return false;
     }
     if (!hourlyRate) {
-      alert("Please enter a rate.");
-      return;
+      showWarning("Please enter a rate.");
+      return false;
     }
     if (isRecurring) {
-      if (recurringDays.length === 0) { alert("Please select at least one day."); return; }
-      if (!recurringEndDate) { alert("Please select an end date."); return; }
-      if (recurringEndDate <= lessonDate) { alert("End date must be after start date."); return; }
+      if (recurringDays.length === 0) { showWarning("Please select at least one day."); return false; }
+      if (!recurringEndDate) { showWarning("Please select an end date."); return false; }
+      if (recurringEndDate <= lessonDate) { showWarning("End date must be after start date."); return false; }
     }
 
-    const { data: existingLinks, error: existingStudentError } = await supabase
-      .from("coach_students")
-      .select(`
-        student_id,
-        students (
-          id,
-          student_name
-        )
-      `)
-      .eq("coach_id", coachId);
-
-    if (existingStudentError) {
-      console.log("Student lookup error:", existingStudentError);
-      return;
-    }
-
-    const resolvedStudentIds: string[] = [];
-
-    for (const entry of groupStudents) {
-      if (entry.id) {
-        resolvedStudentIds.push(entry.id);
-        continue;
-      }
-
-      const existingLink = existingLinks?.find(
-        (link: any) =>
-          link.students?.student_name?.trim().toLowerCase() === entry.name.toLowerCase()
-      );
-
-      if (existingLink) {
-        resolvedStudentIds.push(existingLink.student_id);
-        continue;
-      }
-
-      const { data: newStudent, error: newStudentError } = await supabase
-        .from("students")
-        .insert({ student_name: entry.name, active: true })
-        .select()
-        .single();
-
-      if (newStudentError || !newStudent) {
-        console.log("Student create error:", newStudentError);
-        return;
-      }
-
-      const { error: linkError } = await supabase
-        .from("coach_students")
-        .insert({ coach_id: coachId, student_id: newStudent.id });
-
-      if (linkError) {
-        console.log("Coach-student link error:", linkError);
-        return;
-      }
-
-      resolvedStudentIds.push(newStudent.id);
+    const { ids: resolvedStudentIds, error: studentError } = await resolveStudentIds(coachId, groupStudents);
+    if (studentError || !resolvedStudentIds) {
+      showError("save the group lesson", studentError);
+      return false;
     }
 
     let groupLessonId = selectedGroupClassId;
@@ -632,7 +589,8 @@ function Lessons() {
 
       if (groupError || !newGroup) {
         console.log("Group lesson create error:", groupError);
-        return;
+        showError("save the group lesson", groupError);
+        return false;
       }
 
       groupLessonId = newGroup.id;
@@ -642,7 +600,7 @@ function Lessons() {
         student_id: studentId,
       }));
       const { error: rosterError } = await supabase.from("group_lesson_students").insert(rosterRows);
-      if (rosterError) console.log("Group roster insert error:", rosterError);
+      if (rosterError) { console.log("Group roster insert error:", rosterError); showError("save the group lesson", rosterError); }
     } else {
       // Attaching a one-off session to an existing Group Class instead of
       // minting a new one — but if the coach added someone new for today,
@@ -660,7 +618,7 @@ function Lessons() {
           student_id: studentId,
         }));
         const { error: rosterError } = await supabase.from("group_lesson_students").insert(newRosterRows);
-        if (rosterError) console.log("Group roster update error:", rosterError);
+        if (rosterError) { console.log("Group roster update error:", rosterError); showError("save the group lesson", rosterError); }
         else queryClient.invalidateQueries({ queryKey: ["group-lessons", coachId] });
       }
     }
@@ -700,7 +658,8 @@ function Lessons() {
       .from("lessons").insert(lessonRows).select("id");
     if (lessonsError) {
       console.log("Group lessons insert error:", lessonsError);
-      return;
+      showError("save the group lesson", lessonsError);
+      return false;
     }
 
     syncToGoogle("lesson", (insertedLessons || []).map((l: any) => l.id));
@@ -709,6 +668,7 @@ function Lessons() {
     queryClient.invalidateQueries({ queryKey: ["coach-students", coachId] });
     queryClient.invalidateQueries({ queryKey: ["students", coachId] });
     queryClient.invalidateQueries({ queryKey: ["group-lessons", coachId] });
+    return true;
   }
 
   async function handleCreateLesson(e: any) {
@@ -722,7 +682,7 @@ function Lessons() {
       if (!coachId) return;
 
       if (isGroup) {
-        await handleCreateGroupLesson();
+        if (!(await handleCreateGroupLesson())) return;
         setStudentName("");
         setSelectedStudentId(null);
         setLessonDate("");
@@ -747,75 +707,25 @@ function Lessons() {
       const cleanStudentName = studentName.trim();
 
       if (!cleanStudentName) {
-        alert("Please enter a student name.");
+        showWarning("Please enter a student name.");
         return;
       }
 
-      const { data: existingLinks, error: existingStudentError } = await supabase
-        .from("coach_students")
-        .select(`
-          student_id,
-          students (
-            id,
-            student_name
-          )
-        `)
-        .eq("coach_id", coachId);
-
-      if (existingStudentError) {
-        console.log("Student lookup error:", existingStudentError);
+      const { id: finalStudentId, created: createdStudent, error: studentError } =
+        await findOrCreateStudentId(coachId, cleanStudentName, selectedStudentId);
+      if (studentError || !finalStudentId) {
+        showError("save the lesson", studentError);
         return;
       }
-
-      const existingLink = existingLinks?.find((link: any) => {
-        return (
-          link.students?.student_name?.trim().toLowerCase() ===
-          cleanStudentName.toLowerCase()
-        );
-      });
-
-      let finalStudentId = existingLink?.student_id;
-      if (selectedStudentId) {
-        finalStudentId = selectedStudentId;
-      }
-
-      if (!finalStudentId) {
-        const { data: newStudent, error: newStudentError } = await supabase
-          .from("students")
-          .insert({
-            student_name: cleanStudentName,
-            active: true,
-          })
-          .select()
-          .single();
-
-        if (newStudentError) {
-          console.log("Student create error:", newStudentError);
-          return;
-        }
-
-        finalStudentId = newStudent.id;
-
-        const { error: linkError } = await supabase
-          .from("coach_students")
-          .insert({
-            coach_id: coachId,
-            student_id: finalStudentId,
-          });
-
-        if (linkError) {
-          console.log("Coach-student link error:", linkError);
-          return;
-        }
-
+      if (createdStudent) {
         queryClient.invalidateQueries({ queryKey: ["students", coachId] });
         queryClient.invalidateQueries({ queryKey: ["coach-students", coachId] });
       }
 
       if (isRecurring) {
-        if (recurringDays.length === 0) { alert("Please select at least one day."); return; }
-        if (!recurringEndDate) { alert("Please select an end date."); return; }
-        if (recurringEndDate <= lessonDate) { alert("End date must be after start date."); return; }
+        if (recurringDays.length === 0) { showWarning("Please select at least one day."); return; }
+        if (!recurringEndDate) { showWarning("Please select an end date."); return; }
+        if (recurringEndDate <= lessonDate) { showWarning("End date must be after start date."); return; }
 
         const seriesPayload = {
           coach_id: coachId,
@@ -841,6 +751,7 @@ function Lessons() {
 
         if (seriesError || !newSeries) {
           console.log("Series create error:", seriesError);
+          showError("save the lesson", seriesError);
           return;
         }
 
@@ -864,7 +775,7 @@ function Lessons() {
           }));
           const { data: insertedLessons, error: lessonError } = await supabase
             .from("lessons").insert(lessonRows).select("id");
-          if (lessonError) console.log("Recurring lesson insert error:", lessonError);
+          if (lessonError) { console.log("Recurring lesson insert error:", lessonError); showError("save the lesson", lessonError); }
           else syncToGoogle("lesson", (insertedLessons || []).map((l: any) => l.id));
         }
 
@@ -898,6 +809,7 @@ function Lessons() {
 
         if (lessonError) {
           console.log("Lesson create error:", lessonError);
+          showError("save the lesson", lessonError);
           return;
         }
 
@@ -926,14 +838,6 @@ function Lessons() {
 
   }
 
-  const groupedLessons = lessons.reduce((groups: any, lesson) => {
-    if (!groups[lesson.dateLabel]) {
-      groups[lesson.dateLabel] = [];
-    }
-
-    groups[lesson.dateLabel].push(lesson);
-    return groups;
-  }, {});
 
   function formatMoney(amount: any) {
     return Number(amount || 0).toLocaleString("en-US", {
@@ -1082,8 +986,8 @@ function Lessons() {
 
       // ── Series edit mode ──
       if (editSeriesMode && seriesData) {
-        if (seriesDays.length === 0) { alert("Please select at least one day."); return; }
-        if (!seriesEndDate) { alert("Please select an end date."); return; }
+        if (seriesDays.length === 0) { showWarning("Please select at least one day."); return; }
+        if (!seriesEndDate) { showWarning("Please select an end date."); return; }
 
         const today = new Date().toLocaleDateString("en-CA");
         const seriesPayload = {
@@ -1097,14 +1001,16 @@ function Lessons() {
           updated_at: new Date().toISOString(),
         };
 
-        await supabase.from("recurring_lessons").update(seriesPayload).eq("id", seriesData.id);
+        const { error: seriesUpdateError } = await supabase.from("recurring_lessons").update(seriesPayload).eq("id", seriesData.id);
+        if (seriesUpdateError) { showError("update the series", seriesUpdateError); return; }
 
         // Delete future unbilled occurrences and regenerate
-        await supabase.from("lessons")
+        const { error: seriesDeleteError } = await supabase.from("lessons")
           .delete()
           .eq("recurring_series_id", seriesData.id)
           .eq("billing_status", "unbilled")
           .gte("lesson_date", today);
+        if (seriesDeleteError) { showError("update the series", seriesDeleteError); return; }
 
         const occurrences = generateOccurrences(today, seriesEndDate, seriesFrequency, seriesDays);
         if (occurrences.length > 0) {
@@ -1124,7 +1030,8 @@ function Lessons() {
             recurring_occurrence_date: date,
             notes: notes || null,
           }));
-          const { data: insertedLessons } = await supabase.from("lessons").insert(lessonRows).select("id");
+          const { data: insertedLessons, error: seriesInsertError } = await supabase.from("lessons").insert(lessonRows).select("id");
+          if (seriesInsertError) showError("update the series", seriesInsertError);
           syncToGoogle("lesson", (insertedLessons || []).map((l: any) => l.id));
         }
 
@@ -1136,9 +1043,9 @@ function Lessons() {
 
       // ── Convert to recurring ──
       if (isRecurring && !editingLesson.is_recurring) {
-        if (recurringDays.length === 0) { alert("Please select at least one day."); return; }
-        if (!recurringEndDate) { alert("Please select an end date."); return; }
-        if (recurringEndDate <= lessonDate) { alert("End date must be after the lesson date."); return; }
+        if (recurringDays.length === 0) { showWarning("Please select at least one day."); return; }
+        if (!recurringEndDate) { showWarning("Please select an end date."); return; }
+        if (recurringEndDate <= lessonDate) { showWarning("End date must be after the lesson date."); return; }
 
         const seriesPayload = {
           coach_id: coachId,
@@ -1158,7 +1065,7 @@ function Lessons() {
 
         const { data: newSeries, error: seriesError } = await supabase
           .from("recurring_lessons").insert(seriesPayload).select().single();
-        if (seriesError || !newSeries) { console.log("Series create error:", seriesError); return; }
+        if (seriesError || !newSeries) { console.log("Series create error:", seriesError); showError("make the lesson recurring", seriesError); return; }
 
         const calculatedRate = hourlyRate ? Number(hourlyRate) * (Number(durationMinutes) / 60) : 0;
 
@@ -1198,7 +1105,8 @@ function Lessons() {
             recurring_series_id: newSeries.id,
             recurring_occurrence_date: date,
           }));
-          const { data: insertedLessons } = await supabase.from("lessons").insert(lessonRows).select("id");
+          const { data: insertedLessons, error: occurrencesError } = await supabase.from("lessons").insert(lessonRows).select("id");
+          if (occurrencesError) showError("make the lesson recurring", occurrencesError);
           pushIds.push(...(insertedLessons || []).map((l: any) => l.id));
         }
         syncToGoogle("lesson", pushIds);
@@ -1231,13 +1139,15 @@ function Lessons() {
 
       if (error) {
         console.log("Update lesson error:", error);
+        showError("update the lesson", error);
         return;
       }
 
       setLessons((prev) => prev.map((lesson) => (lesson.id === editingLesson.id ? data : lesson)));
       syncToGoogle("lesson", [data.id]);
       queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
-      await syncInvoiceStatusFromLesson(editingLesson.id);
+      const invoiceSyncError = await syncInvoiceStatusFromLesson(editingLesson.id);
+      if (invoiceSyncError) showError("update the related invoice", invoiceSyncError);
       closeEditLesson();
 
     } finally {
@@ -1252,7 +1162,9 @@ function Lessons() {
 
     try {
 
-      await cleanupInvoicesAfterLessonDelete(lessonId);
+      const invoiceCleanupError = await cleanupInvoicesAfterLessonDelete(lessonId, coachId);
+
+      if (invoiceCleanupError) showError("update the related invoice", invoiceCleanupError);
 
       const { error } = await supabase
         .from("lessons")
@@ -1262,6 +1174,7 @@ function Lessons() {
 
       if (error) {
         console.log("Delete lesson error:", error);
+        showError("delete the lesson", error);
         return;
       }
 
@@ -1288,7 +1201,8 @@ function Lessons() {
       const lessonIds = members.map((lesson) => lesson.id);
 
       for (const lessonId of lessonIds) {
-        await cleanupInvoicesAfterLessonDelete(lessonId);
+        const invoiceCleanupError = await cleanupInvoicesAfterLessonDelete(lessonId, coachId);
+        if (invoiceCleanupError) showError("update the related invoice", invoiceCleanupError);
       }
 
       const { error } = await supabase
@@ -1299,6 +1213,7 @@ function Lessons() {
 
       if (error) {
         console.log("Delete group session error:", error);
+        showError("delete the group session", error);
         return;
       }
 
@@ -1324,11 +1239,11 @@ function Lessons() {
     if (isSavingGroupEdit || !editingGroupMembers || !coachId) return;
 
     if (editGroupStudents.length === 0) {
-      alert("Please add at least one student.");
+      showWarning("Please add at least one student.");
       return;
     }
     if (!editGroupRate) {
-      alert("Please enter a rate.");
+      showWarning("Please enter a rate.");
       return;
     }
 
@@ -1337,61 +1252,10 @@ function Lessons() {
     try {
       const groupLessonId = editingGroupMembers[0].group_lesson_id;
 
-      const { data: existingLinks, error: existingStudentError } = await supabase
-        .from("coach_students")
-        .select(`
-          student_id,
-          students (
-            id,
-            student_name
-          )
-        `)
-        .eq("coach_id", coachId);
-
-      if (existingStudentError) {
-        console.log("Student lookup error:", existingStudentError);
+      const { ids: resolvedStudentIds, error: studentError } = await resolveStudentIds(coachId, editGroupStudents);
+      if (studentError || !resolvedStudentIds) {
+        showError("update the group session", studentError);
         return;
-      }
-
-      const resolvedStudentIds: string[] = [];
-
-      for (const entry of editGroupStudents) {
-        if (entry.id) {
-          resolvedStudentIds.push(entry.id);
-          continue;
-        }
-
-        const existingLink = existingLinks?.find(
-          (link: any) =>
-            link.students?.student_name?.trim().toLowerCase() === entry.name.toLowerCase()
-        );
-
-        if (existingLink) {
-          resolvedStudentIds.push(existingLink.student_id);
-          continue;
-        }
-
-        const { data: newStudent, error: newStudentError } = await supabase
-          .from("students")
-          .insert({ student_name: entry.name, active: true })
-          .select()
-          .single();
-
-        if (newStudentError || !newStudent) {
-          console.log("Student create error:", newStudentError);
-          return;
-        }
-
-        const { error: linkError } = await supabase
-          .from("coach_students")
-          .insert({ coach_id: coachId, student_id: newStudent.id });
-
-        if (linkError) {
-          console.log("Coach-student link error:", linkError);
-          return;
-        }
-
-        resolvedStudentIds.push(newStudent.id);
       }
 
       const finalIdSet = new Set(resolvedStudentIds);
@@ -1412,7 +1276,8 @@ function Lessons() {
       const hourlyRateField = editGroupBillingMode === "per_student" ? Number(editGroupRate) : null;
 
       for (const member of toRemove) {
-        await cleanupInvoicesAfterLessonDelete(member.id);
+        const invoiceCleanupError = await cleanupInvoicesAfterLessonDelete(member.id, coachId);
+        if (invoiceCleanupError) showError("update the related invoice", invoiceCleanupError);
       }
 
       if (toRemove.length > 0) {
@@ -1421,7 +1286,7 @@ function Lessons() {
           .delete()
           .in("id", toRemove.map((m: any) => m.id))
           .eq("coach_id", coachId);
-        if (removeError) console.log("Remove group member error:", removeError);
+        if (removeError) { console.log("Remove group member error:", removeError); showError("update the group session", removeError); }
       }
 
       if (toKeep.length > 0) {
@@ -1438,7 +1303,7 @@ function Lessons() {
           })
           .in("id", toKeep.map((m: any) => m.id))
           .eq("coach_id", coachId);
-        if (updateError) console.log("Update group members error:", updateError);
+        if (updateError) { console.log("Update group members error:", updateError); showError("update the group session", updateError); }
       }
 
       let insertedIds: string[] = [];
@@ -1463,6 +1328,7 @@ function Lessons() {
 
         if (insertError) {
           console.log("Add group member error:", insertError);
+          showError("update the group session", insertError);
         } else {
           insertedIds = (insertedLessons || []).map((l: any) => l.id);
         }
@@ -1474,7 +1340,7 @@ function Lessons() {
           student_id: studentId,
         }));
         const { error: rosterError } = await supabase.from("group_lesson_students").insert(rosterRows);
-        if (rosterError) console.log("Group roster update error:", rosterError);
+        if (rosterError) { console.log("Group roster update error:", rosterError); showError("update the group session", rosterError); }
       }
 
       // Keep the Group Class definition's rate/billing/title in sync so the
@@ -1493,7 +1359,7 @@ function Lessons() {
           })
           .eq("id", groupLessonId)
           .eq("coach_id", coachId);
-        if (classUpdateError) console.log("Group class update error:", classUpdateError);
+        if (classUpdateError) { console.log("Group class update error:", classUpdateError); showError("update the group session", classUpdateError); }
       }
 
       syncToGoogle("lesson", [
@@ -1518,17 +1384,19 @@ function Lessons() {
     if (isDeletingSeries || !seriesData) return;
     setIsDeletingSeries(true);
     try {
-      await supabase.from("recurring_lessons").update({ active: false }).eq("id", seriesData.id);
+      const { error: deactivateError } = await supabase.from("recurring_lessons").update({ active: false }).eq("id", seriesData.id);
+      if (deactivateError) { showError("delete the series", deactivateError); return; }
       const { data: toDelete } = await supabase.from("lessons")
         .select("id")
         .eq("recurring_series_id", seriesData.id)
         .eq("billing_status", "unbilled")
         .gte("lesson_date", new Date().toLocaleDateString("en-CA"));
-      await supabase.from("lessons")
+      const { error: deleteError } = await supabase.from("lessons")
         .delete()
         .eq("recurring_series_id", seriesData.id)
         .eq("billing_status", "unbilled")
         .gte("lesson_date", new Date().toLocaleDateString("en-CA"));
+      if (deleteError) showError("delete the series' upcoming lessons", deleteError);
       syncToGoogle("lesson", (toDelete || []).map((l: any) => l.id));
       queryClient.invalidateQueries({ queryKey: ["recurring-lessons", coachId] });
       queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
@@ -1558,7 +1426,8 @@ function Lessons() {
     if (!error && data) {
       setLessons((prev) => prev.map((l) => (l.id === lesson.id ? data : l)));
       queryClient.invalidateQueries({ queryKey: ["lessons", coachId] });
-      await syncInvoiceStatusFromLesson(lesson.id);
+      const invoiceSyncError = await syncInvoiceStatusFromLesson(lesson.id);
+      if (invoiceSyncError) showError("update the related invoice", invoiceSyncError);
     }
     setStatusUpdatingId(null);
   }
@@ -1744,7 +1613,7 @@ function Lessons() {
     if (!coachId) return;
 
     if (eventEndDate < eventStartDate) {
-      alert("End date can't be before the start date.");
+      showWarning("End date can't be before the start date.");
       return;
     }
 
@@ -1766,7 +1635,7 @@ function Lessons() {
     setIsSavingEvent(false);
 
     if (error) {
-      alert(error.message);
+      showError("save the event", error);
       return;
     }
 
@@ -1787,174 +1656,13 @@ function Lessons() {
     setIsSavingEvent(false);
 
     if (error) {
-      alert(error.message);
+      showError("delete the event", error);
       return;
     }
 
     syncToGoogle("event", [deletedEventId]);
     queryClient.invalidateQueries({ queryKey: ["events", coachId] });
     closeAddEvent();
-  }
-
-  async function syncInvoiceStatusFromLesson(lessonId: string) {
-    const { data: invoiceLinks, error: linkError } = await supabase
-      .from("invoice_lessons")
-      .select(`
-        invoice_id,
-        invoices (
-          id,
-          coach_id
-        )
-      `)
-      .eq("lesson_id", lessonId);
-
-    if (linkError || !invoiceLinks || invoiceLinks.length === 0) {
-      return;
-    }
-
-    for (const link of invoiceLinks as any[]) {
-      const invoiceId = link.invoice_id;
-
-      const { data: attachedLessons, error: lessonsError } = await supabase
-        .from("invoice_lessons")
-        .select(`
-          lessons (
-            id,
-            billing_status
-          )
-        `)
-        .eq("invoice_id", invoiceId);
-
-      if (lessonsError || !attachedLessons) {
-        console.log("Invoice attached lessons error:", lessonsError);
-        continue;
-      }
-
-      const lessons = attachedLessons.map((row: any) => row.lessons);
-
-      const statuses = lessons.map(
-        (lesson: any) => lesson.billing_status || "unbilled"
-      );
-
-      let invoiceStatus = "unbilled";
-
-      if (statuses.length > 0 && statuses.every((status) => status === "paid")) {
-        invoiceStatus = "paid";
-      } else if (
-        statuses.length > 0 &&
-        statuses.every((status) => status === "billed")
-      ) {
-        invoiceStatus = "billed";
-      } else if (statuses.some((status) => status === "unbilled")) {
-        invoiceStatus = "unbilled";
-      } else {
-        invoiceStatus = "billed";
-      }
-
-      await supabase
-        .from("invoices")
-        .update({
-          status: invoiceStatus,
-        })
-        .eq("id", invoiceId);
-    }
-  }
-
-  function getInvoiceStatusFromLessons(lessons: any[]) {
-    if (lessons.length === 0) return "unbilled";
-
-    const statuses = lessons.map(
-      (lesson) => lesson.billing_status || "unbilled"
-    );
-
-    if (statuses.every((status) => status === "paid")) {
-      return "paid";
-    }
-
-    if (statuses.every((status) => status === "billed")) {
-      return "billed";
-    }
-
-    if (statuses.some((status) => status === "unbilled")) {
-      return "unbilled";
-    }
-
-    return "billed";
-  }
-
-  async function cleanupInvoicesAfterLessonDelete(lessonId: string) {
-    if (!coachId) return;
-
-    const { data: invoiceLinks, error: linkError } = await supabase
-      .from("invoice_lessons")
-      .select("invoice_id")
-      .eq("lesson_id", lessonId);
-
-    if (linkError) {
-      console.log("Find invoice links error:", linkError);
-      return;
-    }
-
-    if (!invoiceLinks || invoiceLinks.length === 0) return;
-
-    for (const link of invoiceLinks) {
-      const invoiceId = link.invoice_id;
-
-      const { data: remainingLinks, error: remainingError } = await supabase
-        .from("invoice_lessons")
-        .select(`
-          lesson_id,
-          lessons (
-            id,
-            rate,
-            billing_status
-          )
-        `)
-        .eq("invoice_id", invoiceId)
-        .neq("lesson_id", lessonId);
-
-      if (remainingError) {
-        console.log("Remaining invoice lessons error:", remainingError);
-        continue;
-      }
-
-      if (!remainingLinks || remainingLinks.length === 0) {
-        const { error: deleteInvoiceError } = await supabase
-          .from("invoices")
-          .delete()
-          .eq("id", invoiceId)
-          .eq("coach_id", coachId);
-
-        if (deleteInvoiceError) {
-          console.log("Delete empty invoice error:", deleteInvoiceError);
-        }
-
-        continue;
-      }
-
-      const remainingLessons = remainingLinks.map((row: any) => row.lessons);
-
-      const newTotal = remainingLessons.reduce(
-        (sum: number, lesson: any) => sum + Number(lesson.rate || 0),
-        0
-      );
-
-      const newStatus = getInvoiceStatusFromLessons(remainingLessons);
-
-      const { error: updateInvoiceError } = await supabase
-        .from("invoices")
-        .update({
-          subtotal: newTotal,
-          total: newTotal,
-          status: newStatus,
-        })
-        .eq("id", invoiceId)
-        .eq("coach_id", coachId);
-
-      if (updateInvoiceError) {
-        console.log("Update invoice after lesson delete error:", updateInvoiceError);
-      }
-    }
   }
 
   function resetLessonForm() {

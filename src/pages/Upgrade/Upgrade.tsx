@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
+import { showError, showErrorMessage } from "../../lib/notify";
 import { usePlan } from "../../hooks/usePlan";
 import { applyReferralRewards } from "../../hooks/useReferrals";
 import { REFERRALS_PER_REWARD } from "../../lib/referral";
@@ -155,17 +156,17 @@ function Upgrade() {
       const { data, error } = await supabase.functions.invoke("cancel-subscription");
       console.log("Cancel response:", data, error);
       if (error) {
-        alert(`Function error: ${error.message}`);
+        showError("cancel your subscription", error);
         return;
       }
       if (data?.error) {
-        alert(`Stripe error: ${data.error}`);
+        showErrorMessage("Couldn't cancel your subscription", "Stripe declined the request. Please try again or contact support.", data.error);
         return;
       }
       setCancelConfirm(false);
       setCancelSuccess(true);
     } catch (err: any) {
-      alert(`Caught error: ${err.message}`);
+      showError("cancel your subscription", err);
     } finally {
       setCancelLoading(false);
     }

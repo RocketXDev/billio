@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
 import { showError, showWarning } from "../../lib/notify";
 import { findOrCreateStudentId } from "../../lib/students";
+import { normalizeVenmoHandle, normalizeZelleContact } from "../../lib/paymentOptions";
 import { cleanupInvoicesAfterLessonDelete } from "../../lib/invoiceSync";
 import { deleteNotification, markNotificationRead, notificationLink } from "../../lib/notifications";
 import { fetchAllRows } from "../../lib/fetchAllRows";
@@ -179,6 +180,13 @@ function Dashboard() {
 
   // Coaches info
   const [coachSmsConsent, setCoachSmsConsent] = useState(false);
+  // Optional "How do parents pay you?" step. "other" (the default) saves
+  // nothing — e.g. coaches paid at the rink's front desk.
+  const [onboardingPayMethod, setOnboardingPayMethod] = useState<"venmo" | "zelle" | "both" | "other">("other");
+  const [onboardingVenmo, setOnboardingVenmo] = useState("");
+  const [onboardingZelle, setOnboardingZelle] = useState("");
+  const [onboardingZelleName, setOnboardingZelleName] = useState("");
+  const [onboardingPayInMessages, setOnboardingPayInMessages] = useState(true);
 
   // Invoices
   const [isSaving, setIsSaving] = useState(false); 
@@ -394,7 +402,16 @@ function Dashboard() {
     dismissDashboardTutorial();
   }
 
+  // Account setup below creates the profile/coach rows on a first visit.
+  // React StrictMode (dev) runs effects twice on mount, which created two
+  // coach rows for a new account (and then nothing could load either) —
+  // run it once per mount.
+  const dashboardSetupStarted = useRef(false);
+
   useEffect(() => {
+    if (dashboardSetupStarted.current) return;
+    dashboardSetupStarted.current = true;
+
     async function loadDashboard() {
       setLoading(true);
 
@@ -558,6 +575,10 @@ function Dashboard() {
 
         if (newCoach) {
           setCoachId(newCoach.id);
+          // useCoachIdentity ran in parallel with this setup and cached "no
+          // coach yet" (for 10 min) — refetch it, or every widget waiting on
+          // it keeps the page on the loading screen and onboarding never shows.
+          queryClient.invalidateQueries({ queryKey: ["coach-identity"] });
           setShowOnboarding(true);
           setAvatarUrl("");
         }
@@ -730,6 +751,17 @@ function Dashboard() {
 
     if (!coachId) return;
 
+    // Optional payment details: blank fields are simply skipped; only
+    // something typed in the wrong format stops the save.
+    const wantsVenmo = onboardingPayMethod === "venmo" || onboardingPayMethod === "both";
+    const wantsZelle = onboardingPayMethod === "zelle" || onboardingPayMethod === "both";
+    const venmo = wantsVenmo ? normalizeVenmoHandle(onboardingVenmo) : { value: null, error: null };
+    const zelle = wantsZelle ? normalizeZelleContact(onboardingZelle) : { value: null, error: null };
+    if (venmo.error || zelle.error) {
+      showWarning((venmo.error || zelle.error)!);
+      return;
+    }
+
     const { error } = await supabase
       .from("coaches")
       .update({
@@ -751,6 +783,22 @@ function Dashboard() {
       console.log("Onboarding save error:", error);
       showError("save your setup", error);
       return;
+    }
+
+    // Saved separately so a problem here never blocks finishing setup.
+    if (venmo.value || zelle.value) {
+      const { error: paymentError } = await supabase
+        .from("coaches")
+        .update({
+          venmo_handle: venmo.value,
+          zelle_contact: zelle.value,
+          zelle_name: zelle.value ? onboardingZelleName.trim() || null : null,
+          payment_in_messages: onboardingPayInMessages,
+        })
+        .eq("id", coachId);
+      if (paymentError) {
+        showError("save your Venmo/Zelle details — you can add them later in Settings", paymentError);
+      }
     }
 
     await supabase
@@ -1873,6 +1921,90 @@ function Dashboard() {
                     );
                   })}
                 </div>
+              </div>
+
+              <div className="input-block">
+                <label>How do parents pay you? (Optional)</label>
+                <p className="onboarding-field-note">
+                  Add Venmo or Zelle and parents see how to pay right on your invoices. Choose
+                  Other if you're paid another way — you can change this later in Settings.
+                </p>
+
+                <div className="onboarding-choice-group onboarding-pay-choices">
+                  {([
+                    ["venmo", "Venmo"],
+                    ["zelle", "Zelle"],
+                    ["both", "Both"],
+                    ["other", "Other"],
+                  ] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={`onboarding-choice ${onboardingPayMethod === value ? "active" : ""}`}
+                      onClick={() => setOnboardingPayMethod(value)}
+                      aria-pressed={onboardingPayMethod === value}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {(onboardingPayMethod === "venmo" || onboardingPayMethod === "both") && (
+                  <div className="onboarding-pay-field">
+                    <label htmlFor="onboardingVenmo">Venmo username</label>
+                    <input
+                      id="onboardingVenmo"
+                      type="text"
+                      value={onboardingVenmo}
+                      onChange={(e) => setOnboardingVenmo(e.target.value)}
+                      placeholder="@your-username"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                    />
+                  </div>
+                )}
+
+                {(onboardingPayMethod === "zelle" || onboardingPayMethod === "both") && (
+                  <>
+                    <div className="onboarding-pay-field">
+                      <label htmlFor="onboardingZelle">Zelle email or phone</label>
+                      <input
+                        id="onboardingZelle"
+                        type="text"
+                        inputMode="email"
+                        value={onboardingZelle}
+                        onChange={(e) => setOnboardingZelle(e.target.value)}
+                        placeholder="you@email.com or (555) 123-4567"
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck={false}
+                      />
+                    </div>
+                    <div className="onboarding-pay-field">
+                      <label htmlFor="onboardingZelleName">Name on your Zelle account</label>
+                      <input
+                        id="onboardingZelleName"
+                        type="text"
+                        maxLength={60}
+                        value={onboardingZelleName}
+                        onChange={(e) => setOnboardingZelleName(e.target.value)}
+                        placeholder="So parents know they're paying the right person"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {onboardingPayMethod !== "other" && (
+                  <label className="onboarding-pay-toggle">
+                    <input
+                      type="checkbox"
+                      checked={onboardingPayInMessages}
+                      onChange={(e) => setOnboardingPayInMessages(e.target.checked)}
+                    />
+                    <span>Also include in my invoice emails and texts</span>
+                  </label>
+                )}
               </div>
 
               <div className="input-block">

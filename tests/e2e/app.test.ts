@@ -80,6 +80,10 @@ test("A brand-new account still gets its profile created from the sign-up detail
   assert.equal(profile.full_name, "Signup Name");
   assert.equal(profile.email, "coach@example.com");
   assert.equal(profile.role, "coach");
+  assert.equal(fake.rows("coaches").length, 1, "exactly one coach row");
+  // The first visit used to sit on the loading screen forever (the identity
+  // lookup had cached "no coach yet"), so onboarding never appeared.
+  await app.page.locator("#visibleName").waitFor({ timeout: 5000 });
 });
 
 // ── Invoices ────────────────────────────────────────────────────────────────
@@ -613,4 +617,62 @@ test("Settings: 'include in emails and texts' appears with Venmo/Zelle, is on by
   await page.locator(".settings-save-btn").first().click();
   await waitFor(() => fake.rows("coaches")[0].venmo_handle === "Coach-Anna", "saved");
   assert.equal(fake.rows("coaches")[0].payment_in_messages, false);
+});
+
+// ── Onboarding: optional Venmo / Zelle ──────────────────────────────────────
+
+async function fillOnboardingBasics(page: Page) {
+  await page.locator("#visibleName").waitFor();
+  await page.locator("#visibleName").fill("Coach Anna");
+  await page.locator("#defaultHourlyRate").fill("60");
+  await page.locator("#phoneNumber").fill("7195550100");
+}
+const paymentWrites = (fake: any) =>
+  fake.requests("PATCH", "coaches").filter((r: any) => r.body && "venmo_handle" in r.body);
+
+test("Onboarding: a new coach can add Venmo and Zelle and keep them in messages", async () => {
+  const fake = seedWorld({ withProfile: false });
+  app = await openApp(fake, "/dashboard");
+  const { page } = app;
+  await fillOnboardingBasics(page);
+  assert.equal(await page.locator(".onboarding-pay-choices .onboarding-choice.active").innerText(), "Other", "Other is the default");
+  assert.equal(await page.locator("#onboardingVenmo").count(), 0, "no fields for Other");
+
+  await page.locator(".onboarding-pay-choices .onboarding-choice", { hasText: "Both" }).click();
+  await page.locator("#onboardingVenmo").fill("@Coach-Anna");
+  await page.locator("#onboardingZelle").fill("Anna@Example.com");
+  await page.locator("#onboardingZelleName").fill("Anna Smith");
+  assert.equal(await page.locator(".onboarding-pay-toggle input").isChecked(), true, "include in messages: on by default");
+  await page.getByRole("button", { name: "Finish Setup" }).click();
+
+  await waitFor(() => fake.rows("coaches").some((c) => c.venmo_handle === "Coach-Anna"), "payment details saved");
+  const coach = fake.rows("coaches").find((c) => c.venmo_handle === "Coach-Anna")!;
+  assert.equal(coach.zelle_contact, "anna@example.com");
+  assert.equal(coach.zelle_name, "Anna Smith");
+  assert.equal(coach.payment_in_messages, true);
+  assert.equal(coach.setup_completed, true);
+});
+
+test("Onboarding: 'Other' (the default) saves no payment details", async () => {
+  const fake = seedWorld({ withProfile: false });
+  app = await openApp(fake, "/dashboard");
+  const { page } = app;
+  await fillOnboardingBasics(page);
+  await page.getByRole("button", { name: "Finish Setup" }).click();
+  await waitFor(() => fake.rows("coaches").some((c) => c.setup_completed === true), "setup completed");
+  await page.waitForTimeout(300);
+  assert.equal(paymentWrites(fake).length, 0);
+});
+
+test("Onboarding: picking Venmo but leaving it blank still finishes, without a warning", async () => {
+  const fake = seedWorld({ withProfile: false });
+  app = await openApp(fake, "/dashboard");
+  const { page } = app;
+  await fillOnboardingBasics(page);
+  await page.locator(".onboarding-pay-choices .onboarding-choice", { hasText: "Venmo" }).click();
+  await page.getByRole("button", { name: "Finish Setup" }).click();
+  await waitFor(() => fake.rows("coaches").some((c) => c.setup_completed === true), "setup completed");
+  await page.waitForTimeout(300);
+  assert.equal(await popup(page).count(), 0, "no warning for an empty optional field");
+  assert.equal(paymentWrites(fake).length, 0);
 });

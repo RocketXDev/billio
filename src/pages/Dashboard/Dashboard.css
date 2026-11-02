@@ -1056,3 +1056,64 @@
     padding: 24px 18px 18px;
   }
 }
+
+/* ── Onboarding: optional "How do parents pay you?" ── */
+.onboarding-pay-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.onboarding-pay-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.onboarding-pay-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--secondary-text);
+}
+
+/* Same look as the other onboarding fields — the global form-input rule
+   (styles/forms.css) only reaches inputs that are direct children of
+   .input-block, and these are nested one level deeper. */
+.onboarding-pay-field input {
+  width: 100%;
+  height: 50px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background-color: var(--input-bg);
+  outline: none;
+  font-size: 16px;
+  font-weight: 400;
+  padding: 15px;
+  box-sizing: border-box;
+}
+
+.onboarding-pay-field input:focus {
+  background-color: var(--border);
+}
+
+.input-block > label.onboarding-pay-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 14px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--main-text);
+  cursor: pointer;
+}
+
+.onboarding-pay-toggle input {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--primary-purple);
+  cursor: pointer;
+}

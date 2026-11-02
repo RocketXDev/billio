@@ -50,10 +50,10 @@ export function normalizeZelleContact(input: string): Checked {
 
 /**
  * Venmo's documented payment link (venmo.com/paymentlinks): opens the Venmo
- * app on a phone with the amount and note already filled in.
+ * app on a phone with the amount filled in; the parent writes their own note.
  */
-export function venmoPayUrl(handle: string, amount: number, note: string) {
-  const params = new URLSearchParams({ txn: "pay", amount: amount.toFixed(2), note });
+export function venmoPayUrl(handle: string, amount: number) {
+  const params = new URLSearchParams({ txn: "pay", amount: amount.toFixed(2) });
   return `https://venmo.com/${encodeURIComponent(handle)}?${params.toString()}`;
 }
 

@@ -3,16 +3,14 @@ import { FaArrowRight, FaCheck, FaRegCopy } from "react-icons/fa";
 import { formatMoney, hasPaymentOptions, venmoPayUrl, type PaymentDetails } from "../../lib/paymentOptions";
 import "./PaymentOptions.css";
 
-// "How to pay" block: Venmo (deep link with amount + invoice number filled
-// in) and Zelle (copyable details — Zelle has no link, it lives inside each
+// "How to pay" block: Venmo (deep link with the amount filled in) and Zelle (copyable details — Zelle has no link, it lives inside each
 // bank's app). Renders nothing when the coach hasn't added either.
 //
 // Brand colours and names only, no official logos (both brands restrict
 // logo use).
-export default function PaymentOptions({ details, amount, invoiceNumber, preview = false }: {
+export default function PaymentOptions({ details, amount, preview = false }: {
   details: PaymentDetails | null | undefined;
   amount: number;
-  invoiceNumber: string;
   // Settings preview: same look, links inert.
   preview?: boolean;
 }) {
@@ -26,7 +24,7 @@ export default function PaymentOptions({ details, amount, invoiceNumber, preview
       {venmo && (
         <a
           className="pay-option pay-option-venmo"
-          href={preview ? undefined : venmoPayUrl(venmo, amount, invoiceNumber)}
+          href={preview ? undefined : venmoPayUrl(venmo, amount)}
           target="_blank"
           rel="noopener noreferrer"
           aria-disabled={preview || undefined}
@@ -58,9 +56,6 @@ export default function PaymentOptions({ details, amount, invoiceNumber, preview
         </div>
       )}
 
-      <p className="pay-options-note">
-        Please add <strong>{invoiceNumber}</strong> to the payment note.
-      </p>
     </section>
   );
 }

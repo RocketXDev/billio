@@ -298,7 +298,6 @@ export default function MarkInvoicePaid({
               <PaymentOptions
                 details={payment}
                 amount={groupTotal ?? Number(invoice?.total || 0)}
-                invoiceNumber={invoiceNumber}
               />
               <p className="mip-subtitle">
                 Once you've sent the payment, tap below so {coachName} knows it's taken care of.

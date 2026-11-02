@@ -572,14 +572,14 @@ test("Parent pay link shows Venmo and Zelle when the coach added them", async ()
   const href = new URL((await venmo.getAttribute("href"))!);
   assert.equal(href.origin + href.pathname, "https://venmo.com/Coach-Anna");
   assert.equal(href.searchParams.get("amount"), "60.00");
-  assert.equal(href.searchParams.get("note"), "INV-1001");
+  assert.equal(href.searchParams.has("note"), false, "no pre-filled note");
   assert.equal(await venmo.getAttribute("target"), "_blank");
 
   const zelle = page.locator(".pay-option-zelle");
   assert.match(await zelle.innerText(), /\(555\) 010-2000/);
   assert.match(await zelle.innerText(), /Anna Smith/);
   assert.equal(await zelle.locator(".pay-copy-btn").count(), 2, "copy address + amount");
-  assert.match(await page.locator(".pay-options-note").innerText(), /INV-1001/);
+  assert.doesNotMatch(await page.locator(".pay-options").innerText(), /payment note/, "no note instruction");
 
   await page.getByRole("button", { name: "✓ I've sent the payment" }).click();
   await page.getByRole("heading", { name: "Invoice Marked as Paid" }).waitFor();

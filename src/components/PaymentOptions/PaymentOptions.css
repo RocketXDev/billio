@@ -178,16 +178,6 @@
   }
 }
 
-.pay-options-note {
-  margin: 2px 0 0;
-  color: var(--secondary-text);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.pay-options-note strong {
-  color: var(--main-text);
-}
 
 .pay-option-venmo:focus-visible,
 .pay-copy-btn:focus-visible {

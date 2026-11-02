@@ -176,7 +176,7 @@ export async function generateInvoicePdf(args: GenerateInvoicePdfArgs): Promise<
       lines.push({
         label: "Venmo",
         value: `@${payment.venmo_handle}`,
-        url: venmoPayUrl(payment.venmo_handle, Number(total || 0), invoiceNumber),
+        url: venmoPayUrl(payment.venmo_handle, Number(total || 0)),
       });
     }
     if (payment.zelle_contact) {
@@ -186,7 +186,7 @@ export async function generateInvoicePdf(args: GenerateInvoicePdfArgs): Promise<
       });
     }
 
-    const boxH = 30 + lines.length * 18 + 22;
+    const boxH = 30 + lines.length * 18 + 4;
     const pageH = doc.internal.pageSize.getHeight();
     y += 30;
     // Keep clear of the footer note at the bottom of the page.
@@ -216,10 +216,6 @@ export async function generateInvoicePdf(args: GenerateInvoicePdfArgs): Promise<
       else doc.text(line.value, margin + 70, lineY);
       lineY += 18;
     }
-
-    doc.setFontSize(9);
-    doc.setTextColor(100, 116, 139);
-    doc.text(`Please add ${invoiceNumber} to the payment note.`, margin + 16, lineY + 2);
   }
 
   if (footerNote) {

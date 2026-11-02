@@ -35,11 +35,11 @@ test("Zelle takes an email (lower-cased) or a US phone (formatted)", () => {
 });
 
 test("Venmo link follows Venmo's documented payment-link format", () => {
-  const url = new URL(venmoPayUrl("anna-smith", 120, "INV-2026-A1B2 #3"));
+  const url = new URL(venmoPayUrl("anna-smith", 120));
   assert.equal(url.origin + url.pathname, "https://venmo.com/anna-smith");
   assert.equal(url.searchParams.get("txn"), "pay");
   assert.equal(url.searchParams.get("amount"), "120.00", "decimal, no $ sign");
-  assert.equal(url.searchParams.get("note"), "INV-2026-A1B2 #3", "note survives URL escaping");
+  assert.equal(url.searchParams.has("note"), false, "parents write their own note");
 });
 
 test("payment options show only when Venmo or Zelle is set", () => {

@@ -525,7 +525,6 @@ export default function Settings() {
                         zelle_name: zelleCheck.value ? zelleNameInput.trim() || null : null,
                       }}
                       amount={120}
-                      invoiceNumber={`${invoicePrefix || "INV"}-1001`}
                     />
                   </div>
                 )}

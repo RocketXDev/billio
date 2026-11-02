@@ -1117,3 +1117,110 @@
   accent-color: var(--primary-purple);
   cursor: pointer;
 }
+
+/* ── Onboarding on desktop (≥1024px) ──
+   Two panels instead of a tall phone-width column: a fixed brand panel on
+   the left (logo, illustration, heading) and the form scrolling on the
+   right, inside a card sized to the screen. Phones and tablets keep the
+   single-column layout above untouched. */
+@media (min-width: 1024px) {
+  .onboarding-overlay {
+    padding: 32px;
+  }
+
+  .onboarding-card {
+    max-width: 980px;
+    height: min(780px, calc(100vh - 64px));
+    max-height: none;
+    padding: 0;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    /* Rows 2–5 hold the brand panel; 1 and 6 centre it vertically. */
+    grid-template-rows: 1fr auto auto auto auto 1fr;
+    background: linear-gradient(90deg, var(--accent-tint) 0 360px, var(--card-bg) 360px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .onboarding-logo,
+  .onboarding-image,
+  .onboarding-card > h2,
+  .onboarding-card > p {
+    grid-column: 1;
+    padding: 0 36px;
+    box-sizing: border-box;
+  }
+
+  .onboarding-logo {
+    grid-row: 2;
+    width: 186px; /* 150px logo + side padding */
+  }
+
+  .onboarding-image {
+    grid-row: 3;
+    max-width: 312px; /* 240px illustration + side padding */
+    margin: 18px auto 14px;
+  }
+
+  .onboarding-card > h2 {
+    grid-row: 4;
+    margin: 0 0 10px;
+    font-size: 26px;
+  }
+
+  .onboarding-card > p {
+    grid-row: 5;
+    margin: 0;
+  }
+
+  .onboarding-form {
+    grid-column: 2;
+    grid-row: 1 / -1;
+    min-height: 0;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 18px;
+    row-gap: 20px;
+    align-content: start;
+    padding: 40px 44px 32px;
+  }
+
+  /* Everything full width except Visible Name + Hourly Rate, side by side. */
+  .onboarding-form > * {
+    grid-column: 1 / -1;
+  }
+
+  .onboarding-form > .input-block:nth-of-type(1),
+  .onboarding-form > .input-block:nth-of-type(2) {
+    grid-column: auto;
+  }
+
+  /* Short choice lists read better across than stacked. */
+  .onboarding-form .onboarding-choice-group {
+    flex-direction: row;
+  }
+
+  .onboarding-form .onboarding-choice-group > * {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .onboarding-form .onboarding-pay-choices {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .onboarding-form > button[type="submit"] {
+    width: 100%;
+    margin-top: 4px;
+  }
+
+  /* Side-by-side buttons are narrower, so the "Pro only" tag moves from
+     inside the button (where it covered the label) onto its top edge. */
+  .onboarding-form .onboarding-choice-group .pro-only-bubble {
+    top: 0;
+    right: 10px;
+    transform: translateY(-50%);
+  }
+}

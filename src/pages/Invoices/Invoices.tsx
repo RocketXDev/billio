@@ -1157,6 +1157,15 @@ function Invoices() {
 
     const studentName = invoice.students?.student_name || invoice.student_name || "Student";
 
+    // Optional Venmo/Zelle for the "How to pay" box. Errors are ignored on
+    // purpose: before supabase/sql/payment_details.sql runs, the columns
+    // don't exist and the PDF is simply generated without the box.
+    const { data: payment } = await supabase
+      .from("coaches")
+      .select("venmo_handle, zelle_contact, zelle_name")
+      .eq("id", coachId)
+      .maybeSingle();
+
     const pdfBlob = await generateInvoicePdf({
       businessName: brand?.business_name || fullName || "Invoice",
       accentColor: brand?.accent_color || "#3b33d9",
@@ -1168,6 +1177,7 @@ function Invoices() {
       dueDate: invoice.due_date,
       lessons,
       total: invoice.total,
+      payment,
     });
 
     const filePath = `${coachId}/${invoice.id}.pdf`;

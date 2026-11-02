@@ -39,3 +39,4 @@ import "../pages/GroupLessons/GroupLessons.css";
 import "../pages/GoogleCalendar/GoogleCalendar.css";
 import "../pages/EarningsDashboard/EarningsDashboard.css";
 import "../pages/PdfInvoice/PdfInvoice.css";
+import "../components/PaymentOptions/PaymentOptions.css";

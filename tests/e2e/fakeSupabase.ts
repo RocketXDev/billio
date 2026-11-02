@@ -115,6 +115,11 @@ export class FakeSupabase {
   failRules: FailRule[] = [];
   // "DELETE notifications" etc.: succeed but change nothing, like RLS with no policy for that command.
   silentlyBlocked = new Set<string>();
+  // "coaches.venmo_handle" etc.: columns that don't exist yet (a migration
+  // that hasn't been run) — selecting or writing them fails like Postgres.
+  missingColumns = new Set<string>();
+  // Edge function name -> JSON reply (default {}).
+  functionResponses: Record<string, (body: any) => unknown> = {};
   internalErrors: string[] = [];
 
   user: Row;
@@ -158,8 +163,10 @@ export class FakeSupabase {
       const path = url.pathname;
       if (path.startsWith("/auth/v1/")) return this.auth(path, request.method(), json);
       if (path.startsWith("/functions/v1/")) {
-        this.log.push({ method: request.method(), table: `fn:${path.slice(14)}`, params: url.searchParams, body: safeJson(request.postData()) });
-        return json(200, {});
+        const name = path.slice(14);
+        const body = safeJson(request.postData());
+        this.log.push({ method: request.method(), table: `fn:${name}`, params: url.searchParams, body });
+        return json(200, this.functionResponses[name]?.(body) ?? {});
       }
       if (path.startsWith("/rest/v1/rpc/")) {
         this.log.push({ method: "RPC", table: path.slice(13), params: url.searchParams, body: safeJson(request.postData()) });
@@ -191,6 +198,15 @@ export class FakeSupabase {
     if (rule) {
       rule.times = (rule.times ?? 1) - 1;
       return json(400, { message: rule.message, code: "E2E01", details: null, hint: null });
+    }
+
+    const referenced = [
+      ...(params.get("select") || "").replace(/\s+/g, "").split(/[,()]/),
+      ...Object.keys(body && typeof body === "object" && !Array.isArray(body) ? body : {}),
+    ];
+    const missing = referenced.find((col) => this.missingColumns.has(`${table}.${col}`));
+    if (missing) {
+      return json(400, { code: "42703", message: `column ${table}.${missing} does not exist`, details: null, hint: null });
     }
 
     const headers = request.headers();

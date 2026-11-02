@@ -440,7 +440,7 @@ test("Earnings → Export downloads the lessons and monthly summary CSVs", async
 
   const lessonsCsv = await read("All lessons");
   assert.equal(lessonsCsv.name, "billio-lessons-2026.csv");
-  const lines = lessonsCsv.text.replace(/^﻿/, "").trim().split("\r\n");
+  const lines = lessonsCsv.text.replace(/^\uFEFF/, "").trim().split("\r\n");
   const expected = fake.rows("lessons").filter((l) => l.lesson_date.startsWith("2026-")).length;
   assert.equal(lines.length, expected + 1, "header + one row per 2026 lesson");
   assert.match(lines[0], /^Date,Start time,Student,Lesson type,/);
@@ -449,7 +449,7 @@ test("Earnings → Export downloads the lessons and monthly summary CSVs", async
 
   const summary = await read("Monthly summary");
   assert.equal(summary.name, "billio-monthly-summary-2026.csv");
-  const sLines = summary.text.replace(/^﻿/, "").trim().split("\r\n");
+  const sLines = summary.text.replace(/^\uFEFF/, "").trim().split("\r\n");
   assert.equal(sLines.length, 1 + 12 + 1, "header, 12 months, total");
   assert.match(sLines.at(-1)!, new RegExp(`^Total,${expected},`));
 
@@ -501,4 +501,116 @@ test("Tapping an announcement in the phone notification panel opens its page", a
   await page.locator(".notification-item", { hasText: "New: export to a spreadsheet" }).click();
   await page.waitForURL("**/earnings-dashboard");
   await waitFor(() => fake.rows("notifications")[0].is_read === true, "marked read");
+});
+
+// ── Optional Venmo / Zelle ──────────────────────────────────────────────────
+
+test("Settings: optional Venmo/Zelle are cleaned up, previewed and saved", async () => {
+  const fake = seedWorld();
+  app = await openApp(fake, "/settings");
+  const { page } = app;
+  const venmo = page.getByPlaceholder("your-username");
+  await venmo.waitFor();
+  assert.equal(await page.locator(".settings-pay-preview").count(), 0, "no preview while empty");
+
+  // An invalid username warns and saves nothing.
+  await venmo.fill("anna smith");
+  await page.locator(".settings-save-btn").first().click();
+  await popup(page).waitFor();
+  assert.match(await popup(page).innerText(), /5–30 letters/);
+  await popup(page).getByRole("button", { name: "OK" }).click();
+  assert.equal(fake.requests("PATCH", "coaches").length, 0);
+
+  await venmo.fill("https://venmo.com/u/Coach-Anna");
+  await page.getByPlaceholder("you@email.com or (555) 123-4567").fill("+1 555 010 2000");
+  await page.getByPlaceholder("So parents know they're paying the right person").fill("Anna Smith");
+  const preview = page.locator(".settings-pay-preview");
+  await preview.getByText("Pay $120.00 with Venmo").waitFor();
+  assert.match(await preview.innerText(), /@Coach-Anna/);
+  assert.match(await preview.innerText(), /\(555\) 010-2000/);
+
+  await page.locator(".settings-save-btn").first().click();
+  await waitFor(() => fake.rows("coaches")[0].venmo_handle === "Coach-Anna", "payment details saved");
+  const coach = fake.rows("coaches")[0];
+  assert.equal(coach.zelle_contact, "(555) 010-2000");
+  assert.equal(coach.zelle_name, "Anna Smith");
+});
+
+test("Settings still works before the payment columns exist (SQL not run yet)", async () => {
+  const fake = seedWorld();
+  for (const col of ["venmo_handle", "zelle_contact", "zelle_name"]) fake.missingColumns.add(`coaches.${col}`);
+  app = await openApp(fake, "/settings");
+  const { page } = app;
+  await page.getByText("Payment details aren't available yet.").waitFor();
+  await page.locator(".settings-chip", { hasText: "24" }).first().click().catch(() => {});
+  await page.locator(".settings-save-btn").first().click();
+  await waitFor(() => fake.requests("PATCH", "coaches").length > 0, "other settings saved");
+  await page.waitForTimeout(300);
+  assert.equal(await popup(page).count(), 0, "no error popup");
+});
+
+const payLink = (fake: any, payment: Record<string, unknown> | null) => {
+  fake.functionResponses["get-payment-reminder-invoice"] = () => ({
+    success: true, already_paid: false, group: null, grandTotal: null, payment,
+    invoice: { id: "invoice-liam", invoice_number: "INV-1001", total: 60, status: "unbilled", due_date: "2026-10-13",
+      students: { student_name: "Liam Chen" } },
+  });
+  fake.functionResponses["mark-invoice-paid"] = () => ({
+    success: true, invoice: { id: "invoice-liam", invoice_number: "INV-1001", total: 60, students: { student_name: "Liam Chen" } },
+  });
+};
+
+test("Parent pay link shows Venmo and Zelle when the coach added them", async () => {
+  const fake = seedWorld();
+  payLink(fake, { coach_name: "Coach Anna", venmo_handle: "Coach-Anna", zelle_contact: "(555) 010-2000", zelle_name: "Anna Smith" });
+  app = await openApp(fake, "/pay?token=tok-123");
+  const { page } = app;
+  await page.getByRole("heading", { name: "Pay Coach Anna" }).waitFor();
+
+  const venmo = page.locator(".pay-option-venmo");
+  assert.match(await venmo.innerText(), /Pay \$60\.00 with Venmo/);
+  const href = new URL((await venmo.getAttribute("href"))!);
+  assert.equal(href.origin + href.pathname, "https://venmo.com/Coach-Anna");
+  assert.equal(href.searchParams.get("amount"), "60.00");
+  assert.equal(href.searchParams.get("note"), "INV-1001");
+  assert.equal(await venmo.getAttribute("target"), "_blank");
+
+  const zelle = page.locator(".pay-option-zelle");
+  assert.match(await zelle.innerText(), /\(555\) 010-2000/);
+  assert.match(await zelle.innerText(), /Anna Smith/);
+  assert.equal(await zelle.locator(".pay-copy-btn").count(), 2, "copy address + amount");
+  assert.match(await page.locator(".pay-options-note").innerText(), /INV-1001/);
+
+  await page.getByRole("button", { name: "✓ I've sent the payment" }).click();
+  await page.getByRole("heading", { name: "Invoice Marked as Paid" }).waitFor();
+  assert.equal(fake.requests("POST", "fn:mark-invoice-paid").length, 1);
+});
+
+test("Parent pay link is unchanged for coaches without Venmo or Zelle", async () => {
+  const fake = seedWorld();
+  payLink(fake, null);
+  app = await openApp(fake, "/pay?token=tok-123");
+  const { page } = app;
+  await page.getByRole("heading", { name: "Mark Invoice as Paid?" }).waitFor();
+  assert.equal(await page.locator(".pay-options").count(), 0);
+  await page.getByRole("button", { name: "✓ Yes, mark as paid" }).waitFor();
+});
+
+test("Settings: 'include in emails and texts' appears with Venmo/Zelle, is on by default, and can be turned off", async () => {
+  const fake = seedWorld();
+  app = await openApp(fake, "/settings");
+  const { page } = app;
+  const toggle = page.getByRole("switch", { name: /Also include in invoice emails and texts/ });
+  await page.getByPlaceholder("your-username").waitFor();
+  assert.equal(await toggle.count(), 0, "hidden while no payment details");
+
+  await page.getByPlaceholder("your-username").fill("Coach-Anna");
+  await toggle.waitFor({ state: "attached" });
+  assert.equal(await toggle.isChecked(), true, "on by default");
+
+  await page.locator(".settings-pay-switch").click();
+  assert.equal(await toggle.isChecked(), false);
+  await page.locator(".settings-save-btn").first().click();
+  await waitFor(() => fake.rows("coaches")[0].venmo_handle === "Coach-Anna", "saved");
+  assert.equal(fake.rows("coaches")[0].payment_in_messages, false);
 });

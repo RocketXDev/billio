@@ -27,6 +27,8 @@ import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { useLessonTerm } from "../../hooks/useLessonTerm";
+import PaymentOptions from "../../components/PaymentOptions/PaymentOptions";
+import { hasPaymentOptions, type PaymentDetails } from "../../lib/paymentOptions";
 import "./MarkInvoicePaid.css";
 
 type State = "loading" | "confirm" | "success" | "already_paid" | "error";
@@ -65,6 +67,9 @@ export default function MarkInvoicePaid({
   // Set when this invoice was part of a combined send (invoice_group_id) —
   // its siblings, so paid-status can be shown/marked across the whole group.
   const [groupInvoices, setGroupInvoices] = useState<any[] | null>(null);
+  // The coach's optional Venmo/Zelle details (parent links only) — null when
+  // they haven't added any, which keeps this page exactly as before.
+  const [payment, setPayment] = useState<(PaymentDetails & { coach_name?: string | null }) | null>(null);
 
   useEffect(() => {
     if (mode === "student") {
@@ -101,6 +106,7 @@ export default function MarkInvoicePaid({
 
       setInvoice(data.invoice);
       setGroupInvoices(data.group || null);
+      setPayment(data.payment || null);
       setState(data.already_paid ? "already_paid" : "confirm");
     } catch (err: any) {
       setErrorMsg(err.message || "Something went wrong.");
@@ -235,6 +241,9 @@ export default function MarkInvoicePaid({
     ? groupInvoices.reduce((sum, g) => sum + Number(g.total || 0), 0)
     : null;
 
+  const showPayment = mode === "student" && hasPaymentOptions(payment);
+  const coachName = payment?.coach_name?.trim() || "your coach";
+
   // Same card in all three states — a combined invoice shows every
   // student's subtotal plus the grand total instead of a single amount.
   function invoiceCardBody(showDueDate: boolean) {
@@ -273,15 +282,34 @@ export default function MarkInvoicePaid({
       {/* Confirm */}
       {state === "confirm" && (
         <>
-          <div className="mip-icon warning">?</div>
-          <h2 className="mip-title">Mark Invoice as Paid?</h2>
+          {showPayment ? (
+            <h2 className="mip-title">Pay {coachName}</h2>
+          ) : (
+            <>
+              <div className="mip-icon warning">?</div>
+              <h2 className="mip-title">Mark Invoice as Paid?</h2>
+            </>
+          )}
 
           {invoiceCardBody(true)}
 
-          <p className="mip-subtitle">
-            Confirming will mark {groupInvoices ? "these invoices" : "this invoice"} as paid
-            and update all linked {term.lower} statuses in Billio.
-          </p>
+          {showPayment ? (
+            <>
+              <PaymentOptions
+                details={payment}
+                amount={groupTotal ?? Number(invoice?.total || 0)}
+                invoiceNumber={invoiceNumber}
+              />
+              <p className="mip-subtitle">
+                Once you've sent the payment, tap below so {coachName} knows it's taken care of.
+              </p>
+            </>
+          ) : (
+            <p className="mip-subtitle">
+              Confirming will mark {groupInvoices ? "these invoices" : "this invoice"} as paid
+              and update all linked {term.lower} statuses in Billio.
+            </p>
+          )}
 
           <button
             type="button"
@@ -289,21 +317,26 @@ export default function MarkInvoicePaid({
             onClick={handleMarkPaid}
             disabled={marking}
           >
-            {marking ? "Marking as paid..." : "✓ Yes, mark as paid"}
+            {marking ? "Marking as paid..." : showPayment ? "✓ I've sent the payment" : "✓ Yes, mark as paid"}
           </button>
 
-          <button
-            type="button"
-            className="mip-btn-secondary"
-            onClick={dismiss}
-            disabled={marking}
-          >
-            {mode === "student" ? "Open app instead" : "Cancel"}
-          </button>
+          {/* Parents paying via Venmo/Zelle have no app to open. */}
+          {!showPayment && (
+            <button
+              type="button"
+              className="mip-btn-secondary"
+              onClick={dismiss}
+              disabled={marking}
+            >
+              {mode === "student" ? "Open app instead" : "Cancel"}
+            </button>
+          )}
 
           {mode === "student" && (
             <p className="mip-disclaimer">
-              This link expires in 7 days. If you already marked this paid in the app, ignore this.
+              {showPayment
+                ? "Questions about this invoice? Please contact your coach."
+                : "This link expires in 7 days. If you already marked this paid in the app, ignore this."}
             </p>
           )}
         </>

@@ -11,10 +11,14 @@ import {
   FaTrash,
   FaCheck,
   FaChevronRight,
+  FaWallet,
 } from "react-icons/fa";
 import { supabase } from "../../lib/supabaseClient";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import { TIMEZONE_GROUPS } from "../../lib/timezones";
+import { showError, showWarning } from "../../lib/notify";
+import { normalizeVenmoHandle, normalizeZelleContact } from "../../lib/paymentOptions";
+import PaymentOptions from "../../components/PaymentOptions/PaymentOptions";
 import "./Settings.css";
 
 const DURATION_OPTIONS = [30, 45, 60, 90, 120];
@@ -53,6 +57,12 @@ export default function Settings() {
   const [lessonTermPlural, setLessonTermPlural] = useState("Lessons");
   const [useCustomTerm, setUseCustomTerm] = useState(false);
 
+  // Optional Venmo / Zelle shown to parents on the pay page and PDFs.
+  const [venmoInput, setVenmoInput] = useState("");
+  const [zelleInput, setZelleInput] = useState("");
+  const [zelleNameInput, setZelleNameInput] = useState("");
+  const [paymentInMessages, setPaymentInMessages] = useState(true);
+
   // Password change
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -81,6 +91,35 @@ export default function Settings() {
     },
     enabled: !!coachId,
   });
+
+  // Separate query (and save) so the rest of Settings keeps working even
+  // before supabase/sql/payment_details.sql has added these columns.
+  const { data: paymentData, error: paymentError } = useQuery({
+    queryKey: ["coach-payment-details", coachId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("coaches")
+        .select("venmo_handle, zelle_contact, zelle_name, payment_in_messages")
+        .eq("id", coachId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!coachId,
+    retry: false,
+  });
+  const paymentUnavailable = !!paymentError;
+
+  useEffect(() => {
+    if (!paymentData) return;
+    setVenmoInput(paymentData.venmo_handle || "");
+    setZelleInput(paymentData.zelle_contact || "");
+    setZelleNameInput(paymentData.zelle_name || "");
+    setPaymentInMessages(paymentData.payment_in_messages !== false);
+  }, [paymentData]);
+
+  const venmoCheck = normalizeVenmoHandle(venmoInput);
+  const zelleCheck = normalizeZelleContact(zelleInput);
 
   // Gate on the data actually being present, not just `isLoading` — react-query
   // reports `isLoading: false` while the query is still `enabled: false` (i.e.
@@ -117,6 +156,11 @@ export default function Settings() {
 
   async function handleSave() {
     if (!coachId || saving) return;
+    const paymentProblem = !paymentUnavailable && (venmoCheck.error || zelleCheck.error);
+    if (paymentProblem) {
+      showWarning(paymentProblem);
+      return;
+    }
     setSaving(true);
 
     const { error } = await supabase
@@ -132,15 +176,41 @@ export default function Settings() {
       })
       .eq("id", coachId);
 
-    setSaving(false);
-    if (!error) {
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
-      queryClient.invalidateQueries({ queryKey: ["coach-settings", coachId] });
-      queryClient.invalidateQueries({ queryKey: ["settings", coachId] });
-      queryClient.invalidateQueries({ queryKey: ["invoice-settings", coachId] });
-      queryClient.invalidateQueries({ queryKey: ["lesson-reminder-settings", coachId] });
+    if (error) {
+      setSaving(false);
+      showError("save your settings", error);
+      return;
     }
+
+    if (!paymentUnavailable && paymentData) {
+      const zelleContact = zelleCheck.value;
+      const next = {
+        venmo_handle: venmoCheck.value,
+        zelle_contact: zelleContact,
+        zelle_name: zelleContact ? zelleNameInput.trim() || null : null,
+        payment_in_messages: paymentInMessages,
+      };
+      const changed = (Object.keys(next) as (keyof typeof next)[]).some(
+        (key) => (paymentData[key] ?? null) !== next[key]
+      );
+      if (changed) {
+        const { error: paymentSaveError } = await supabase.from("coaches").update(next).eq("id", coachId);
+        if (paymentSaveError) {
+          setSaving(false);
+          showError("save your payment details", paymentSaveError);
+          return;
+        }
+        queryClient.invalidateQueries({ queryKey: ["coach-payment-details", coachId] });
+      }
+    }
+
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+    queryClient.invalidateQueries({ queryKey: ["coach-settings", coachId] });
+    queryClient.invalidateQueries({ queryKey: ["settings", coachId] });
+    queryClient.invalidateQueries({ queryKey: ["invoice-settings", coachId] });
+    queryClient.invalidateQueries({ queryKey: ["lesson-reminder-settings", coachId] });
   }
 
   async function handleChangePassword() {
@@ -358,6 +428,109 @@ export default function Settings() {
                 {invoicePrefix || "INV"}-{new Date().getFullYear()}-A1B2
               </span>
             </div>
+          </div>
+        </section>
+
+        {/* ── Getting paid (optional) ── */}
+        <section className="settings-section">
+          <div className="settings-section-label">
+            <FaWallet className="settings-section-icon" />
+            Getting paid
+          </div>
+
+          <div className="settings-card">
+            <div className="settings-row-label">Venmo &amp; Zelle (optional)</div>
+            <p className="settings-row-note settings-pay-intro">
+              Add either one and parents see it on the invoice link, ready to pay. Leave both
+              empty if you're paid another way, like at the front desk — nothing changes.
+            </p>
+
+            {paymentUnavailable ? (
+              <p className="settings-row-note">Payment details aren't available yet.</p>
+            ) : (
+              <>
+                <label className="settings-pay-field">
+                  <span>Venmo username</span>
+                  <div className={`settings-pay-input settings-pay-at${venmoCheck.error ? " invalid" : ""}`}>
+                    <span aria-hidden="true">@</span>
+                    <input
+                      type="text"
+                      value={venmoInput}
+                      onChange={(e) => setVenmoInput(e.target.value)}
+                      placeholder="your-username"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                    />
+                  </div>
+                  {venmoCheck.error && <small className="settings-pay-error">{venmoCheck.error}</small>}
+                </label>
+
+                <label className="settings-pay-field">
+                  <span>Zelle email or phone</span>
+                  <div className={`settings-pay-input${zelleCheck.error ? " invalid" : ""}`}>
+                    <input
+                      type="text"
+                      inputMode="email"
+                      value={zelleInput}
+                      onChange={(e) => setZelleInput(e.target.value)}
+                      placeholder="you@email.com or (555) 123-4567"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                    />
+                  </div>
+                  {zelleCheck.error && <small className="settings-pay-error">{zelleCheck.error}</small>}
+                </label>
+
+                {zelleInput.trim() && (
+                  <label className="settings-pay-field">
+                    <span>Name on your Zelle account</span>
+                    <div className="settings-pay-input">
+                      <input
+                        type="text"
+                        value={zelleNameInput}
+                        maxLength={60}
+                        onChange={(e) => setZelleNameInput(e.target.value)}
+                        placeholder="So parents know they're paying the right person"
+                      />
+                    </div>
+                  </label>
+                )}
+
+                {(venmoCheck.value || zelleCheck.value) && (
+                  <label className="settings-pay-switch">
+                    <input
+                      type="checkbox"
+                      role="switch"
+                      checked={paymentInMessages}
+                      onChange={(e) => setPaymentInMessages(e.target.checked)}
+                    />
+                    <span className="settings-pay-switch-track" aria-hidden="true" />
+                    <span className="settings-pay-switch-text">
+                      <strong>Also include in invoice emails and texts</strong>
+                      <small>Parents see how to pay right in the message — no link to open.</small>
+                    </span>
+                  </label>
+                )}
+
+                {(venmoCheck.value || zelleCheck.value) && (
+                  <div className="settings-pay-preview">
+                    <span>What parents see</span>
+                    <PaymentOptions
+                      preview
+                      details={{
+                        venmo_handle: venmoCheck.value,
+                        zelle_contact: zelleCheck.value,
+                        zelle_name: zelleCheck.value ? zelleNameInput.trim() || null : null,
+                      }}
+                      amount={120}
+                      invoiceNumber={`${invoicePrefix || "INV"}-1001`}
+                    />
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </section>
 

@@ -3,6 +3,8 @@
 // built from real lesson rows instead of freeform line items. Returns a Blob
 // so the caller can upload it to Storage, rather than triggering a download.
 
+import { hasPaymentOptions, venmoPayUrl, type PaymentDetails } from "./paymentOptions";
+
 type InvoiceLessonRow = {
   lesson_date: string;
   start_time: string;
@@ -22,6 +24,8 @@ type GenerateInvoicePdfArgs = {
   dueDate?: string;
   lessons: InvoiceLessonRow[];
   total: number;
+  // Coach's optional Venmo / Zelle — adds a "How to pay" box when present.
+  payment?: PaymentDetails | null;
 };
 
 function money(n: any) {
@@ -66,7 +70,7 @@ function formatTime(timeStr: string) {
 }
 
 export async function generateInvoicePdf(args: GenerateInvoicePdfArgs): Promise<Blob> {
-  const { businessName, accentColor, logoUrl, footerNote, studentName, invoiceNumber, issueDate, dueDate, lessons, total } = args;
+  const { businessName, accentColor, logoUrl, footerNote, studentName, invoiceNumber, issueDate, dueDate, lessons, total, payment } = args;
 
   const { default: jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "pt", format: "a4" });
@@ -165,6 +169,58 @@ export async function generateInvoicePdf(args: GenerateInvoicePdfArgs): Promise<
   doc.text("Total", pageW - margin - 120, y, { align: "right" });
   doc.setTextColor(rgb.r, rgb.g, rgb.b);
   doc.text(money(total), pageW - margin - 10, y, { align: "right" });
+
+  if (hasPaymentOptions(payment)) {
+    const lines: { label: string; value: string; url?: string }[] = [];
+    if (payment.venmo_handle) {
+      lines.push({
+        label: "Venmo",
+        value: `@${payment.venmo_handle}`,
+        url: venmoPayUrl(payment.venmo_handle, Number(total || 0), invoiceNumber),
+      });
+    }
+    if (payment.zelle_contact) {
+      lines.push({
+        label: "Zelle",
+        value: payment.zelle_name ? `${payment.zelle_contact} (${payment.zelle_name})` : payment.zelle_contact,
+      });
+    }
+
+    const boxH = 30 + lines.length * 18 + 22;
+    const pageH = doc.internal.pageSize.getHeight();
+    y += 30;
+    // Keep clear of the footer note at the bottom of the page.
+    if (y + boxH > pageH - margin - 24) {
+      doc.addPage();
+      y = margin;
+    }
+
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(margin, y, pageW - margin * 2, boxH, 10, 10, "FD");
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(15, 23, 42);
+    doc.text("How to pay", margin + 16, y + 22);
+
+    let lineY = y + 42;
+    doc.setFontSize(10);
+    for (const line of lines) {
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(100, 116, 139);
+      doc.text(line.label, margin + 16, lineY);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(15, 23, 42);
+      if (line.url) doc.textWithLink(line.value, margin + 70, lineY, { url: line.url });
+      else doc.text(line.value, margin + 70, lineY);
+      lineY += 18;
+    }
+
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Please add ${invoiceNumber} to the payment note.`, margin + 16, lineY + 2);
+  }
 
   if (footerNote) {
     doc.setFontSize(9);

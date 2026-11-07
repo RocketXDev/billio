@@ -289,36 +289,47 @@ function Invoices() {
   }
 
 
-  const now = new Date();
+  // ── This week (Sun–Sat, coach's local time) ──
+  // The summary cards show the Sunday–Saturday week containing today; it
+  // rolls over to the new week each Sunday.
+  // All comparisons are on local "YYYY-MM-DD" strings. Date-only values
+  // (lesson_date, issue_date) must never go through `new Date("YYYY-MM-DD")`,
+  // which parses as UTC midnight and lands on the previous day in US timezones.
+  const toLocalDay = (d: Date) => d.toLocaleDateString("en-CA");
+  const today = new Date();
+  const lastWeekStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay());
+  const lastWeekEnd = new Date(lastWeekStart.getFullYear(), lastWeekStart.getMonth(), lastWeekStart.getDate() + 6);
+  const weekStartDay = toLocalDay(lastWeekStart);
+  const weekEndDay = toLocalDay(lastWeekEnd);
+  const isSummaryWeek = (day: string | null | undefined) => !!day && day >= weekStartDay && day <= weekEndDay;
+  const summaryWeekLabel = `${lastWeekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${lastWeekEnd.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
 
-  function getInvoiceDate(invoice: any) {
-    return (
-      invoice.paid_at ||
-      invoice.updated_at ||
-      invoice.issue_date ||
-      invoice.created_at
-    );
+  // Timestamp (paid_at / updated_at) → local calendar day.
+  const timestampDay = (value: any) => {
+    if (!value) return null;
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : toLocalDay(d);
+  };
+
+  // The day an invoice's work happened: its earliest lesson, falling back to
+  // the billing period / issue date for invoices without linked lessons.
+  function invoiceWorkDay(invoice: any): string | null {
+    const lessonDates = (invoice.invoice_lessons || [])
+      .map((il: any) => il.lessons?.lesson_date)
+      .filter(Boolean)
+      .sort();
+    const raw = lessonDates[0] || invoice.period_start || invoice.issue_date;
+    if (raw) return String(raw).slice(0, 10);
+    return timestampDay(invoice.created_at);
   }
 
-  function isCurrentMonth(dateValue: any) {
-    if (!dateValue) return false;
+  // Both cards are keyed on the week the lessons were taught, so
+  // Paid + Unpaid = that week's total earnings.
+  const paidInvoicesThisWeek = invoices.filter(
+    (invoice) => invoice.status === "paid" && isSummaryWeek(invoiceWorkDay(invoice))
+  );
 
-    const d = new Date(dateValue);
-
-    return (
-      d.getFullYear() === now.getFullYear() &&
-      d.getMonth() === now.getMonth()
-    );
-  }
-
-  const paidInvoicesThisMonth = invoices.filter((invoice) => {
-    return (
-      invoice.status === "paid" &&
-      isCurrentMonth(getInvoiceDate(invoice))
-    );
-  });
-
-  const paidThisMonth = paidInvoicesThisMonth.reduce(
+  const paidThisWeek = paidInvoicesThisWeek.reduce(
     (total, invoice) => total + Number(invoice.total || 0),
     0
   );
@@ -331,13 +342,15 @@ function Invoices() {
     (invoice) => invoice.status === "billed"
   );
 
-  const unpaidInvoices = invoices.filter(
+  // Unpaid = unbilled or billed invoices for that week's lessons.
+  // (Missing status counts as unbilled, same as the "Unbilled invoices" card.)
+  const unpaidInvoicesThisWeek = invoices.filter(
     (invoice) =>
-      invoice.status === "unbilled" ||
-      invoice.status === "billed"
+      ((invoice.status || "unbilled") === "unbilled" || invoice.status === "billed") &&
+      isSummaryWeek(invoiceWorkDay(invoice))
   );
 
-  const unpaidTotal = unpaidInvoices.reduce(
+  const unpaidTotal = unpaidInvoicesThisWeek.reduce(
     (total, invoice) => total + Number(invoice.total || 0),
     0
   );
@@ -502,7 +515,13 @@ function Invoices() {
       // mistake-correction), so forcing a status here would overwrite real
       // state that may still be accurate on another invoice.
 
-      queryClient.setQueryData<any[]>(["invoices", coachId], (prev) => [invoiceData, ...(prev ?? [])]);
+      // Carry the lesson dates into the cached row (same shape as the list
+      // query) so the weekly summary cards place it correctly right away.
+      const cachedInvoice = {
+        ...invoiceData,
+        invoice_lessons: selectedLessons.map((lesson) => ({ lessons: { lesson_date: lesson.lesson_date } })),
+      };
+      queryClient.setQueryData<any[]>(["invoices", coachId], (prev) => [cachedInvoice, ...(prev ?? [])]);
 
     } finally {
       setIsSaving(false);
@@ -911,6 +930,14 @@ function Invoices() {
       .from("invoices")
       .update({
         status: finalInvoiceStatus,
+        // Stamp the payment day only on the transition into "paid"; keep the
+        // original stamp on re-saves, clear it if moved back out of paid.
+        paid_at:
+          finalInvoiceStatus === "paid"
+            ? editingInvoice.status === "paid"
+              ? editingInvoice.paid_at ?? new Date().toISOString()
+              : new Date().toISOString()
+            : null,
         issue_date: editIssueDate || null,
         due_date: editDueDate || null,
         notes: editNotes || null,
@@ -937,7 +964,7 @@ function Invoices() {
       return;
     }
 
-    queryClient.setQueryData<any[]>(["invoices", coachId], (prev) => (prev ?? []).map((inv) => inv.id === editingInvoice.id ? updatedInvoice : inv));
+    queryClient.setQueryData<any[]>(["invoices", coachId], (prev) => (prev ?? []).map((inv) => inv.id === editingInvoice.id ? { ...inv, ...updatedInvoice } : inv));
 
     closeEditInvoice();
   }
@@ -993,14 +1020,14 @@ function Invoices() {
 
     const { data, error } = await supabase
       .from("invoices")
-      .update({ status: next })
+      .update({ status: next, paid_at: next === "paid" ? new Date().toISOString() : null })
       .in("id", groupIds)
       .eq("coach_id", coachId)
       .select("*, students(student_name, email, phone_number, parent_name, parent_phone)");
     if (!error && data) {
       queryClient.setQueryData<any[]>(["invoices", coachId], (prev) => (prev ?? []).map((inv) => {
         const updated = data.find((d: any) => d.id === inv.id);
-        return updated || inv;
+        return updated ? { ...inv, ...updated } : inv;
       }));
       const { data: lessonLinks } = await supabase
         .from("invoice_lessons").select("lesson_id").in("invoice_id", groupIds);
@@ -1605,14 +1632,14 @@ function Invoices() {
                 <div className="invoice-stat-icon"><FaWallet /></div>
                 <span>Unpaid this week</span>
                 <strong>{formatMoney(unpaidTotal)}</strong>
-                <p>{pendingInvoices.length} invoices</p>
+                <p>{unpaidInvoicesThisWeek.length} invoices · {summaryWeekLabel}</p>
               </div>
 
               <div className="invoice-stat-card green-stat">
                 <div className="invoice-stat-icon"><FaFileInvoiceDollar /></div>
-                <span>Paid this month</span>
-                <strong>{formatMoney(paidThisMonth)}</strong>
-                <p>{paidInvoicesThisMonth.length} invoices</p>
+                <span>Paid this week</span>
+                <strong>{formatMoney(paidThisWeek)}</strong>
+                <p>{paidInvoicesThisWeek.length} invoices · {summaryWeekLabel}</p>
               </div>
 
               <div className="invoice-stat-card orange-stat">
@@ -2991,7 +3018,7 @@ function Invoices() {
                   <div className="tutorial-icon-wrap">📊</div>
                   <h2 className="tutorial-title">Invoice Overview</h2>
                   <p className="tutorial-text">
-                    The cards at the top summarize your billing: unpaid totals, paid invoices this month, unbilled invoices, and invoices that have already been billed.
+                    The cards at the top summarize your billing: paid and unpaid invoices for this week's lessons (Sunday–Saturday), unbilled invoices, and invoices that have already been billed.
                   </p>
                   <div className="tutorial-dots">
                     {[0, 1, 2, 3, 4].map((step) => (

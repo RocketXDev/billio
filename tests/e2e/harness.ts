@@ -20,6 +20,8 @@ let browser: Browser | null = null;
 export async function startHarness() {
   process.env.VITE_SUPABASE_URL = `http://${SUPABASE_HOST}`;
   process.env.VITE_SUPABASE_ANON_KEY = "e2e-anon-key";
+  process.env.VITE_STRIPE_PUBLISHABLE_KEY = "pk_test_e2e";
+  process.env.VITE_PAYMENTS_COACH_IDS ??= "coach-1";
   server = await createServer({
     root: new URL("../..", import.meta.url).pathname,
     logLevel: "error",

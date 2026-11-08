@@ -16,14 +16,18 @@ import {
   FaLock,
   FaThumbtack,
   FaGift,
+  FaCreditCard,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import "./More.css";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { usePlan } from "../../hooks/usePlan";
 import { useDashboardWidgets } from "../../hooks/useDashboardWidgets";
 import { getDashboardTools } from "../../lib/dashboardTools";
 import { useLessonTerm } from "../../hooks/useLessonTerm";
+import { useCoachIdentity } from "../../hooks/useCoachIdentity";
+import { connectStatusKey, fetchConnectAvailable, paymentsEnabledFor } from "../../lib/connect";
 
 export default function More() {
   const navigate = useNavigate();
@@ -31,6 +35,12 @@ export default function More() {
   const { pinned, togglePinned, widgetsLoading } = useDashboardWidgets();
   const term = useLessonTerm();
   const DASHBOARD_TOOLS = getDashboardTools(term);
+  const { coachId } = useCoachIdentity();
+  const { data: paymentsAvailable } = useQuery({
+    queryKey: connectStatusKey(coachId),
+    queryFn: fetchConnectAvailable,
+    enabled: paymentsEnabledFor(coachId),
+  });
 
   const [showMoreTutorial, setShowMoreTutorial] = useState(false);
   const [moreTutorialStep, setMoreTutorialStep] = useState(0);
@@ -193,6 +203,11 @@ export default function More() {
           <Link to="/settings" className="more-list-item">
             <FaCog /><span>Settings</span><FaChevronRight />
           </Link>
+          {paymentsAvailable && (
+            <Link to="/payments" className="more-list-item">
+              <FaCreditCard /><span>Payments</span><FaChevronRight />
+            </Link>
+          )}
           <Link to="/upgrade" className="more-list-item">
             <FaCrown /><span>Subscription</span><FaChevronRight />
           </Link>

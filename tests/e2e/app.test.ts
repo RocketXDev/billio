@@ -676,3 +676,205 @@ test("Onboarding: picking Venmo but leaving it blank still finishes, without a w
   assert.equal(await popup(page).count(), 0, "no warning for an empty optional field");
   assert.equal(paymentWrites(fake).length, 0);
 });
+
+// ── Card payments (More → Payments) ─────────────────────────────────────────
+
+const connectStatus = (state: string, extra: Record<string, unknown> = {}) => ({
+  available: true, state, card_payments_on: true, livemode: false, ...extra,
+});
+
+// Stands in for Stripe's Connect.js: same custom elements, no network.
+const CONNECT_JS_STUB = `
+  const setters = ["setOnLoadError", "setOnLoaderStart", "setFullTermsOfServiceUrl", "setRecipientTermsOfServiceUrl",
+    "setPrivacyPolicyUrl", "setSkipTermsOfServiceCollection", "setCollectionOptions", "setOnStepChange",
+    "setOnSectionOpen", "setOnNotificationsChange"];
+  for (const tag of ["account-onboarding", "account-management", "notification-banner"]) {
+    class Stub extends HTMLElement {
+      connectedCallback() { this.textContent = "stub " + tag; }
+      setConnector() {}
+      setOnExitInternalOnly(listener) { window.__connectExit = listener; }
+    }
+    for (const name of setters) Stub.prototype[name + "InternalOnly"] = function () {};
+    customElements.define("stripe-connect-" + tag, Stub);
+  }
+  window.StripeConnect = { init: (params) => {
+    params.fetchClientSecret().then((secret) => { window.__connectSecret = secret; });
+    return { connect: () => {}, update: () => {}, logout: async () => {} };
+  } };
+`;
+
+const CONNECT_JS_URL = "https://connect-js.stripe.com/**";
+const stubConnectJs = (page: Page) =>
+  page.route(CONNECT_JS_URL, (route) => route.fulfill({ contentType: "text/javascript", body: CONNECT_JS_STUB }));
+
+const connectCalls = (fake: any, action: string) =>
+  fake.requests("POST", "fn:connect-account").filter((r: any) => r.body?.action === action);
+
+const openPayments = async (fake: any) => {
+  app = await openApp(fake, "/more");
+  await stubConnectJs(app.page);
+  const row = app.page.locator(".more-list-item", { hasText: "Payments" });
+  await row.waitFor();
+  await row.click();
+  await app.page.locator(".ref-title", { hasText: "Payments" }).waitFor();
+  return app;
+};
+
+test("Coaches not on the payments list make no extra requests and never see the page", async () => {
+  const fake = seedWorld();
+  fake.db.coaches[0].id = "some-other-coach";
+  fake.functionResponses["connect-account"] = () => connectStatus("active"); // even if the server said yes
+  app = await openApp(fake, "/more");
+  const { page, navigate } = app;
+  await page.locator(".more-list-item", { hasText: "Settings" }).waitFor();
+  await page.waitForTimeout(400);
+  assert.equal(await page.locator(".more-list-item", { hasText: "Payments" }).count(), 0);
+
+  await page.evaluate(() => {
+    new MutationObserver(() => {
+      if (document.querySelector(".ref-title, .payments-primary-btn")) (window as any).__sawPayments = true;
+    }).observe(document.body, { childList: true, subtree: true });
+  });
+  await navigate("/payments");
+  await waitFor(() => page.url().endsWith("/more"), "sent back to More");
+  await page.locator(".more-list-item", { hasText: "Settings" }).waitFor();
+
+  assert.equal(await page.evaluate(() => (window as any).__sawPayments ?? false), false, "page never rendered");
+  assert.equal(fake.requests("POST", "fn:connect-account").length, 0, "no payments requests");
+  const loaded: string[] = await page.evaluate(() => performance.getEntriesByType("resource").map((e) => e.name));
+  assert.equal(loaded.filter((url) => url.includes("stripe")).length, 0, "nothing from Stripe");
+  assert.equal(await popup(page).count(), 0, "no error popup");
+});
+
+test("Payments stays hidden from coaches who aren't allowed, even by URL", async () => {
+  const fake = seedWorld();
+  fake.functionResponses["connect-account"] = () => ({ available: false });
+  app = await openApp(fake, "/more");
+  const { page, navigate } = app;
+  await page.locator(".more-list-item", { hasText: "Settings" }).waitFor();
+  await waitFor(() => connectCalls(fake, "status").length > 0, "status asked");
+  await page.waitForTimeout(300);
+  assert.equal(await page.locator(".more-list-item", { hasText: "Payments" }).count(), 0);
+
+  await navigate("/payments");
+  await waitFor(() => page.url().endsWith("/more"), "sent back to More");
+  assert.equal(await popup(page).count(), 0, "no error popup");
+});
+
+test("Payments stays hidden and quiet when the backend isn't deployed yet", async () => {
+  const fake = seedWorld();
+  // What the app gets today, before the function exists: no `available` field.
+  app = await openApp(fake, "/more");
+  const { page } = app;
+  await page.locator(".more-list-item", { hasText: "Settings" }).waitFor();
+  await page.waitForTimeout(400);
+  assert.equal(await page.locator(".more-list-item", { hasText: "Payments" }).count(), 0);
+  assert.equal(await popup(page).count(), 0, "no error popup");
+});
+
+test("A coach enrolls, finishes with Stripe and can switch cards off", async () => {
+  const fake = seedWorld();
+  let current = connectStatus("not_started");
+  fake.functionResponses["connect-account"] = (body: any) => {
+    if (body.action === "enroll") current = connectStatus("onboarding");
+    if (body.action === "session") return { client_secret: "cs_e2e" };
+    if (body.action === "set-card-payments") current = connectStatus("active", { card_payments_on: body.on });
+    return current;
+  };
+  const { page } = await openPayments(fake);
+
+  const body = page.locator(".ref-body");
+  await page.getByRole("button", { name: "Set up card payments" }).waitFor();
+  const intro = await body.innerText();
+  assert.match(intro, /\$57\.36/, "fee example");
+  assert.match(intro, /Venmo and Zelle keep working/, "stays optional");
+  assert.doesNotMatch(intro, /\btax/i, "no tax wording");
+  assert.match(intro, /Test mode/);
+  assert.equal(connectCalls(fake, "session").length, 0, "Stripe isn't loaded until enrolled");
+
+  await page.getByRole("button", { name: "Set up card payments" }).click();
+  await page.locator("stripe-connect-account-onboarding").waitFor();
+  assert.equal(connectCalls(fake, "enroll").length, 1);
+  await page.waitForFunction(() => (window as any).__connectSecret === "cs_e2e");
+
+  // Stripe reports the coach finished; the page re-checks and moves on.
+  current = connectStatus("active");
+  await page.evaluate(() => (window as any).__connectExit());
+  await page.getByText("You're ready to take cards").waitFor();
+  await page.locator("stripe-connect-account-management").waitFor();
+  await page.locator("stripe-connect-notification-banner").waitFor();
+  assert.equal(await page.locator("stripe-connect-account-onboarding").count(), 0);
+
+  const cards = page.getByRole("switch");
+  assert.equal(await cards.isChecked(), true);
+  await page.locator(".payments-switch").click();
+  await waitFor(() => connectCalls(fake, "set-card-payments").length === 1, "saved");
+  assert.equal(connectCalls(fake, "set-card-payments")[0].body.on, false);
+  await page.locator(".payments-switch input:not(:checked)").waitFor({ state: "attached" });
+  assert.equal(await popup(page).count(), 0, "no error popup");
+});
+
+test("Each Stripe account state shows the right message", async () => {
+  for (const [state, text] of [
+    ["in_review", "Stripe is reviewing your details"],
+    ["action_needed", "Stripe needs a bit more information"],
+  ] as const) {
+    const fake = seedWorld();
+    fake.functionResponses["connect-account"] = (body: any) =>
+      body.action === "session" ? { client_secret: "cs_e2e" } : connectStatus(state);
+    const { page, close } = await openPayments(fake);
+    await page.getByText(text).waitFor();
+    await page.locator("stripe-connect-notification-banner").waitFor();
+    assert.equal(await page.getByRole("switch").count(), 0, "no card switch until active");
+    await close();
+  }
+  app = null;
+});
+
+test("A failed enrollment reports the reason and keeps the coach on the page", async () => {
+  const fake = seedWorld();
+  fake.functionResponses["connect-account"] = (body: any) =>
+    body.action === "enroll" ? { error: "Stripe is having a moment." } : connectStatus("not_started");
+  const { page } = await openPayments(fake);
+  await page.getByRole("button", { name: "Set up card payments" }).click();
+  await popup(page).waitFor();
+  assert.match(await popup(page).innerText(), /Couldn't set up card payments/);
+  assert.match(await popup(page).innerText(), /Stripe is having a moment/);
+  await page.getByRole("button", { name: "OK" }).click();
+  await page.getByRole("button", { name: "Set up card payments" }).waitFor();
+});
+
+test("If Stripe can't load, the page offers a retry instead of an error popup", async () => {
+  const fake = seedWorld();
+  fake.functionResponses["connect-account"] = (body: any) =>
+    body.action === "session" ? { client_secret: "cs_e2e" } : connectStatus("onboarding");
+  const { page } = await openPayments(fake);
+  await page.unroute(CONNECT_JS_URL);
+  await page.reload();
+  const retry = page.getByRole("button", { name: "Try again" });
+  await retry.waitFor();
+  assert.equal(await popup(page).count(), 0, "no error popup");
+
+  await stubConnectJs(page);
+  await retry.click();
+  await page.locator("stripe-connect-account-onboarding").waitFor();
+});
+
+test("If the status check fails, Payments offers a retry and stays on the page", async () => {
+  const fake = seedWorld();
+  let fail = false;
+  fake.functionResponses["connect-account"] = () => (fail ? { error: "Down." } : connectStatus("not_started"));
+  const { page, navigate } = await openPayments(fake);
+  await page.getByRole("button", { name: "Set up card payments" }).waitFor();
+
+  fail = true;
+  await navigate("/more");
+  await page.locator(".more-list-item", { hasText: "Settings" }).waitFor();
+  await navigate("/payments");
+  await page.getByRole("button", { name: "Try again" }).waitFor();
+  assert.ok(page.url().endsWith("/payments"));
+
+  fail = false;
+  await page.getByRole("button", { name: "Try again" }).click();
+  await page.getByRole("button", { name: "Set up card payments" }).waitFor();
+});

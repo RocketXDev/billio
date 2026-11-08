@@ -40,6 +40,7 @@ const GoogleCalendar = lazyPage(() => import("./pages/GoogleCalendar/GoogleCalen
 const EarningsDashboard = lazyPage(() => import("./pages/EarningsDashboard/EarningsDashboard"));
 const PdfInvoice = lazyPage(() => import("./pages/PdfInvoice/PdfInvoice"));
 const Referrals = lazyPage(() => import("./pages/Referrals/Referrals"));
+const Payments = lazyPage(() => import("./pages/Payments/Payments"));
 
 const SITE_URL = "https://www.mybillioapp.com";
 
@@ -281,6 +282,16 @@ function App() {
         }
       />
 
+      <Route
+        path="/payments"
+        element={
+          <ProtectedRoute>
+            <DesktopLayout>
+              <Payments />
+            </DesktopLayout>
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/more"
         element={

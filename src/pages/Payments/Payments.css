@@ -1,0 +1,129 @@
+/* PAYMENTS PAGE — layout comes from the .ref-* classes in Referrals.css */
+
+.payments-test-pill {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.payments-points {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--secondary-text);
+}
+
+.payments-fee-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  font-size: 14px;
+  color: var(--secondary-text);
+}
+
+.payments-fee-total {
+  margin-top: 4px;
+  padding-top: 11px;
+  border-top: 1px solid var(--border);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--main-text);
+}
+
+.payments-note {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--secondary-text);
+}
+
+.payments-note-center {
+  margin: 0;
+  text-align: center;
+}
+
+.payments-primary-btn {
+  width: 100%;
+  height: 50px;
+  margin: 0;
+  border: none;
+  border-radius: 14px;
+  background: var(--accent-grad);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.payments-primary-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.payments-problem {
+  text-align: center;
+}
+
+.payments-problem p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--secondary-text);
+}
+
+.payments-problem .payments-primary-btn {
+  margin-top: 14px;
+}
+
+.payments-status {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.payments-status-icon {
+  font-size: 24px;
+  line-height: 1;
+  color: var(--primary-purple);
+}
+
+.payments-status[data-state="active"] .payments-status-icon {
+  color: #16a34a;
+}
+
+.payments-status[data-state="action_needed"] .payments-status-icon {
+  color: #d97706;
+}
+
+.payments-status strong {
+  display: block;
+  font-size: 15px;
+  color: var(--main-text);
+}
+
+.payments-status small {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--secondary-text);
+}
+
+.payments-switch {
+  margin: 0;
+}
+
+/* Stripe's forms need the width on a phone. */
+.payments-embed {
+  padding: 16px 12px;
+}

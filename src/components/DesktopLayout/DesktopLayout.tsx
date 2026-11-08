@@ -44,6 +44,7 @@ function DesktopLayout({ children }: Props) {
     "/upgrade": "Upgrade",
     "/referrals": "Refer & Earn",
     "/more": "More",
+    "/payments": "Payments",
     "/earnings-dashboard": "Earnings",
     "/recurring-lessons": `Recurring ${term.plural}`,
     "/timer": `${term.singular} Timer`,

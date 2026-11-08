@@ -687,8 +687,8 @@ const connectStatus = (state: string, extra: Record<string, unknown> = {}) => ({
 const CONNECT_JS_STUB = `
   const setters = ["setOnLoadError", "setOnLoaderStart", "setFullTermsOfServiceUrl", "setRecipientTermsOfServiceUrl",
     "setPrivacyPolicyUrl", "setSkipTermsOfServiceCollection", "setCollectionOptions", "setOnStepChange",
-    "setOnSectionOpen", "setOnNotificationsChange"];
-  for (const tag of ["account-onboarding", "account-management", "notification-banner"]) {
+    "setOnSectionOpen", "setOnNotificationsChange", "setDefaultFilters"];
+  for (const tag of ["account-onboarding", "account-management", "notification-banner", "balances", "payments", "payouts-list"]) {
     class Stub extends HTMLElement {
       connectedCallback() { this.textContent = "stub " + tag; }
       setConnector() {}
@@ -813,6 +813,38 @@ test("A coach enrolls, finishes with Stripe and can switch cards off", async () 
   assert.equal(connectCalls(fake, "set-card-payments")[0].body.on, false);
   await page.locator(".payments-switch input:not(:checked)").waitFor({ state: "attached" });
   assert.equal(await popup(page).count(), 0, "no error popup");
+});
+
+test("An active coach sees their balance, payments, withdrawals and total received", async () => {
+  const fake = seedWorld();
+  const row = (id: string, amount_cents: number, status: string, extra: Record<string, unknown> = {}) => ({
+    id, coach_id: "coach-1", amount_cents, refunded_cents: 0, status, needs_review: false, livemode: false,
+    created_at: `2026-10-0${id}T12:00:00Z`, ...extra,
+  });
+  fake.db.invoice_payments = [
+    row("1", 6000, "succeeded"),
+    row("2", 4000, "partially_refunded", { refunded_cents: 1000 }),
+    row("3", 2500, "refunded", { refunded_cents: 2500 }),
+    row("4", 1000, "pending"),
+    row("5", 5000, "succeeded", { needs_review: true }),
+    row("6", 9900, "succeeded", { livemode: true }),
+    row("7", 7700, "succeeded", { coach_id: "someone-else" }),
+  ];
+  fake.functionResponses["connect-account"] = (body: any) =>
+    body.action === "session" ? { client_secret: "cs_e2e" } : connectStatus("active");
+  const { page } = await openPayments(fake);
+
+  for (const tag of ["balances", "payments", "payouts-list", "account-management"]) {
+    await page.locator(`stripe-connect-${tag}`).waitFor();
+  }
+  const received = await page.locator(".payments-received").innerText();
+  assert.match(received, /\$140\.00/, "paid minus refunds, this coach and mode only");
+  assert.match(received, /3 payments/);
+  await page.getByText("A payment needs your review").waitFor();
+  const body = await page.locator(".ref-body").innerText();
+  assert.match(body, /Standard transfers are free/);
+  assert.match(body, /Stripe keeps its processing fee/);
+  assert.doesNotMatch(body, /\btax/i);
 });
 
 test("Each Stripe account state shows the right message", async () => {

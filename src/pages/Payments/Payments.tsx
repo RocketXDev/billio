@@ -17,20 +17,25 @@ import type { LoadError, StripeConnectInstance } from "@stripe/connect-js";
 import {
   ConnectAccountManagement,
   ConnectAccountOnboarding,
+  ConnectBalances,
   ConnectComponentsProvider,
   ConnectNotificationBanner,
+  ConnectPayments,
+  ConnectPayoutsList,
 } from "@stripe/react-connect-js";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import { useLessonTerm } from "../../hooks/useLessonTerm";
 import {
   connectStatusKey,
   enrollInCardPayments,
+  fetchCardPayments,
   fetchConnectStatus,
   paymentsEnabledFor,
   setCardPaymentsOn,
   type ConnectState,
 } from "../../lib/connect";
 import { showError } from "../../lib/notify";
+import { formatMoney } from "../../lib/paymentOptions";
 import { startConnect } from "./connectEmbed";
 import "./Payments.css";
 
@@ -76,6 +81,18 @@ export default function Payments() {
 
   const state = status?.available ? status.state : null;
   const needsStripe = !!state && state !== "not_started";
+  const livemode = !!status?.available && status.livemode;
+
+  const { data: cardPayments } = useQuery({
+    queryKey: ["invoice-payments", coachId, livemode],
+    queryFn: () => fetchCardPayments(coachId, livemode),
+    enabled: needsStripe,
+    staleTime: 0,
+    retry: false,
+  });
+  const received = (cardPayments ?? []).filter((p) => ["succeeded", "partially_refunded", "disputed"].includes(p.status));
+  const receivedCents = received.reduce((sum, p) => sum + p.amount_cents - p.refunded_cents, 0);
+  const toReview = (cardPayments ?? []).filter((p) => p.needs_review && p.status === "succeeded").length;
 
   const connectStarted = useRef(false);
   const beginConnect = useCallback(() => {
@@ -165,6 +182,25 @@ export default function Payments() {
       ) : (
         <>
           <ConnectNotificationBanner onLoadError={onComponentError} />
+          <div className="ref-card payments-embed">
+            <h2 className="ref-card-title">Your balance</h2>
+            <ConnectBalances onLoadError={onComponentError} />
+            <p className="payments-note">
+              Use Pay out to withdraw to your bank. Standard transfers are free. Expedited transfers cost 1% and
+              arrive in about 30 minutes, when Stripe offers them for your account.
+            </p>
+          </div>
+          <div className="ref-card payments-embed">
+            <h2 className="ref-card-title">Payments and refunds</h2>
+            <ConnectPayments onLoadError={onComponentError} />
+            <p className="payments-note">
+              If you refund a parent, Billio's 1% is returned to you, but Stripe keeps its processing fee.
+            </p>
+          </div>
+          <div className="ref-card payments-embed">
+            <h2 className="ref-card-title">Withdrawals</h2>
+            <ConnectPayoutsList onLoadError={onComponentError} />
+          </div>
           <div className="ref-card payments-embed">
             <h2 className="ref-card-title">Account and bank details</h2>
             <ConnectAccountManagement onLoadError={onComponentError} />
@@ -270,6 +306,24 @@ export default function Payments() {
                 <small>Turn this off to hide the card option from parents.</small>
               </span>
             </label>
+          </div>
+        )}
+
+        {toReview > 0 && (
+          <div className="ref-card payments-status" data-state="action_needed">
+            <span className="payments-status-icon"><FaExclamationCircle /></span>
+            <div>
+              <strong>{toReview === 1 ? "A payment needs" : `${toReview} payments need`} your review</strong>
+              <small>The invoice was already paid or its amount changed. Check below and refund the parent if needed.</small>
+            </div>
+          </div>
+        )}
+
+        {received.length > 0 && (
+          <div className="ref-card payments-received">
+            <span>Received by card</span>
+            <strong>{formatMoney(receivedCents / 100)}</strong>
+            <small>{received.length === 1 ? "1 payment" : `${received.length} payments`} through Billio, before fees</small>
           </div>
         )}
 

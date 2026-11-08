@@ -2,6 +2,7 @@
 // The Stripe embedded components are loaded separately by the Payments page, so
 // this file stays cheap for More to import.
 
+import { fetchAllRows } from "./fetchAllRows";
 import { supabase } from "./supabaseClient";
 
 export type ConnectState = "not_started" | "onboarding" | "action_needed" | "in_review" | "active";
@@ -65,6 +66,26 @@ export async function fetchConnectClientSecret() {
   const { client_secret } = await invokeConnect<{ client_secret: string }>({ action: "session" });
   return client_secret;
 }
+
+export type CardPayment = {
+  id: string;
+  amount_cents: number;
+  refunded_cents: number;
+  status: string;
+  needs_review: boolean;
+};
+
+export const fetchCardPayments = (coachId: string, livemode: boolean) =>
+  fetchAllRows<CardPayment>((from, to) =>
+    supabase
+      .from("invoice_payments")
+      .select("id, amount_cents, refunded_cents, status, needs_review")
+      .eq("coach_id", coachId)
+      .eq("livemode", livemode)
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range(from, to)
+  );
 
 // ── Parents paying from the /pay link ───────────────────────────────────────
 

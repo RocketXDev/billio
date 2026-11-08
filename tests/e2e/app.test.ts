@@ -795,6 +795,7 @@ test("A coach enrolls, finishes with Stripe and can switch cards off", async () 
   await page.getByRole("button", { name: "Set up card payments" }).click();
   await page.locator("stripe-connect-account-onboarding").waitFor();
   assert.equal(connectCalls(fake, "enroll").length, 1);
+  assert.match(await body.innerText(), /customer support address/, "address tip during setup");
   await page.waitForFunction(() => (window as any).__connectSecret === "cs_e2e");
 
   // Stripe reports the coach finished; the page re-checks and moves on.

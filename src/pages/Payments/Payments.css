@@ -81,6 +81,15 @@
   color: var(--secondary-text);
 }
 
+.payments-problem-detail {
+  display: block;
+  margin-top: 8px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--secondary-text);
+  word-break: break-word;
+}
+
 .payments-problem .payments-primary-btn {
   margin-top: 14px;
 }

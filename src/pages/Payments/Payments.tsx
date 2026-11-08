@@ -13,7 +13,7 @@ import {
   FaHome,
   FaUsers,
 } from "react-icons/fa";
-import type { StripeConnectInstance } from "@stripe/connect-js";
+import type { LoadError, StripeConnectInstance } from "@stripe/connect-js";
 import {
   ConnectAccountManagement,
   ConnectAccountOnboarding,
@@ -72,7 +72,7 @@ export default function Payments() {
   const [enrolling, setEnrolling] = useState(false);
   const [savingCards, setSavingCards] = useState(false);
   const [connect, setConnect] = useState<StripeConnectInstance | null>(null);
-  const [connectFailed, setConnectFailed] = useState(false);
+  const [connectError, setConnectError] = useState<string | null>(null);
 
   const state = status?.available ? status.state : null;
   const needsStripe = !!state && state !== "not_started";
@@ -82,7 +82,7 @@ export default function Payments() {
     connectStarted.current = true;
     startConnect().then(setConnect).catch((error) => {
       console.error("Stripe embedded components failed to start:", error);
-      setConnectFailed(true);
+      setConnectError(error?.message || "Unknown error");
     });
   }, []);
 
@@ -102,7 +102,7 @@ export default function Payments() {
 
   function retryConnect() {
     setConnect(null);
-    setConnectFailed(false);
+    setConnectError(null);
     beginConnect();
   }
 
@@ -130,7 +130,10 @@ export default function Payments() {
   }
 
   const refreshStatus = () => queryClient.invalidateQueries({ queryKey: connectStatusKey(coachId) });
-  const onComponentError = () => setConnectFailed(true);
+  const onComponentError = ({ elementTagName, error }: LoadError) => {
+    console.error(`Stripe ${elementTagName} failed to load:`, error);
+    setConnectError(`${elementTagName}: ${error.type}${error.message ? ` (${error.message})` : ""}`);
+  };
 
   if (identityLoading) {
     return (
@@ -145,9 +148,10 @@ export default function Payments() {
 
   if (!paymentsEnabled || (status && !status.available)) return <Navigate to="/more" replace />;
 
-  const stripePanel = connectFailed ? (
+  const stripePanel = connectError ? (
     <div className="ref-card payments-problem">
-      <p>We couldn't load this part of Stripe. Check your connection and try again.</p>
+      <p>We couldn't load this part of Stripe. Try again, or open Billio in Chrome or Safari with any ad blocker turned off.</p>
+      <small className="payments-problem-detail">{connectError}</small>
       <button type="button" className="payments-primary-btn" onClick={retryConnect}>Try again</button>
     </div>
   ) : !connect ? (
@@ -229,9 +233,15 @@ export default function Payments() {
         )}
 
         {state === "onboarding" && (
-          <p className="payments-note payments-note-center">
-            Stripe may open a small window to confirm your phone number. If nothing appears, allow pop-ups for Billio.
-          </p>
+          <>
+            <p className="payments-note payments-note-center">
+              Stripe may open a small window to confirm your phone number. If nothing appears, allow pop-ups for Billio.
+            </p>
+            <p className="payments-note payments-note-center">
+              Stripe asks for a customer support address, which parents may be able to see. If you'd rather not share
+              your home address, you can use the rink or studio where you teach, or a mailing address like a PO box.
+            </p>
+          </>
         )}
 
         {state && state !== "not_started" && state !== "onboarding" && (

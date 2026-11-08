@@ -24,8 +24,8 @@ export function paymentsEnabledFor(coachId: string) {
   return list.includes("*") || list.includes(coachId);
 }
 
-async function invokeConnect<T>(body: Record<string, unknown>): Promise<T> {
-  const { data, error } = await supabase.functions.invoke("connect-account", { body });
+async function invokeFunction<T>(name: string, body: Record<string, unknown>): Promise<T> {
+  const { data, error } = await supabase.functions.invoke(name, { body });
   if (error || data?.error) {
     // A non-2xx response arrives as `error`, with our message unread on the raw Response.
     let message: string | undefined = data?.error;
@@ -40,6 +40,8 @@ async function invokeConnect<T>(body: Record<string, unknown>): Promise<T> {
   }
   return data as T;
 }
+
+const invokeConnect = <T,>(body: Record<string, unknown>) => invokeFunction<T>("connect-account", body);
 
 export const fetchConnectStatus = (refresh = false) =>
   invokeConnect<ConnectStatus>({ action: "status", refresh });
@@ -63,3 +65,13 @@ export async function fetchConnectClientSecret() {
   const { client_secret } = await invokeConnect<{ client_secret: string }>({ action: "session" });
   return client_secret;
 }
+
+// ── Parents paying from the /pay link ───────────────────────────────────────
+
+export type CardCheckoutStatus = { available: boolean; amount_cents?: number; coach_name?: string | null };
+
+export const fetchCardCheckoutStatus = (token: string) =>
+  invokeFunction<CardCheckoutStatus>("create-invoice-checkout", { token, action: "status" });
+
+export const createCardCheckout = (token: string) =>
+  invokeFunction<{ url: string }>("create-invoice-checkout", { token, action: "checkout" });

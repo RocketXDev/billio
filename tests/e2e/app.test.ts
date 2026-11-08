@@ -713,10 +713,10 @@ const connectCalls = (fake: any, action: string) =>
 const openPayments = async (fake: any) => {
   app = await openApp(fake, "/more");
   await stubConnectJs(app.page);
-  const row = app.page.locator(".more-list-item", { hasText: "Payments" });
+  const row = app.page.locator(".more-card", { hasText: "Accept Payments" });
   await row.waitFor();
   await row.click();
-  await app.page.locator(".ref-title", { hasText: "Payments" }).waitFor();
+  await app.page.locator(".ref-title", { hasText: "Accept Payments" }).waitFor();
   return app;
 };
 
@@ -728,7 +728,7 @@ test("Coaches not on the payments list make no extra requests and never see the 
   const { page, navigate } = app;
   await page.locator(".more-list-item", { hasText: "Settings" }).waitFor();
   await page.waitForTimeout(400);
-  assert.equal(await page.locator(".more-list-item", { hasText: "Payments" }).count(), 0);
+  assert.equal(await page.locator(".more-card", { hasText: "Accept Payments" }).count(), 0);
 
   await page.evaluate(() => {
     new MutationObserver(() => {
@@ -754,7 +754,7 @@ test("Payments stays hidden from coaches who aren't allowed, even by URL", async
   await page.locator(".more-list-item", { hasText: "Settings" }).waitFor();
   await waitFor(() => connectCalls(fake, "status").length > 0, "status asked");
   await page.waitForTimeout(300);
-  assert.equal(await page.locator(".more-list-item", { hasText: "Payments" }).count(), 0);
+  assert.equal(await page.locator(".more-card", { hasText: "Accept Payments" }).count(), 0);
 
   await navigate("/payments");
   await waitFor(() => page.url().endsWith("/more"), "sent back to More");
@@ -768,7 +768,7 @@ test("Payments stays hidden and quiet when the backend isn't deployed yet", asyn
   const { page } = app;
   await page.locator(".more-list-item", { hasText: "Settings" }).waitFor();
   await page.waitForTimeout(400);
-  assert.equal(await page.locator(".more-list-item", { hasText: "Payments" }).count(), 0);
+  assert.equal(await page.locator(".more-card", { hasText: "Accept Payments" }).count(), 0);
   assert.equal(await popup(page).count(), 0, "no error popup");
 });
 
@@ -878,3 +878,106 @@ test("If the status check fails, Payments offers a retry and stays on the page",
   await page.getByRole("button", { name: "Try again" }).click();
   await page.getByRole("button", { name: "Set up card payments" }).waitFor();
 });
+
+test("Accept Payments sits right under Group Lessons and can't be pinned", async () => {
+  const fake = seedWorld();
+  fake.functionResponses["connect-account"] = () => connectStatus("not_started");
+  app = await openApp(fake, "/more");
+  const { page } = app;
+  await page.locator(".more-card", { hasText: "Accept Payments" }).waitFor();
+  const titles = await page.locator(".more-card h3").allInnerTexts();
+  const group = titles.findIndex((t) => t.startsWith("Group"));
+  assert.equal(titles[group + 1], "Accept Payments");
+  assert.equal(await page.locator(".more-card", { hasText: "Accept Payments" }).locator(".more-pin-btn").count(), 0);
+  assert.equal(await page.locator(".more-list-item", { hasText: "Payments" }).count(), 0, "not in Account any more");
+});
+
+test("Input zoom is off on Accept Payments only", async () => {
+  const fake = seedWorld();
+  fake.functionResponses["connect-account"] = () => connectStatus("not_started");
+  const { page, navigate } = await openPayments(fake);
+  const viewport = () => page.locator('meta[name="viewport"]').getAttribute("content");
+  await page.getByRole("button", { name: "Set up card payments" }).waitFor();
+  assert.match((await viewport())!, /maximum-scale=1/);
+  await navigate("/more");
+  await page.locator(".more-card", { hasText: "Accept Payments" }).waitFor();
+  assert.doesNotMatch((await viewport())!, /maximum-scale/);
+});
+
+// ── Parents paying by card on /pay ──────────────────────────────────────────
+
+const VENMO = { coach_name: "Coach Anna", venmo_handle: "Coach-Anna" };
+const cardReady = { available: true, amount_cents: 6000, coach_name: "Coach Anna" };
+const cardButton = (page: Page) => page.getByRole("button", { name: "Pay $60.00 by card or Apple Pay" });
+const checkoutCalls = (fake: any, action: string) =>
+  fake.requests("POST", "fn:create-invoice-checkout").filter((r: any) => r.body?.action === action);
+
+test("A coach with only cards: parent pays by card, with no 'I've paid' button", async () => {
+  const fake = seedWorld();
+  payLink(fake, null);
+  fake.functionResponses["create-invoice-checkout"] = (body: any) =>
+    body.action === "checkout" ? { url: `${origin}/pay?token=tok-123&paid=1` } : cardReady;
+  let origin = "";
+  app = await openApp(fake, "/pay?token=tok-123");
+  const { page } = app;
+  origin = new URL(page.url()).origin;
+  await page.getByRole("heading", { name: "Pay Coach Anna" }).waitFor();
+  await cardButton(page).waitFor();
+  assert.equal(await page.getByRole("button", { name: /I've sent|mark as paid/ }).count(), 0);
+  assert.equal(await page.getByRole("button", { name: "Open app instead" }).count(), 0);
+
+  const statusChecks = checkoutCalls(fake, "status").length; // StrictMode runs the load twice in dev
+  await cardButton(page).click();
+  await page.getByRole("heading", { name: "Payment Received" }).waitFor();
+  assert.equal(checkoutCalls(fake, "checkout").length, 1);
+  assert.match(await page.locator(".mip-invoice-card").innerText(), /INV-1001/);
+  assert.equal(fake.requests("POST", "fn:mark-invoice-paid").length, 0, "the webhook marks it paid, not the page");
+  assert.equal(checkoutCalls(fake, "status").length, statusChecks, "no card status check after paying");
+});
+
+test("Cards alongside Venmo: both shown, card first", async () => {
+  const fake = seedWorld();
+  payLink(fake, VENMO);
+  fake.functionResponses["create-invoice-checkout"] = () => cardReady;
+  app = await openApp(fake, "/pay?token=tok-123");
+  const { page } = app;
+  await cardButton(page).waitFor();
+  await page.locator(".pay-option-venmo").waitFor();
+  await page.getByRole("button", { name: "✓ I've sent the payment" }).waitFor();
+  const cardTop = (await cardButton(page).boundingBox())!.y;
+  const venmoTop = (await page.locator(".pay-option-venmo").boundingBox())!.y;
+  assert.ok(cardTop < venmoTop, "card above Venmo");
+});
+
+test("If card payment can't start, the parent is told and stays on the page", async () => {
+  const fake = seedWorld();
+  payLink(fake, null);
+  fake.functionResponses["create-invoice-checkout"] = (body: any) =>
+    body.action === "checkout" ? { error: "Card payment isn't available for this invoice." } : cardReady;
+  app = await openApp(fake, "/pay?token=tok-123");
+  const { page } = app;
+  await cardButton(page).click();
+  await popup(page).waitFor();
+  assert.match(await popup(page).innerText(), /isn't available for this invoice/);
+  await page.getByRole("button", { name: "OK" }).click();
+  assert.equal(await cardButton(page).isEnabled(), true);
+});
+
+for (const [name, reply] of [
+  ["isn't enrolled", { available: false }],
+  ["hasn't been deployed", {}],
+  ["fails", { error: "Down." }],
+] as const) {
+  test(`Pay link is unchanged when the card service ${name}`, async () => {
+    const fake = seedWorld();
+    payLink(fake, null);
+    fake.functionResponses["create-invoice-checkout"] = () => reply;
+    app = await openApp(fake, "/pay?token=tok-123");
+    const { page } = app;
+    await page.getByRole("heading", { name: "Mark Invoice as Paid?" }).waitFor();
+    await page.getByRole("button", { name: "✓ Yes, mark as paid" }).waitFor();
+    await page.getByRole("button", { name: "Open app instead" }).waitFor();
+    assert.equal(await page.getByRole("button", { name: /by card/ }).count(), 0);
+    assert.equal(await popup(page).count(), 0, "no error popup");
+  });
+}

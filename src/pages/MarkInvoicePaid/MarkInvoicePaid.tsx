@@ -29,9 +29,14 @@ import { supabase } from "../../lib/supabaseClient";
 import { useLessonTerm } from "../../hooks/useLessonTerm";
 import PaymentOptions from "../../components/PaymentOptions/PaymentOptions";
 import { hasPaymentOptions, type PaymentDetails } from "../../lib/paymentOptions";
+import { createCardCheckout, fetchCardCheckoutStatus, type CardCheckoutStatus } from "../../lib/connect";
+import { showError } from "../../lib/notify";
 import "./MarkInvoicePaid.css";
 
-type State = "loading" | "confirm" | "success" | "already_paid" | "error";
+type State = "loading" | "confirm" | "success" | "already_paid" | "card_paid" | "error";
+
+// How long the page will wait for the card option before showing without it.
+const CARD_STATUS_WAIT_MS = 1500;
 
 interface MarkInvoicePaidProps {
   // Coach mode: pass the invoice id directly (e.g. from the invoices list).
@@ -59,6 +64,8 @@ export default function MarkInvoicePaid({
 
   // Student mode when there's a token; otherwise coach (authenticated) mode.
   const mode: "student" | "coach" = token ? "student" : "coach";
+  // Stripe sends the parent back here with paid=1 after a successful card payment.
+  const returnedFromCard = mode === "student" && searchParams.get("paid") === "1";
 
   const [state, setState] = useState<State>("loading");
   const [invoice, setInvoice] = useState<any>(null);
@@ -70,6 +77,8 @@ export default function MarkInvoicePaid({
   // The coach's optional Venmo/Zelle details (parent links only) — null when
   // they haven't added any, which keeps this page exactly as before.
   const [payment, setPayment] = useState<(PaymentDetails & { coach_name?: string | null }) | null>(null);
+  const [cardOption, setCardOption] = useState<CardCheckoutStatus | null>(null);
+  const [startingCard, setStartingCard] = useState(false);
 
   useEffect(() => {
     if (mode === "student") {
@@ -90,13 +99,50 @@ export default function MarkInvoicePaid({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, invoiceId]);
 
+  // Pressing back from Stripe can restore this page exactly as it was left.
+  useEffect(() => {
+    const reset = (event: PageTransitionEvent) => {
+      if (event.persisted) setStartingCard(false);
+    };
+    window.addEventListener("pageshow", reset);
+    return () => window.removeEventListener("pageshow", reset);
+  }, []);
+
+  // Never blocks the page for long, and any failure just means no card option.
+  function loadCardOption() {
+    const status = fetchCardCheckoutStatus(token!).then(setCardOption).catch(() => {});
+    return Promise.race([status, new Promise((resolve) => setTimeout(resolve, CARD_STATUS_WAIT_MS))]);
+  }
+
+  async function startCardPayment() {
+    if (startingCard) return;
+    setStartingCard(true);
+    try {
+      const { url } = await createCardCheckout(token!);
+      window.location.href = url;
+    } catch (err) {
+      setStartingCard(false);
+      showError("open card payment", err);
+    }
+  }
+
   // ── Student: validate the token via the edge function ──────────────
   async function validateToken() {
     try {
-      const { data, error } = await supabase.functions.invoke(
-        "get-payment-reminder-invoice",
-        { body: { token } }
-      );
+      const [{ data, error }] = await Promise.all([
+        supabase.functions.invoke("get-payment-reminder-invoice", { body: { token } }),
+        returnedFromCard ? null : loadCardOption(),
+      ]);
+
+      if (returnedFromCard) {
+        // The money has moved; the invoice flips to paid moments later.
+        if (data?.invoice) {
+          setInvoice(data.invoice);
+          setGroupInvoices(data.group || null);
+        }
+        setState("card_paid");
+        return;
+      }
 
       if (error || data?.error) {
         setErrorMsg(data?.error || error?.message || "Invalid or expired link.");
@@ -242,7 +288,9 @@ export default function MarkInvoicePaid({
     : null;
 
   const showPayment = mode === "student" && hasPaymentOptions(payment);
-  const coachName = payment?.coach_name?.trim() || "your coach";
+  const showCard = mode === "student" && !!cardOption?.available;
+  const coachName = payment?.coach_name?.trim() || cardOption?.coach_name?.trim() || "your coach";
+  const cardAmount = `$${((cardOption?.amount_cents ?? 0) / 100).toFixed(2)}`;
 
   // Same card in all three states — a combined invoice shows every
   // student's subtotal plus the grand total instead of a single amount.
@@ -282,7 +330,7 @@ export default function MarkInvoicePaid({
       {/* Confirm */}
       {state === "confirm" && (
         <>
-          {showPayment ? (
+          {showPayment || showCard ? (
             <h2 className="mip-title">Pay {coachName}</h2>
           ) : (
             <>
@@ -293,7 +341,18 @@ export default function MarkInvoicePaid({
 
           {invoiceCardBody(true)}
 
-          {showPayment ? (
+          {showCard && (
+            <button
+              type="button"
+              className="mip-btn-primary"
+              onClick={startCardPayment}
+              disabled={startingCard}
+            >
+              {startingCard ? "Opening secure payment..." : `Pay ${cardAmount} by card or Apple Pay`}
+            </button>
+          )}
+
+          {showCard && !showPayment ? null : showPayment ? (
             <>
               <PaymentOptions
                 details={payment}
@@ -310,17 +369,20 @@ export default function MarkInvoicePaid({
             </p>
           )}
 
-          <button
-            type="button"
-            className="mip-btn-primary"
-            onClick={handleMarkPaid}
-            disabled={marking}
-          >
-            {marking ? "Marking as paid..." : showPayment ? "✓ I've sent the payment" : "✓ Yes, mark as paid"}
-          </button>
+          {/* Card payments mark themselves paid. */}
+          {(showPayment || !showCard) && (
+            <button
+              type="button"
+              className={showCard ? "mip-btn-secondary" : "mip-btn-primary"}
+              onClick={handleMarkPaid}
+              disabled={marking}
+            >
+              {marking ? "Marking as paid..." : showPayment ? "✓ I've sent the payment" : "✓ Yes, mark as paid"}
+            </button>
+          )}
 
-          {/* Parents paying via Venmo/Zelle have no app to open. */}
-          {!showPayment && (
+          {/* Parents paying online have no app to open. */}
+          {!showPayment && !showCard && (
             <button
               type="button"
               className="mip-btn-secondary"
@@ -333,11 +395,23 @@ export default function MarkInvoicePaid({
 
           {mode === "student" && (
             <p className="mip-disclaimer">
-              {showPayment
+              {showPayment || showCard
                 ? "Questions about this invoice? Please contact your coach."
                 : "This link expires in 7 days. If you already marked this paid in the app, ignore this."}
             </p>
           )}
+        </>
+      )}
+
+      {/* Back from a successful card payment */}
+      {state === "card_paid" && (
+        <>
+          <div className="mip-icon success">✓</div>
+          <h2 className="mip-title">Payment Received</h2>
+
+          {invoice && invoiceCardBody(false)}
+
+          <p className="mip-subtitle">Thank you. Your coach will see this in Billio shortly.</p>
         </>
       )}
 

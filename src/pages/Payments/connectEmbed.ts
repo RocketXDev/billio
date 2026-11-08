@@ -27,6 +27,7 @@ export async function startConnect() {
 
   // Fetched up front for the same reason: a failure here stays on the page.
   let firstSecret: string | null = await fetchConnectClientSecret();
+  const isPhone = window.matchMedia("(max-width: 640px)").matches;
 
   return loadConnectAndInitialize({
     publishableKey: connectPublishableKey,
@@ -45,6 +46,7 @@ export async function startConnect() {
         colorPrimary: "#3b33d9",
         fontFamily: "Inter, sans-serif",
         borderRadius: "10px",
+        ...(isPhone && { bodyMdFontSize: "16px", buttonPaddingX: "40px" }),
       },
     },
   });

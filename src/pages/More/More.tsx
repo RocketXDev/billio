@@ -24,10 +24,18 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { usePlan } from "../../hooks/usePlan";
 import { useDashboardWidgets } from "../../hooks/useDashboardWidgets";
-import { getDashboardTools } from "../../lib/dashboardTools";
+import { getDashboardTools, type DashboardTool } from "../../lib/dashboardTools";
 import { useLessonTerm } from "../../hooks/useLessonTerm";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import { connectStatusKey, fetchConnectAvailable, paymentsEnabledFor } from "../../lib/connect";
+
+const PAYMENTS_TOOL: DashboardTool = {
+  slug: "payments",
+  icon: <FaCreditCard />,
+  title: "Accept Payments",
+  desc: "Let parents pay invoices by card or Apple Pay.",
+  free: true,
+};
 
 export default function More() {
   const navigate = useNavigate();
@@ -41,6 +49,10 @@ export default function More() {
     queryFn: fetchConnectAvailable,
     enabled: paymentsEnabledFor(coachId),
   });
+
+  const tools = DASHBOARD_TOOLS.flatMap((tool) =>
+    tool.slug === "group-lessons" && paymentsAvailable ? [tool, PAYMENTS_TOOL] : [tool]
+  );
 
   const [showMoreTutorial, setShowMoreTutorial] = useState(false);
   const [moreTutorialStep, setMoreTutorialStep] = useState(0);
@@ -132,7 +144,7 @@ export default function More() {
       <section className="more-section">
         <h2>Coaching Tools</h2>
         <div className="more-grid">
-          {DASHBOARD_TOOLS.map(({ slug, icon, title, desc, free, comingSoon, comingSoonReason }) => {
+          {tools.map(({ slug, icon, title, desc, free, comingSoon, comingSoonReason }) => {
             const locked = !free && !isPro;
             const isPinned = pinned.includes(slug);
 
@@ -152,7 +164,8 @@ export default function More() {
               );
             }
 
-            const pinBtn = isPro && (
+            const canPin = isPro && slug !== PAYMENTS_TOOL.slug;
+            const pinBtn = canPin && (
               <button
                 type="button"
                 className={`more-pin-btn${isPinned ? " active" : ""}`}
@@ -180,7 +193,7 @@ export default function More() {
             }
 
             return (
-              <Link key={slug} to={`/${slug}`} className={`more-card${isPro ? " pinnable" : ""}`}>
+              <Link key={slug} to={`/${slug}`} className={`more-card${canPin ? " pinnable" : ""}`}>
                 <div className="more-icon">{icon}</div>
                 <div><h3>{title}</h3><p>{desc}</p></div>
                 {pinBtn}
@@ -203,11 +216,6 @@ export default function More() {
           <Link to="/settings" className="more-list-item">
             <FaCog /><span>Settings</span><FaChevronRight />
           </Link>
-          {paymentsAvailable && (
-            <Link to="/payments" className="more-list-item">
-              <FaCreditCard /><span>Payments</span><FaChevronRight />
-            </Link>
-          )}
           <Link to="/upgrade" className="more-list-item">
             <FaCrown /><span>Subscription</span><FaChevronRight />
           </Link>

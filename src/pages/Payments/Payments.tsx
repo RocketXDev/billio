@@ -90,6 +90,16 @@ export default function Payments() {
     if (needsStripe && !connectStarted.current) beginConnect();
   }, [needsStripe, beginConnect]);
 
+  // iOS zooms the whole page when a field smaller than 16px gets focus, and
+  // Stripe's fields are in iframes we can't restyle. Only while this page is open.
+  useEffect(() => {
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (!viewport) return;
+    const original = viewport.getAttribute("content") ?? "";
+    viewport.setAttribute("content", `${original}, maximum-scale=1.0`);
+    return () => viewport.setAttribute("content", original);
+  }, []);
+
   function retryConnect() {
     setConnect(null);
     setConnectFailed(false);
@@ -172,7 +182,7 @@ export default function Payments() {
       <div className="ref-body">
         <div className="ref-hero">
           <div className="ref-hero-icon"><FaCreditCard /></div>
-          <h1 className="ref-title">Payments</h1>
+          <h1 className="ref-title">Accept Payments</h1>
           <p className="ref-subtitle">Let parents pay invoices by card or Apple Pay.</p>
           {status?.available && !status.livemode && <span className="payments-test-pill">Test mode</span>}
         </div>

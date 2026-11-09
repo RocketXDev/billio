@@ -1,7 +1,7 @@
 // Optional Venmo / Zelle details.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
+import { offeredPayment,
   hasPaymentOptions, normalizeVenmoHandle, normalizeZelleContact, venmoPayUrl,
 } from "../../src/lib/paymentOptions.ts";
 
@@ -40,6 +40,15 @@ test("Venmo link follows Venmo's documented payment-link format", () => {
   assert.equal(url.searchParams.get("txn"), "pay");
   assert.equal(url.searchParams.get("amount"), "120.00", "decimal, no $ sign");
   assert.equal(url.searchParams.has("note"), false, "parents write their own note");
+});
+
+test("offeredPayment drops only the methods switched off", () => {
+  const full = { venmo_handle: "anna-smith", zelle_contact: "a@b.co", zelle_name: "Anna" };
+  assert.deepEqual(offeredPayment(full), full, "columns missing = everything stays on");
+  assert.deepEqual(offeredPayment({ ...full, offer_venmo: false }), { ...full, venmo_handle: null });
+  assert.deepEqual(offeredPayment({ ...full, offer_zelle: false }), { venmo_handle: "anna-smith", zelle_contact: null, zelle_name: null });
+  assert.equal(hasPaymentOptions(offeredPayment({ ...full, offer_venmo: false, offer_zelle: false })), false);
+  assert.equal(offeredPayment(null), null);
 });
 
 test("payment options show only when Venmo or Zelle is set", () => {

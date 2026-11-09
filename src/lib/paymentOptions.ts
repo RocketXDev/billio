@@ -13,6 +13,16 @@ export function hasPaymentOptions(details: PaymentDetails | null | undefined): d
   return !!(details?.venmo_handle || details?.zelle_contact);
 }
 
+// Drops whichever methods the coach switched off in Settings → Getting paid.
+export function offeredPayment(
+  details: (PaymentDetails & { offer_venmo?: boolean | null; offer_zelle?: boolean | null }) | null | undefined
+): PaymentDetails | null {
+  if (!details) return null;
+  const venmo_handle = details.offer_venmo === false ? null : details.venmo_handle ?? null;
+  const zelle_contact = details.offer_zelle === false ? null : details.zelle_contact ?? null;
+  return { venmo_handle, zelle_contact, zelle_name: zelle_contact ? details.zelle_name ?? null : null };
+}
+
 type Checked = { value: string | null; error: string | null };
 
 /**

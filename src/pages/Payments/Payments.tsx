@@ -36,6 +36,7 @@ import {
 } from "../../lib/connect";
 import { showError } from "../../lib/notify";
 import { formatMoney } from "../../lib/paymentOptions";
+import { buildCardPaymentsCsv, downloadCsv, fetchCardPaymentsForExport } from "../../lib/exportRecords";
 import { startConnect } from "./connectEmbed";
 import "./Payments.css";
 
@@ -76,6 +77,7 @@ export default function Payments() {
 
   const [enrolling, setEnrolling] = useState(false);
   const [savingCards, setSavingCards] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [connect, setConnect] = useState<StripeConnectInstance | null>(null);
   const [connectError, setConnectError] = useState<string | null>(null);
 
@@ -146,6 +148,17 @@ export default function Payments() {
     }
   }
 
+  async function exportCardPayments() {
+    setExporting(true);
+    try {
+      downloadCsv("billio-card-payments.csv", buildCardPaymentsCsv(await fetchCardPaymentsForExport(coachId, livemode)));
+    } catch (error) {
+      showError("export your card payments", error);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   const refreshStatus = () => queryClient.invalidateQueries({ queryKey: connectStatusKey(coachId) });
   const onComponentError = ({ elementTagName, error }: LoadError) => {
     console.error(`Stripe ${elementTagName} failed to load:`, error);
@@ -186,8 +199,8 @@ export default function Payments() {
             <h2 className="ref-card-title">Your balance</h2>
             <ConnectBalances onLoadError={onComponentError} />
             <p className="payments-note">
-              Use Pay out to withdraw to your bank. Standard transfers are free. Expedited transfers cost 1% and
-              arrive in about 30 minutes, when Stripe offers them for your account.
+              Use Pay out to withdraw to your bank. Standard transfers are free. If Stripe offers expedited transfers
+              on your account, they usually arrive in about 30 minutes, for a fee shown before you confirm.
             </p>
           </div>
           <div className="ref-card payments-embed">
@@ -245,7 +258,7 @@ export default function Payments() {
               <ul className="payments-points">
                 <li>Parents pay from the invoice link with a credit card, debit card or Apple Pay.</li>
                 <li>The money goes to your balance, and the invoice is marked paid.</li>
-                <li>Withdraw to your bank whenever you like. Standard transfers are free; expedited transfers cost 1%, when available.</li>
+                <li>Withdraw to your bank whenever you like. Standard transfers are free; expedited transfers have a fee shown before you confirm, when available.</li>
               </ul>
             </div>
 
@@ -324,6 +337,9 @@ export default function Payments() {
             <span>Received by card</span>
             <strong>{formatMoney(receivedCents / 100)}</strong>
             <small>{received.length === 1 ? "1 payment" : `${received.length} payments`} through Billio, before fees</small>
+            <button type="button" className="payments-export-btn" disabled={exporting} onClick={exportCardPayments}>
+              {exporting ? "Preparing…" : "Export with fees (CSV)"}
+            </button>
           </div>
         )}
 

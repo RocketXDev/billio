@@ -440,3 +440,38 @@
   color: var(--secondary-text);
   line-height: 1.4;
 }
+
+.settings-pay-methods {
+  margin: 4px 0 14px;
+}
+
+.settings-pay-methods .settings-row-note {
+  margin-bottom: 12px;
+}
+
+.settings-pay-methods .settings-pay-switch:last-child {
+  margin-bottom: 0;
+}
+
+.settings-pay-setup {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 4px 0 14px;
+}
+
+.settings-pay-methods .settings-pay-setup:last-child {
+  margin-bottom: 0;
+}
+
+.settings-pay-setup-btn {
+  flex: 0 0 auto;
+  width: auto;
+  height: 36px;
+  margin: 0;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+}

@@ -37,6 +37,9 @@ type State = "loading" | "confirm" | "success" | "already_paid" | "card_paid" | 
 
 // How long the page will wait for the card option before showing without it.
 const CARD_STATUS_WAIT_MS = 1500;
+// Longer from a "Pay online" link: this parent came here to pay by card, and
+// without the option the page would ask them to mark the invoice paid.
+const CARD_LINK_WAIT_MS = 8000;
 
 interface MarkInvoicePaidProps {
   // Coach mode: pass the invoice id directly (e.g. from the invoices list).
@@ -111,7 +114,8 @@ export default function MarkInvoicePaid({
   // Never blocks the page for long, and any failure just means no card option.
   function loadCardOption() {
     const status = fetchCardCheckoutStatus(token!).then(setCardOption).catch(() => {});
-    return Promise.race([status, new Promise((resolve) => setTimeout(resolve, CARD_STATUS_WAIT_MS))]);
+    const waitMs = searchParams.get("card") === "1" ? CARD_LINK_WAIT_MS : CARD_STATUS_WAIT_MS;
+    return Promise.race([status, new Promise((resolve) => setTimeout(resolve, waitMs))]);
   }
 
   async function startCardPayment() {

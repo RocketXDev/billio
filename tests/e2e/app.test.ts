@@ -604,19 +604,66 @@ test("Settings: 'include in emails and texts' appears with Venmo/Zelle, is on by
   const fake = seedWorld();
   app = await openApp(fake, "/settings");
   const { page } = app;
-  const toggle = page.getByRole("switch", { name: /Also include in invoice emails and texts/ });
+  const venmo = page.getByRole("switch", { name: /Venmo/ });
+  const zelle = page.getByRole("switch", { name: /Zelle/ });
   await page.getByPlaceholder("your-username").waitFor();
-  assert.equal(await toggle.count(), 0, "hidden while no payment details");
+  assert.equal(await venmo.count(), 0, "hidden while no payment details");
 
   await page.getByPlaceholder("your-username").fill("Coach-Anna");
-  await toggle.waitFor({ state: "attached" });
-  assert.equal(await toggle.isChecked(), true, "on by default");
+  await page.getByPlaceholder("you@email.com or (555) 123-4567").fill("anna@example.com");
+  await venmo.waitFor({ state: "attached" });
+  assert.equal(await venmo.isChecked(), true, "on by default");
+  assert.equal(await zelle.isChecked(), true, "on by default");
+  assert.equal(await page.getByRole("switch", { name: /Pay online/ }).count(), 0, "no cards set up");
 
-  await page.locator(".settings-pay-switch").click();
-  assert.equal(await toggle.isChecked(), false);
+  await page.locator(".settings-pay-switch", { hasText: "Venmo" }).click();
+  assert.equal(await page.locator(".settings-pay-preview .pay-option-venmo").count(), 0, "preview follows the switch");
   await page.locator(".settings-save-btn").first().click();
   await waitFor(() => fake.rows("coaches")[0].venmo_handle === "Coach-Anna", "saved");
-  assert.equal(fake.rows("coaches")[0].payment_in_messages, false);
+  const coach = fake.rows("coaches")[0];
+  assert.equal(coach.offer_venmo, false);
+  assert.equal(coach.offer_zelle, true);
+  assert.equal(coach.payment_in_messages, true, "Zelle is still sent");
+});
+
+test("Settings: an active card coach can stop sending Pay online", async () => {
+  const fake = seedWorld();
+  fake.functionResponses["connect-account"] = (body: any) => ({
+    available: true, state: "active", livemode: false, card_payments_on: body.action === "set-card-payments" ? body.on : true,
+  });
+  app = await openApp(fake, "/settings");
+  const { page } = app;
+  const card = page.getByRole("switch", { name: /Pay online/ });
+  await card.waitFor({ state: "attached" });
+  assert.equal(await card.isChecked(), true);
+  await page.locator(".settings-pay-switch", { hasText: "Pay online" }).click();
+  await page.locator(".settings-save-btn").first().click();
+  await waitFor(
+    () => fake.requests("POST", "fn:connect-account").some((r: any) => r.body?.action === "set-card-payments" && r.body?.on === false),
+    "card choice saved",
+  );
+});
+
+test("Settings: a coach who hasn't set up cards is pointed to setup", async () => {
+  const fake = seedWorld();
+  fake.functionResponses["connect-account"] = () => ({ available: true, state: "not_started", livemode: false, card_payments_on: true });
+  app = await openApp(fake, "/settings");
+  const { page } = app;
+  await page.locator(".settings-pay-setup").waitFor();
+  assert.equal(await page.getByRole("switch", { name: /Pay online/ }).count(), 0);
+  await page.getByRole("button", { name: "Set up", exact: true }).click();
+  await waitFor(() => page.url().endsWith("/payments"), "opened Accept Payments");
+});
+
+test("Settings: nothing about cards when payments aren't available to the coach", async () => {
+  const fake = seedWorld();
+  fake.functionResponses["connect-account"] = () => ({ available: false });
+  app = await openApp(fake, "/settings");
+  const { page } = app;
+  await page.getByPlaceholder("your-username").waitFor();
+  await waitFor(() => fake.requests("POST", "fn:connect-account").length > 0, "status checked");
+  assert.equal(await page.locator(".settings-pay-setup").count(), 0);
+  assert.equal(await page.locator(".settings-pay-methods").count(), 0);
 });
 
 // ── Onboarding: optional Venmo / Zelle ──────────────────────────────────────
@@ -841,8 +888,14 @@ test("An active coach sees their balance, payments, withdrawals and total receiv
   assert.match(received, /\$140\.00/, "paid minus refunds, this coach and mode only");
   assert.match(received, /3 payments/);
   await page.getByText("A payment needs your review").waitFor();
+
+  fake.db.invoice_payments = fake.db.invoice_payments.map((p: any) => ({ ...p, application_fee_cents: 60, stripe_fee_cents: 204, paid_at: "2026-10-05T18:00:00Z", invoice_ids: ["invoice-liam"], primary_invoice_id: "invoice-liam" }));
+  const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Export with fees (CSV)" }).click()]);
+  assert.equal(download.suggestedFilename(), "billio-card-payments.csv");
+  assert.equal(await popup(page).count(), 0, "export didn't fail");
   const body = await page.locator(".ref-body").innerText();
   assert.match(body, /Standard transfers are free/);
+  assert.doesNotMatch(body, /cost 1%/, "Stripe sets the expedited fee, so the page mustn't promise one");
   assert.match(body, /Stripe keeps its processing fee/);
   assert.doesNotMatch(body, /\btax/i);
 });
@@ -966,6 +1019,19 @@ test("A coach with only cards: parent pays by card, with no 'I've paid' button",
   assert.match(await page.locator(".mip-invoice-card").innerText(), /INV-1001/);
   assert.equal(fake.requests("POST", "fn:mark-invoice-paid").length, 0, "the webhook marks it paid, not the page");
   assert.equal(checkoutCalls(fake, "status").length, statusChecks, "no card status check after paying");
+});
+
+test("A Pay online link waits for a slow card option instead of offering 'mark as paid'", async () => {
+  const fake = seedWorld();
+  payLink(fake, null);
+  fake.functionResponses["create-invoice-checkout"] = async () => {
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    return cardReady;
+  };
+  app = await openApp(fake, "/pay?token=tok-123&card=1");
+  const { page } = app;
+  await cardButton(page).waitFor();
+  assert.equal(await page.getByRole("button", { name: /mark as paid/ }).count(), 0);
 });
 
 test("Cards alongside Venmo: both shown, card first", async () => {

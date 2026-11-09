@@ -166,7 +166,7 @@ export class FakeSupabase {
         const name = path.slice(14);
         const body = safeJson(request.postData());
         this.log.push({ method: request.method(), table: `fn:${name}`, params: url.searchParams, body });
-        return json(200, this.functionResponses[name]?.(body) ?? {});
+        return json(200, (await this.functionResponses[name]?.(body)) ?? {});
       }
       if (path.startsWith("/rest/v1/rpc/")) {
         this.log.push({ method: "RPC", table: path.slice(13), params: url.searchParams, body: safeJson(request.postData()) });

@@ -124,7 +124,60 @@ export function buildMonthlySummaryCsv(lessons: ExportLesson[], term: Term, from
   return toCsv(header, rows);
 }
 
+export type ExportCardPayment = {
+  paid_at: string | null;
+  amount_cents: number;
+  application_fee_cents: number;
+  stripe_fee_cents: number | null;
+  refunded_cents: number;
+  status: string;
+  invoice_ids: string[] | null;
+  invoices?: { invoice_number?: string | null; students?: { student_name?: string | null } | null } | null;
+};
+
+const cents = (n: number) => csvCell((n / 100).toFixed(2), { text: false });
+
+export function buildCardPaymentsCsv(payments: ExportCardPayment[]) {
+  const header = ["Date", "Invoice #", "Student", "Paid by parent", "Stripe fee", "Billio fee", "Refunded", "You received", "Status"];
+  const rows = payments.map((p) => {
+    const extra = (p.invoice_ids?.length ?? 1) - 1;
+    const number = p.invoices?.invoice_number ?? "";
+    // A refund returns the matching share of Billio's fee; Stripe keeps its own.
+    const billioFee = p.amount_cents ? p.application_fee_cents - Math.round(p.application_fee_cents * p.refunded_cents / p.amount_cents) : 0;
+    return [
+      csvCell(p.paid_at ? new Date(p.paid_at).toLocaleDateString("en-CA") : "", { text: false }),
+      csvCell(extra > 0 ? `${number} + ${extra} more` : number),
+      csvCell(p.invoices?.students?.student_name ?? ""),
+      cents(p.amount_cents),
+      p.stripe_fee_cents == null ? "" : cents(p.stripe_fee_cents),
+      cents(billioFee),
+      cents(p.refunded_cents),
+      p.stripe_fee_cents == null ? "" : cents(p.amount_cents - p.refunded_cents - p.stripe_fee_cents - billioFee),
+      csvCell(status(p.status === "partially_refunded" ? "partially refunded" : p.status === "succeeded" ? "paid" : p.status)),
+    ];
+  });
+  return toCsv(header, rows);
+}
+
 // ── Data + download ─────────────────────────────────────────────────────────
+
+/** Every completed card payment, oldest first. */
+export function fetchCardPaymentsForExport(coachId: string, livemode: boolean) {
+  return fetchAllRows<ExportCardPayment>((a, b) =>
+    supabase
+      .from("invoice_payments")
+      .select(
+        "paid_at, amount_cents, application_fee_cents, stripe_fee_cents, refunded_cents, status, invoice_ids, " +
+          "invoices(invoice_number, students(student_name))"
+      )
+      .eq("coach_id", coachId)
+      .eq("livemode", livemode)
+      .in("status", ["succeeded", "partially_refunded", "refunded", "disputed"])
+      .order("paid_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(a, b) as unknown as PromiseLike<{ data: ExportCardPayment[] | null; error: unknown }>
+  );
+}
 
 /** Every lesson in [from, to], oldest first, plus group class titles. */
 export async function fetchLessonsForExport(coachId: string, from: string, to: string) {

@@ -1,7 +1,7 @@
 // CSV export of lessons and monthly earnings.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildLessonsCsv, buildMonthlySummaryCsv, csvCell, toCsv, type ExportLesson } from "../../src/lib/exportRecords.ts";
+import { buildCardPaymentsCsv, buildLessonsCsv, buildMonthlySummaryCsv, csvCell, toCsv, type ExportCardPayment, type ExportLesson } from "../../src/lib/exportRecords.ts";
 
 const term = { singular: "Session", plural: "Sessions" };
 const lesson = (date: string, extra: Partial<ExportLesson> = {}): ExportLesson => ({
@@ -103,4 +103,23 @@ test("monthly summary: every month in range, split by status, with a total row",
 test("monthly summary spans year boundaries", () => {
   const rows = parse(buildMonthlySummaryCsv([], term, "2025-11-15", "2026-02-10"));
   assert.deepEqual(rows.slice(1, -1).map((r) => r[0]), ["November 2025", "December 2025", "January 2026", "February 2026"]);
+});
+
+test("card payments CSV: fees, refunds, combined invoices and fees not known yet", () => {
+  const base: ExportCardPayment = {
+    paid_at: "2026-10-05T18:00:00Z", amount_cents: 6000, application_fee_cents: 60, stripe_fee_cents: 204,
+    refunded_cents: 0, status: "succeeded", invoice_ids: ["a"],
+    invoices: { invoice_number: "INV-1", students: { student_name: "Ava Parker" } },
+  };
+  const rows = parse(buildCardPaymentsCsv([
+    base,
+    { ...base, refunded_cents: 2000, status: "partially_refunded" },
+    { ...base, refunded_cents: 6000, status: "refunded" },
+    { ...base, invoice_ids: ["a", "b", "c"], stripe_fee_cents: null },
+  ]));
+  assert.deepEqual(rows[0], ["Date", "Invoice #", "Student", "Paid by parent", "Stripe fee", "Billio fee", "Refunded", "You received", "Status"]);
+  assert.deepEqual(rows[1], ["2026-10-05", "INV-1", "Ava Parker", "60.00", "2.04", "0.60", "0.00", "57.36", "Paid"]);
+  assert.deepEqual(rows[2], ["2026-10-05", "INV-1", "Ava Parker", "60.00", "2.04", "0.40", "20.00", "37.56", "Partially refunded"]);
+  assert.deepEqual(rows[3], ["2026-10-05", "INV-1", "Ava Parker", "60.00", "2.04", "0.00", "60.00", "-2.04", "Refunded"]);
+  assert.deepEqual(rows[4], ["2026-10-05", "INV-1 + 2 more", "Ava Parker", "60.00", "", "0.60", "0.00", "", "Paid"]);
 });

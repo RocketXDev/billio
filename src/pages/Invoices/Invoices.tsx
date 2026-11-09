@@ -28,6 +28,7 @@ import { usePlan } from "../../hooks/usePlan";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import { useSettings } from "../../hooks/useSettings";
 import { generateInvoicePdf } from "../../lib/generateInvoicePdf";
+import { offeredPayment } from "../../lib/paymentOptions";
 import { useLessonTerm } from "../../hooks/useLessonTerm";
 import { timezoneLabel } from "../../lib/timezones";
 import "./Invoices.css"
@@ -1189,7 +1190,7 @@ function Invoices() {
     // don't exist and the PDF is simply generated without the box.
     const { data: payment } = await supabase
       .from("coaches")
-      .select("venmo_handle, zelle_contact, zelle_name")
+      .select("venmo_handle, zelle_contact, zelle_name, offer_venmo, offer_zelle")
       .eq("id", coachId)
       .maybeSingle();
 
@@ -1204,7 +1205,7 @@ function Invoices() {
       dueDate: invoice.due_date,
       lessons,
       total: invoice.total,
-      payment,
+      payment: offeredPayment(payment),
     });
 
     const filePath = `${coachId}/${invoice.id}.pdf`;

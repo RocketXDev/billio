@@ -17,7 +17,8 @@ import { supabase } from "../../lib/supabaseClient";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import { TIMEZONE_GROUPS } from "../../lib/timezones";
 import { showError, showWarning } from "../../lib/notify";
-import { normalizeVenmoHandle, normalizeZelleContact } from "../../lib/paymentOptions";
+import { hasPaymentOptions, normalizeVenmoHandle, normalizeZelleContact, offeredPayment } from "../../lib/paymentOptions";
+import { connectStatusKey, fetchConnectStatus, paymentsEnabledFor, setCardPaymentsOn } from "../../lib/connect";
 import PaymentOptions from "../../components/PaymentOptions/PaymentOptions";
 import "./Settings.css";
 
@@ -36,6 +37,13 @@ const TERM_PRESETS = [
   { singular: "Appointment", plural: "Appointments" },
   { singular: "Meeting", plural: "Meetings" },
 ];
+
+const CARD_SETUP = {
+  not_started: { text: "Not set up yet. Let parents pay by card or Apple Pay.", action: "Set up" },
+  onboarding: { text: "You started setting this up.", action: "Finish" },
+  action_needed: { text: "Stripe needs more information.", action: "Finish" },
+  in_review: { text: "Stripe is reviewing your details.", action: "View" },
+};
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -61,7 +69,9 @@ export default function Settings() {
   const [venmoInput, setVenmoInput] = useState("");
   const [zelleInput, setZelleInput] = useState("");
   const [zelleNameInput, setZelleNameInput] = useState("");
-  const [paymentInMessages, setPaymentInMessages] = useState(true);
+  const [offerVenmo, setOfferVenmo] = useState(true);
+  const [offerZelle, setOfferZelle] = useState(true);
+  const [offerCard, setOfferCard] = useState(true);
 
   // Password change
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -99,7 +109,7 @@ export default function Settings() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("coaches")
-        .select("venmo_handle, zelle_contact, zelle_name, payment_in_messages")
+        .select("venmo_handle, zelle_contact, zelle_name, payment_in_messages, offer_venmo, offer_zelle")
         .eq("id", coachId)
         .single();
       if (error) throw error;
@@ -115,11 +125,51 @@ export default function Settings() {
     setVenmoInput(paymentData.venmo_handle || "");
     setZelleInput(paymentData.zelle_contact || "");
     setZelleNameInput(paymentData.zelle_name || "");
-    setPaymentInMessages(paymentData.payment_in_messages !== false);
+    setOfferVenmo(paymentData.payment_in_messages !== false && paymentData.offer_venmo !== false);
+    setOfferZelle(paymentData.payment_in_messages !== false && paymentData.offer_zelle !== false);
   }, [paymentData]);
+
+  // Coaches without card payments make no request here.
+  const { data: cardStatus } = useQuery({
+    queryKey: [...connectStatusKey(coachId), "settings"],
+    queryFn: () => fetchConnectStatus(),
+    enabled: !!coachId && paymentsEnabledFor(coachId),
+    retry: false,
+  });
+  const cardActive = cardStatus?.available === true && cardStatus.state === "active";
+  const cardSetup = cardStatus?.available && cardStatus.state !== "active" ? CARD_SETUP[cardStatus.state] : null;
+
+  useEffect(() => {
+    if (cardStatus?.available) setOfferCard(cardStatus.card_payments_on);
+  }, [cardStatus]);
 
   const venmoCheck = normalizeVenmoHandle(venmoInput);
   const zelleCheck = normalizeZelleContact(zelleInput);
+  const previewPayment = offeredPayment({
+    venmo_handle: venmoCheck.value,
+    zelle_contact: zelleCheck.value,
+    zelle_name: zelleNameInput.trim() || null,
+    offer_venmo: offerVenmo,
+    offer_zelle: offerZelle,
+  });
+
+  function methodSwitch(title: string, detail: string, checked: boolean, onChange: (on: boolean) => void) {
+    return (
+      <label className="settings-pay-switch">
+        <input
+          type="checkbox"
+          role="switch"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+        />
+        <span className="settings-pay-switch-track" aria-hidden="true" />
+        <span className="settings-pay-switch-text">
+          <strong>{title}</strong>
+          <small>{detail}</small>
+        </span>
+      </label>
+    );
+  }
 
   // Gate on the data actually being present, not just `isLoading` — react-query
   // reports `isLoading: false` while the query is still `enabled: false` (i.e.
@@ -188,7 +238,9 @@ export default function Settings() {
         venmo_handle: venmoCheck.value,
         zelle_contact: zelleContact,
         zelle_name: zelleContact ? zelleNameInput.trim() || null : null,
-        payment_in_messages: paymentInMessages,
+        offer_venmo: offerVenmo,
+        offer_zelle: offerZelle,
+        payment_in_messages: offerVenmo || offerZelle,
       };
       const changed = (Object.keys(next) as (keyof typeof next)[]).some(
         (key) => (paymentData[key] ?? null) !== next[key]
@@ -201,6 +253,17 @@ export default function Settings() {
           return;
         }
         queryClient.invalidateQueries({ queryKey: ["coach-payment-details", coachId] });
+      }
+    }
+
+    if (cardStatus?.available && cardActive && offerCard !== cardStatus.card_payments_on) {
+      try {
+        await setCardPaymentsOn(offerCard);
+        queryClient.invalidateQueries({ queryKey: connectStatusKey(coachId) });
+      } catch (cardError) {
+        setSaving(false);
+        showError("update card payments", cardError);
+        return;
       }
     }
 
@@ -498,34 +561,33 @@ export default function Settings() {
                   </label>
                 )}
 
-                {(venmoCheck.value || zelleCheck.value) && (
-                  <label className="settings-pay-switch">
-                    <input
-                      type="checkbox"
-                      role="switch"
-                      checked={paymentInMessages}
-                      onChange={(e) => setPaymentInMessages(e.target.checked)}
-                    />
-                    <span className="settings-pay-switch-track" aria-hidden="true" />
-                    <span className="settings-pay-switch-text">
-                      <strong>Also include in invoice emails and texts</strong>
-                      <small>Parents see how to pay right in the message — no link to open.</small>
-                    </span>
-                  </label>
+                {(venmoCheck.value || zelleCheck.value || cardStatus?.available) && (
+                  <div className="settings-pay-methods">
+                    <div className="settings-row-label">Send to parents and students</div>
+                    <p className="settings-row-note">
+                      Only what's on appears in invoice emails, texts, invoice links and PDFs.
+                    </p>
+                    {cardActive && methodSwitch("Pay online", "Card or Apple Pay through Billio", offerCard, setOfferCard)}
+                    {cardSetup && (
+                      <div className="settings-pay-setup">
+                        <span className="settings-pay-switch-text">
+                          <strong>Pay online</strong>
+                          <small>{cardSetup.text}</small>
+                        </span>
+                        <button type="button" className="settings-pay-setup-btn" onClick={() => navigate("/payments")}>
+                          {cardSetup.action}
+                        </button>
+                      </div>
+                    )}
+                    {venmoCheck.value && methodSwitch("Venmo", `@${venmoCheck.value}`, offerVenmo, setOfferVenmo)}
+                    {zelleCheck.value && methodSwitch("Zelle", zelleCheck.value, offerZelle, setOfferZelle)}
+                  </div>
                 )}
 
-                {(venmoCheck.value || zelleCheck.value) && (
+                {hasPaymentOptions(previewPayment) && (
                   <div className="settings-pay-preview">
                     <span>What parents see</span>
-                    <PaymentOptions
-                      preview
-                      details={{
-                        venmo_handle: venmoCheck.value,
-                        zelle_contact: zelleCheck.value,
-                        zelle_name: zelleCheck.value ? zelleNameInput.trim() || null : null,
-                      }}
-                      amount={120}
-                    />
+                    <PaymentOptions preview details={previewPayment} amount={120} />
                   </div>
                 )}
               </>

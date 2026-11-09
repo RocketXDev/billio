@@ -1,7 +1,7 @@
 // Optional Venmo / Zelle details.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { offeredPayment,
+import { normalizePaypalHandle, offeredPayment, paypalPayUrl,
   hasPaymentOptions, normalizeVenmoHandle, normalizeZelleContact, venmoPayUrl,
 } from "../../src/lib/paymentOptions.ts";
 
@@ -42,12 +42,27 @@ test("Venmo link follows Venmo's documented payment-link format", () => {
   assert.equal(url.searchParams.has("note"), false, "parents write their own note");
 });
 
+test("PayPal names: pasted links are cleaned up, junk is refused", () => {
+  for (const input of ["annasmith", "@annasmith", "paypal.me/annasmith", "https://www.paypal.me/annasmith/25", "https://www.paypal.com/paypalme/annasmith"]) {
+    assert.deepEqual(normalizePaypalHandle(input), { value: "annasmith", error: null }, input);
+  }
+  assert.deepEqual(normalizePaypalHandle("  "), { value: null, error: null });
+  assert.ok(normalizePaypalHandle("anna smith").error);
+  assert.equal(hasPaymentOptions({ paypal_handle: "annasmith" }), true);
+});
+
+test("PayPal link carries the amount in dollars", () => {
+  assert.equal(paypalPayUrl("annasmith", 120), "https://paypal.me/annasmith/120.00USD");
+  assert.equal(paypalPayUrl("annasmith", 7.5), "https://paypal.me/annasmith/7.50USD");
+});
+
 test("offeredPayment drops only the methods switched off", () => {
-  const full = { venmo_handle: "anna-smith", zelle_contact: "a@b.co", zelle_name: "Anna" };
+  const full = { venmo_handle: "anna-smith", paypal_handle: "annasmith", zelle_contact: "a@b.co", zelle_name: "Anna" };
   assert.deepEqual(offeredPayment(full), full, "columns missing = everything stays on");
   assert.deepEqual(offeredPayment({ ...full, offer_venmo: false }), { ...full, venmo_handle: null });
-  assert.deepEqual(offeredPayment({ ...full, offer_zelle: false }), { venmo_handle: "anna-smith", zelle_contact: null, zelle_name: null });
-  assert.equal(hasPaymentOptions(offeredPayment({ ...full, offer_venmo: false, offer_zelle: false })), false);
+  assert.deepEqual(offeredPayment({ ...full, offer_paypal: false }), { ...full, paypal_handle: null });
+  assert.deepEqual(offeredPayment({ ...full, offer_zelle: false }), { venmo_handle: "anna-smith", paypal_handle: "annasmith", zelle_contact: null, zelle_name: null });
+  assert.equal(hasPaymentOptions(offeredPayment({ ...full, offer_venmo: false, offer_paypal: false, offer_zelle: false })), false);
   assert.equal(offeredPayment(null), null);
 });
 

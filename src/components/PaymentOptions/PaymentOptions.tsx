@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { FaArrowRight, FaCheck, FaRegCopy } from "react-icons/fa";
-import { formatMoney, hasPaymentOptions, venmoPayUrl, type PaymentDetails } from "../../lib/paymentOptions";
+import { formatMoney, hasPaymentOptions, paypalPayUrl, venmoPayUrl, type PaymentDetails } from "../../lib/paymentOptions";
 import "./PaymentOptions.css";
 
-// "How to pay" block: Venmo (deep link with the amount filled in) and Zelle (copyable details — Zelle has no link, it lives inside each
+// "How to pay" block: Venmo and PayPal (links with the amount filled in) and Zelle (copyable details — Zelle has no link, it lives inside each
 // bank's app). Renders nothing when the coach hasn't added either.
 //
 // Brand colours and names only, no official logos (both brands restrict
@@ -15,7 +15,7 @@ export default function PaymentOptions({ details, amount, preview = false }: {
   preview?: boolean;
 }) {
   if (!hasPaymentOptions(details)) return null;
-  const { venmo_handle: venmo, zelle_contact: zelle, zelle_name: zelleName } = details;
+  const { venmo_handle: venmo, paypal_handle: paypal, zelle_contact: zelle, zelle_name: zelleName } = details;
 
   return (
     <section className="pay-options" aria-label="How to pay">
@@ -34,6 +34,24 @@ export default function PaymentOptions({ details, amount, preview = false }: {
           <span className="pay-option-text">
             <strong>Pay {formatMoney(amount)} with Venmo</strong>
             <small>@{venmo}</small>
+          </span>
+          <FaArrowRight className="pay-option-arrow" aria-hidden="true" />
+        </a>
+      )}
+
+      {paypal && (
+        <a
+          className="pay-option pay-option-venmo pay-option-paypal"
+          href={preview ? undefined : paypalPayUrl(paypal, amount)}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-disabled={preview || undefined}
+          onClick={preview ? (e) => e.preventDefault() : undefined}
+        >
+          <span className="pay-option-badge" aria-hidden="true">P</span>
+          <span className="pay-option-text">
+            <strong>Pay {formatMoney(amount)} with PayPal</strong>
+            <small>paypal.me/{paypal}</small>
           </span>
           <FaArrowRight className="pay-option-arrow" aria-hidden="true" />
         </a>

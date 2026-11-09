@@ -3,7 +3,7 @@
 // built from real lesson rows instead of freeform line items. Returns a Blob
 // so the caller can upload it to Storage, rather than triggering a download.
 
-import { hasPaymentOptions, venmoPayUrl, type PaymentDetails } from "./paymentOptions";
+import { hasPaymentOptions, paypalPayUrl, venmoPayUrl, type PaymentDetails } from "./paymentOptions";
 
 type InvoiceLessonRow = {
   lesson_date: string;
@@ -177,6 +177,13 @@ export async function generateInvoicePdf(args: GenerateInvoicePdfArgs): Promise<
         label: "Venmo",
         value: `@${payment.venmo_handle}`,
         url: venmoPayUrl(payment.venmo_handle, Number(total || 0)),
+      });
+    }
+    if (payment.paypal_handle) {
+      lines.push({
+        label: "PayPal",
+        value: `paypal.me/${payment.paypal_handle}`,
+        url: paypalPayUrl(payment.paypal_handle, Number(total || 0)),
       });
     }
     if (payment.zelle_contact) {

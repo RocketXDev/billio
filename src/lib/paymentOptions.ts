@@ -1,26 +1,28 @@
-// Optional Venmo / Zelle details a coach can show parents on invoices.
+// Optional Venmo / PayPal / Zelle details a coach can show parents on invoices.
 // Entirely opt-in: many coaches are paid another way (e.g. lesson tickets at
 // the rink's front desk), and with nothing filled in, nothing is shown
 // anywhere — the pay page, PDF and settings look exactly as before.
 
 export type PaymentDetails = {
   venmo_handle?: string | null;
+  paypal_handle?: string | null;
   zelle_contact?: string | null;
   zelle_name?: string | null;
 };
 
 export function hasPaymentOptions(details: PaymentDetails | null | undefined): details is PaymentDetails {
-  return !!(details?.venmo_handle || details?.zelle_contact);
+  return !!(details?.venmo_handle || details?.paypal_handle || details?.zelle_contact);
 }
 
 // Drops whichever methods the coach switched off in Settings → Getting paid.
 export function offeredPayment(
-  details: (PaymentDetails & { offer_venmo?: boolean | null; offer_zelle?: boolean | null }) | null | undefined
+  details: (PaymentDetails & { offer_venmo?: boolean | null; offer_paypal?: boolean | null; offer_zelle?: boolean | null }) | null | undefined
 ): PaymentDetails | null {
   if (!details) return null;
   const venmo_handle = details.offer_venmo === false ? null : details.venmo_handle ?? null;
+  const paypal_handle = details.offer_paypal === false ? null : details.paypal_handle ?? null;
   const zelle_contact = details.offer_zelle === false ? null : details.zelle_contact ?? null;
-  return { venmo_handle, zelle_contact, zelle_name: zelle_contact ? details.zelle_name ?? null : null };
+  return { venmo_handle, paypal_handle, zelle_contact, zelle_name: zelle_contact ? details.zelle_name ?? null : null };
 }
 
 type Checked = { value: string | null; error: string | null };
@@ -38,6 +40,23 @@ export function normalizeVenmoHandle(input: string): Checked {
   if (!raw) return { value: null, error: null };
   if (!/^[A-Za-z0-9_-]{5,30}$/.test(raw)) {
     return { value: null, error: "Venmo usernames are 5–30 letters, numbers, hyphens or underscores." };
+  }
+  return { value: raw, error: null };
+}
+
+/**
+ * Accepts "anna-smith", "@anna-smith" or a pasted PayPal.Me link. PayPal doesn't
+ * publish its naming rules, so this only keeps out what can't be a link name.
+ */
+export function normalizePaypalHandle(input: string): Checked {
+  const raw = input
+    .trim()
+    .replace(/^(https?:\/\/)?(www\.)?(paypal\.me\/|paypal\.com\/paypalme\/)/i, "")
+    .replace(/^@/, "")
+    .replace(/[/?#].*$/, "");
+  if (!raw) return { value: null, error: null };
+  if (!/^[A-Za-z0-9._-]{2,64}$/.test(raw)) {
+    return { value: null, error: "Enter your PayPal.Me name, the part after paypal.me/." };
   }
   return { value: raw, error: null };
 }
@@ -65,6 +84,11 @@ export function normalizeZelleContact(input: string): Checked {
 export function venmoPayUrl(handle: string, amount: number) {
   const params = new URLSearchParams({ txn: "pay", amount: amount.toFixed(2) });
   return `https://venmo.com/${encodeURIComponent(handle)}?${params.toString()}`;
+}
+
+/** PayPal.Me link: opens PayPal with the amount and currency filled in. */
+export function paypalPayUrl(handle: string, amount: number) {
+  return `https://paypal.me/${encodeURIComponent(handle)}/${amount.toFixed(2)}USD`;
 }
 
 export const formatMoney = (amount: number) =>

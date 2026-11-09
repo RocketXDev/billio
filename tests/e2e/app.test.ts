@@ -626,6 +626,36 @@ test("Settings: 'include in emails and texts' appears with Venmo/Zelle, is on by
   assert.equal(coach.payment_in_messages, true, "Zelle is still sent");
 });
 
+test("Settings: PayPal can be added and switched off on its own", async () => {
+  const fake = seedWorld();
+  app = await openApp(fake, "/settings");
+  const { page } = app;
+  const name = page.getByPlaceholder("The part after paypal.me/");
+  await name.waitFor();
+  await name.fill("https://paypal.me/CoachAnna");
+  const paypal = page.getByRole("switch", { name: /PayPal/ });
+  await paypal.waitFor({ state: "attached" });
+  assert.equal(await paypal.isChecked(), true, "on by default");
+  await page.locator(".settings-pay-preview .pay-option-paypal").waitFor();
+
+  await page.locator(".settings-pay-switch", { hasText: "PayPal" }).click();
+  assert.equal(await page.locator(".settings-pay-preview .pay-option-paypal").count(), 0, "preview follows the switch");
+  await page.locator(".settings-save-btn").first().click();
+  await waitFor(() => fake.rows("coaches")[0].paypal_handle === "CoachAnna", "saved");
+  assert.equal(fake.rows("coaches")[0].offer_paypal, false);
+});
+
+test("A parent can pay with PayPal from the pay link", async () => {
+  const fake = seedWorld();
+  payLink(fake, { coach_name: "Coach Anna", paypal_handle: "CoachAnna" });
+  app = await openApp(fake, "/pay?token=tok-123");
+  const { page } = app;
+  const link = page.locator(".pay-option-paypal");
+  await link.waitFor();
+  assert.match(String(await link.getAttribute("href")), /^https:\/\/paypal\.me\/CoachAnna\/\d+\.\d\dUSD$/);
+  await page.getByRole("button", { name: "✓ I've sent the payment" }).waitFor();
+});
+
 test("Settings: an active card coach can stop sending Pay online", async () => {
   const fake = seedWorld();
   fake.functionResponses["connect-account"] = (body: any) => ({

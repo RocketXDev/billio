@@ -1190,7 +1190,7 @@ function Invoices() {
     // don't exist and the PDF is simply generated without the box.
     const { data: payment } = await supabase
       .from("coaches")
-      .select("venmo_handle, zelle_contact, zelle_name, offer_venmo, offer_zelle")
+      .select("venmo_handle, paypal_handle, zelle_contact, zelle_name, offer_venmo, offer_paypal, offer_zelle")
       .eq("id", coachId)
       .maybeSingle();
 

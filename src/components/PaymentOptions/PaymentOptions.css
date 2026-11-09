@@ -89,6 +89,25 @@
   cursor: default;
 }
 
+/* PayPal: the Venmo card in PayPal blue. */
+.pay-option-paypal {
+  border-color: #b8c7e6;
+  background: #f2f5fb;
+}
+
+.pay-option-paypal:hover {
+  background: #e6ecf7;
+  border-color: #003087;
+}
+
+.pay-option-paypal .pay-option-badge {
+  background: #003087;
+}
+
+.pay-option-paypal .pay-option-arrow {
+  color: #003087;
+}
+
 /* Zelle: details to copy, Zelle purple. */
 .pay-option-zelle {
   container-type: inline-size;

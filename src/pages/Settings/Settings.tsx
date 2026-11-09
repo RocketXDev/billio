@@ -17,7 +17,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
 import { TIMEZONE_GROUPS } from "../../lib/timezones";
 import { showError, showWarning } from "../../lib/notify";
-import { hasPaymentOptions, normalizeVenmoHandle, normalizeZelleContact, offeredPayment } from "../../lib/paymentOptions";
+import { hasPaymentOptions, normalizePaypalHandle, normalizeVenmoHandle, normalizeZelleContact, offeredPayment } from "../../lib/paymentOptions";
 import { connectStatusKey, fetchConnectStatus, paymentsEnabledFor, setCardPaymentsOn } from "../../lib/connect";
 import PaymentOptions from "../../components/PaymentOptions/PaymentOptions";
 import "./Settings.css";
@@ -67,9 +67,11 @@ export default function Settings() {
 
   // Optional Venmo / Zelle shown to parents on the pay page and PDFs.
   const [venmoInput, setVenmoInput] = useState("");
+  const [paypalInput, setPaypalInput] = useState("");
   const [zelleInput, setZelleInput] = useState("");
   const [zelleNameInput, setZelleNameInput] = useState("");
   const [offerVenmo, setOfferVenmo] = useState(true);
+  const [offerPaypal, setOfferPaypal] = useState(true);
   const [offerZelle, setOfferZelle] = useState(true);
   const [offerCard, setOfferCard] = useState(true);
 
@@ -109,7 +111,7 @@ export default function Settings() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("coaches")
-        .select("venmo_handle, zelle_contact, zelle_name, payment_in_messages, offer_venmo, offer_zelle")
+        .select("venmo_handle, paypal_handle, zelle_contact, zelle_name, payment_in_messages, offer_venmo, offer_paypal, offer_zelle")
         .eq("id", coachId)
         .single();
       if (error) throw error;
@@ -123,9 +125,11 @@ export default function Settings() {
   useEffect(() => {
     if (!paymentData) return;
     setVenmoInput(paymentData.venmo_handle || "");
+    setPaypalInput(paymentData.paypal_handle || "");
     setZelleInput(paymentData.zelle_contact || "");
     setZelleNameInput(paymentData.zelle_name || "");
     setOfferVenmo(paymentData.payment_in_messages !== false && paymentData.offer_venmo !== false);
+    setOfferPaypal(paymentData.offer_paypal !== false);
     setOfferZelle(paymentData.payment_in_messages !== false && paymentData.offer_zelle !== false);
   }, [paymentData]);
 
@@ -144,12 +148,15 @@ export default function Settings() {
   }, [cardStatus]);
 
   const venmoCheck = normalizeVenmoHandle(venmoInput);
+  const paypalCheck = normalizePaypalHandle(paypalInput);
   const zelleCheck = normalizeZelleContact(zelleInput);
   const previewPayment = offeredPayment({
     venmo_handle: venmoCheck.value,
+    paypal_handle: paypalCheck.value,
     zelle_contact: zelleCheck.value,
     zelle_name: zelleNameInput.trim() || null,
     offer_venmo: offerVenmo,
+    offer_paypal: offerPaypal,
     offer_zelle: offerZelle,
   });
 
@@ -206,7 +213,7 @@ export default function Settings() {
 
   async function handleSave() {
     if (!coachId || saving) return;
-    const paymentProblem = !paymentUnavailable && (venmoCheck.error || zelleCheck.error);
+    const paymentProblem = !paymentUnavailable && (venmoCheck.error || paypalCheck.error || zelleCheck.error);
     if (paymentProblem) {
       showWarning(paymentProblem);
       return;
@@ -236,11 +243,13 @@ export default function Settings() {
       const zelleContact = zelleCheck.value;
       const next = {
         venmo_handle: venmoCheck.value,
+        paypal_handle: paypalCheck.value,
         zelle_contact: zelleContact,
         zelle_name: zelleContact ? zelleNameInput.trim() || null : null,
         offer_venmo: offerVenmo,
+        offer_paypal: offerPaypal,
         offer_zelle: offerZelle,
-        payment_in_messages: offerVenmo || offerZelle,
+        payment_in_messages: offerVenmo || offerPaypal || offerZelle,
       };
       const changed = (Object.keys(next) as (keyof typeof next)[]).some(
         (key) => (paymentData[key] ?? null) !== next[key]
@@ -502,9 +511,9 @@ export default function Settings() {
           </div>
 
           <div className="settings-card">
-            <div className="settings-row-label">Venmo &amp; Zelle (optional)</div>
+            <div className="settings-row-label">Venmo, PayPal &amp; Zelle (optional)</div>
             <p className="settings-row-note settings-pay-intro">
-              Add either one and parents see it on the invoice link, ready to pay. Leave both
+              Add any of these and parents see it on the invoice link, ready to pay. Leave them
               empty if you're paid another way, like at the front desk — nothing changes.
             </p>
 
@@ -527,6 +536,22 @@ export default function Settings() {
                     />
                   </div>
                   {venmoCheck.error && <small className="settings-pay-error">{venmoCheck.error}</small>}
+                </label>
+
+                <label className="settings-pay-field">
+                  <span>PayPal.Me name</span>
+                  <div className={`settings-pay-input${paypalCheck.error ? " invalid" : ""}`}>
+                    <input
+                      type="text"
+                      value={paypalInput}
+                      onChange={(e) => setPaypalInput(e.target.value)}
+                      placeholder="The part after paypal.me/"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                    />
+                  </div>
+                  {paypalCheck.error && <small className="settings-pay-error">{paypalCheck.error}</small>}
                 </label>
 
                 <label className="settings-pay-field">
@@ -561,7 +586,7 @@ export default function Settings() {
                   </label>
                 )}
 
-                {(venmoCheck.value || zelleCheck.value || cardStatus?.available) && (
+                {(venmoCheck.value || paypalCheck.value || zelleCheck.value || cardStatus?.available) && (
                   <div className="settings-pay-methods">
                     <div className="settings-row-label">Send to parents and students</div>
                     <p className="settings-row-note">
@@ -580,6 +605,7 @@ export default function Settings() {
                       </div>
                     )}
                     {venmoCheck.value && methodSwitch("Venmo", `@${venmoCheck.value}`, offerVenmo, setOfferVenmo)}
+                    {paypalCheck.value && methodSwitch("PayPal", `paypal.me/${paypalCheck.value}`, offerPaypal, setOfferPaypal)}
                     {zelleCheck.value && methodSwitch("Zelle", zelleCheck.value, offerZelle, setOfferZelle)}
                   </div>
                 )}

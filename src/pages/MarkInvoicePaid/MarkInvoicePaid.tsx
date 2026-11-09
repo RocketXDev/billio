@@ -356,6 +356,12 @@ export default function MarkInvoicePaid({
             </button>
           )}
 
+          {showCard && (
+            <p className="mip-disclaimer mip-card-legal">
+              Payments are processed by Stripe. Your coach provides the services and handles refund requests. Billio <a href="/terms" target="_blank" rel="noopener noreferrer">Terms</a> and <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a> apply.
+            </p>
+          )}
+
           {showCard && !showPayment ? null : showPayment ? (
             <>
               <PaymentOptions

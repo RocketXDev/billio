@@ -1077,6 +1077,43 @@ test("A Pay online link waits for a slow card option instead of offering 'mark a
   assert.equal(await page.getByRole("button", { name: /mark as paid/ }).count(), 0);
 });
 
+test("Card payers see who processes the payment; other pay links don't", async () => {
+  const fake = seedWorld();
+  payLink(fake, null);
+  fake.functionResponses["create-invoice-checkout"] = () => cardReady;
+  app = await openApp(fake, "/pay?token=tok-123");
+  await cardButton(app.page).waitFor();
+  const notice = app.page.locator(".mip-card-legal");
+  assert.match(await notice.innerText(), /processed by Stripe/);
+  assert.equal(await notice.getByRole("link", { name: "Terms" }).getAttribute("href"), "/terms");
+  await app.close();
+
+  const plain = seedWorld();
+  payLink(plain, null);
+  plain.functionResponses["create-invoice-checkout"] = () => ({ available: false });
+  app = await openApp(plain, "/pay?token=tok-123");
+  await app.page.getByRole("heading", { name: "Mark Invoice as Paid?" }).waitFor();
+  assert.equal(await app.page.locator(".mip-card-legal").count(), 0);
+});
+
+test("Terms and Privacy name Billio LLC and Stripe", async () => {
+  const fake = seedWorld();
+  app = await openApp(fake, "/terms");
+  await app.page.getByRole("heading", { name: "Payment Processing by Stripe" }).waitFor();
+  const terms = await app.page.locator(".legal-card").innerText();
+  assert.match(terms, /operated by Billio LLC/);
+  assert.match(terms, /at least 30 days' notice/);
+  assert.doesNotMatch(terms, /\[|\btax/i, "no leftover placeholders or tax language");
+  await app.close();
+
+  app = await openApp(seedWorld(), "/privacy");
+  await app.page.getByRole("heading", { name: "Privacy Policy" }).first().waitFor();
+  const privacy = await app.page.locator(".legal-card").innerText();
+  assert.match(privacy, /operated by Billio LLC/);
+  assert.match(privacy, /Stripe receives that personal data/);
+  assert.doesNotMatch(privacy, /\[/);
+});
+
 test("Cards alongside Venmo: both shown, card first", async () => {
   const fake = seedWorld();
   payLink(fake, VENMO);

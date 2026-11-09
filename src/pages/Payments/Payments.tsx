@@ -278,6 +278,9 @@ export default function Payments() {
               Stripe, our payments partner, will confirm your identity and bank details. It takes about 5 minutes.
               This is optional, and Venmo and Zelle keep working either way.
             </p>
+            <p className="payments-note payments-note-center payments-legal">
+              By continuing, you agree to Billio's <a href="/terms" target="_blank" rel="noopener noreferrer">Terms</a> and the <a href="https://stripe.com/connect-account/legal/full" target="_blank" rel="noopener noreferrer">Stripe Connected Account Agreement</a>. Stripe handles your details as described in its <a href="https://stripe.com/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.
+            </p>
           </>
         )}
 

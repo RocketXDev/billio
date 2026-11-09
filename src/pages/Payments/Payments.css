@@ -166,3 +166,12 @@
 .payments-embed {
   padding: 16px 12px;
 }
+
+.payments-legal {
+  margin-top: 8px;
+}
+
+.payments-legal a {
+  color: inherit;
+  text-decoration: underline;
+}

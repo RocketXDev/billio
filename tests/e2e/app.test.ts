@@ -626,6 +626,19 @@ test("Settings: 'include in emails and texts' appears with Venmo/Zelle, is on by
   assert.equal(coach.payment_in_messages, true, "Zelle is still sent");
 });
 
+test("Settings: fields are large enough that phones don't zoom in", async () => {
+  const fake = seedWorld();
+  fake.rows("coaches")[0].zelle_contact = "anna@example.com";
+  app = await openApp(fake, "/settings");
+  const { page } = app;
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.getByPlaceholder("your-username").waitFor();
+  const sizes: number[] = await page.locator(".settings-page input:not([type=checkbox]):not([type=file]), .settings-page select")
+    .evaluateAll((els) => els.map((el) => parseFloat(getComputedStyle(el).fontSize)));
+  assert.ok(sizes.length >= 5, "found the fields");
+  assert.deepEqual(sizes.filter((size) => size < 16), []);
+});
+
 test("Settings: PayPal can be added and switched off on its own", async () => {
   const fake = seedWorld();
   app = await openApp(fake, "/settings");

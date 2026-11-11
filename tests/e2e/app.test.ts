@@ -1160,3 +1160,91 @@ for (const [name, reply] of [
     assert.equal(await popup(page).count(), 0, "no error popup");
   });
 }
+
+// ── Invoice settings: custom "every N weeks / months" schedules ─────────────
+
+async function openInvoiceSettings(page: Page) {
+  await page.locator(".invoices-settings-btn").first().click();
+  await page.locator(".invoice-settings-form").waitFor();
+}
+const generateSection = (page: Page) => page.locator(".invoice-settings-section", { hasText: "Generate Invoices" });
+const autoSection = (page: Page) => page.locator(".invoice-settings-section", { hasText: "Automatic Invoices" });
+
+test("Invoice settings: generate invoices every 6 weeks", async () => {
+  const fake = seedWorld();
+  app = await openApp(fake, "/invoices");
+  const { page } = app;
+  await openInvoiceSettings(page);
+  const section = generateSection(page);
+  await section.locator("select").first().selectOption("custom");
+  await section.getByLabel("Number of weeks or months").selectOption("6");
+  await section.locator(".input-block", { hasText: /^Day/ }).locator("select").selectOption("1");
+  // Today is Wednesday, October 14 in the test clock.
+  assert.equal(await section.locator(".invoice-settings-next").innerText(), "Next: Monday, October 19");
+  assert.match(await page.locator(".invoice-settings-section", { hasText: "Send Review Reminder" }).innerText(), /once after each run/);
+  await page.locator(".invoice-settings-save-btn").click();
+  await waitFor(() => fake.rows("coaches")[0].invoice_generation_every === 6, "saved");
+  const coach = fake.rows("coaches")[0];
+  assert.equal(coach.invoice_generation_frequency, "weekly");
+  assert.equal(coach.invoice_generation_day, 1);
+  assert.equal(coach.invoice_generation_anchor, TODAY);
+  assert.equal(coach.auto_invoice_every, 1, "sending untouched");
+
+  await openInvoiceSettings(page);
+  assert.equal(await generateSection(page).locator("select").first().inputValue(), "custom", "shows Custom again");
+  assert.equal(await generateSection(page).getByLabel("Number of weeks or months").inputValue(), "6");
+});
+
+test("Invoice settings: saving other settings keeps a custom schedule's start date", async () => {
+  const fake = seedWorld();
+  Object.assign(fake.rows("coaches")[0], { invoice_generation_every: 6, invoice_generation_anchor: "2026-09-01" });
+  app = await openApp(fake, "/invoices");
+  const { page } = app;
+  await openInvoiceSettings(page);
+  await generateSection(page).locator('input[type="time"]').fill("16:00");
+  await page.locator(".invoice-settings-save-btn").click();
+  await waitFor(() => String(fake.rows("coaches")[0].invoice_generation_time).startsWith("16:00"), "saved");
+  assert.equal(fake.rows("coaches")[0].invoice_generation_anchor, "2026-09-01");
+
+  await openInvoiceSettings(page);
+  await generateSection(page).getByLabel("Number of weeks or months").selectOption("4");
+  await page.locator(".invoice-settings-save-btn").click();
+  await waitFor(() => fake.rows("coaches")[0].invoice_generation_every === 4, "saved");
+  assert.equal(fake.rows("coaches")[0].invoice_generation_anchor, TODAY, "a new schedule starts today");
+});
+
+test("Invoice settings: send automatically every 3 months", async () => {
+  const fake = seedWorld();
+  app = await openApp(fake, "/invoices");
+  const { page } = app;
+  await openInvoiceSettings(page);
+  const section = autoSection(page);
+  await section.locator("select").first().selectOption("yes");
+  await section.locator(".input-block", { hasText: "Frequency" }).locator("select").selectOption("custom");
+  await section.getByLabel("Number of weeks or months").selectOption("3");
+  await section.getByLabel("Weeks or months", { exact: true }).selectOption("month");
+  await section.locator(".input-block", { hasText: "Day of month" }).locator("select").selectOption("20");
+  assert.equal(await section.locator(".invoice-settings-next").innerText(), "Next: Tuesday, October 20");
+  await page.locator(".invoice-settings-save-btn").click();
+  await waitFor(() => fake.rows("coaches")[0].auto_invoice_every === 3, "saved");
+  const coach = fake.rows("coaches")[0];
+  assert.equal(coach.auto_invoice_frequency, "monthly");
+  assert.equal(coach.auto_invoice_day_of_month, 20);
+  assert.equal(coach.auto_invoice_anchor, TODAY);
+});
+
+test("Invoice settings: no Custom, and saving still works, before the SQL is run", async () => {
+  const fake = seedWorld();
+  for (const col of ["invoice_generation_every", "invoice_generation_anchor", "auto_invoice_every", "auto_invoice_anchor"]) {
+    fake.missingColumns.add(`coaches.${col}`);
+  }
+  app = await openApp(fake, "/invoices");
+  const { page } = app;
+  await openInvoiceSettings(page);
+  assert.equal(await generateSection(page).locator('option[value="custom"]').count(), 0);
+  await generateSection(page).locator("select").first().selectOption("monthly");
+  await page.locator(".invoice-settings-save-btn").click();
+  await waitFor(() => fake.rows("coaches")[0].invoice_generation_frequency === "monthly", "saved");
+  assert.equal(await popup(page).count(), 0, "no error popup");
+});
+

@@ -206,6 +206,7 @@ export function seedWorld(options: { withProfile?: boolean } = {}) {
           invoice_generation_time: "15:00", invoice_review_day: 0, invoice_review_time: "15:05",
           auto_invoice_enabled: false, auto_invoice_frequency: "weekly", auto_invoice_day: 1,
           auto_invoice_day_of_month: 1, auto_invoice_time: "09:00", invoice_delivery_method: "email",
+          invoice_generation_every: 1, invoice_generation_anchor: null, auto_invoice_every: 1, auto_invoice_anchor: null,
           auto_generate_pdf: false, venmo_handle: null, zelle_contact: null, zelle_name: null,
           payment_in_messages: true, offer_venmo: true, offer_zelle: true, paypal_handle: null, offer_paypal: true,
         }]

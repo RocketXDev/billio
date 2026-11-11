@@ -1577,3 +1577,25 @@
     padding: 20px 18px 16px;
   }
 }
+
+/* Custom schedule: "Repeat every [6] [weeks]" and the next run date. */
+.invoice-settings-every {
+  display: flex;
+  gap: 10px;
+}
+
+.invoice-settings-every select {
+  flex: 1;
+  min-width: 0;
+}
+
+.invoice-settings-section p.invoice-settings-next {
+  margin: 2px 0 0;
+  font-weight: 600;
+  color: var(--primary-purple);
+}
+
+.invoice-settings-section p.invoice-settings-review-note {
+  margin: 0 0 12px;
+}
+

@@ -31,6 +31,7 @@ import { generateInvoicePdf } from "../../lib/generateInvoicePdf";
 import { offeredPayment } from "../../lib/paymentOptions";
 import { useLessonTerm } from "../../hooks/useLessonTerm";
 import { timezoneLabel } from "../../lib/timezones";
+import { formatRunDate, localNow, MAX_EVERY, nextRunDate, type ScheduleUnit } from "../../lib/invoiceSchedule";
 import "./Invoices.css"
 
 function Invoices() {
@@ -108,6 +109,12 @@ function Invoices() {
   const [autoInvoiceDay, setAutoInvoiceDay] = useState("0");
   const [autoInvoiceDayOfMonth, setAutoInvoiceDayOfMonth] = useState("1");
   const [autoInvoiceTime, setAutoInvoiceTime] = useState("09:00");
+  // "Custom" = every N weeks or months. Stored as the weekly/monthly frequency
+  // plus a count, counted from an anchor date (src/lib/invoiceSchedule.ts).
+  const [invoiceGenerationEvery, setInvoiceGenerationEvery] = useState("2");
+  const [invoiceGenerationUnit, setInvoiceGenerationUnit] = useState<ScheduleUnit>("week");
+  const [autoInvoiceEvery, setAutoInvoiceEvery] = useState("2");
+  const [autoInvoiceUnit, setAutoInvoiceUnit] = useState<ScheduleUnit>("week");
 
   // Invoices Logs
   const [showSentLog, setShowSentLog] = useState(false);
@@ -164,6 +171,24 @@ function Invoices() {
     enabled: !!coachId,
   });
 
+  // Separate so the rest of the settings keep working before
+  // supabase/sql/invoice_custom_schedule.sql adds these; Custom shows once it has.
+  const { data: scheduleCycles } = useQuery({
+    queryKey: ["invoice-settings", coachId, "cycles"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("coaches")
+        .select("invoice_generation_every, invoice_generation_anchor, auto_invoice_every, auto_invoice_anchor")
+        .eq("id", coachId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!coachId,
+    retry: false,
+  });
+  const customScheduleAvailable = !!scheduleCycles;
+
   const invoices: any[] = invoicesData ?? [];
 
   useEffect(() => {
@@ -181,6 +206,22 @@ function Invoices() {
     setAutoInvoiceDayOfMonth(String(invoiceSettingsData.auto_invoice_day_of_month ?? 1));
     setAutoInvoiceTime((invoiceSettingsData.auto_invoice_time || "09:00").slice(0, 5));
   }, [invoiceSettingsData]);
+
+  useEffect(() => {
+    if (!invoiceSettingsData || !scheduleCycles) return;
+    const generationEvery = Number(scheduleCycles.invoice_generation_every) || 1;
+    if (generationEvery > 1) {
+      setInvoiceGenerationFrequency("custom");
+      setInvoiceGenerationEvery(String(generationEvery));
+      setInvoiceGenerationUnit(invoiceSettingsData.invoice_generation_frequency === "monthly" ? "month" : "week");
+    }
+    const autoEvery = Number(scheduleCycles.auto_invoice_every) || 1;
+    if (autoEvery > 1) {
+      setAutoInvoiceFrequency("custom");
+      setAutoInvoiceEvery(String(autoEvery));
+      setAutoInvoiceUnit(invoiceSettingsData.auto_invoice_frequency === "monthly" ? "month" : "week");
+    }
+  }, [invoiceSettingsData, scheduleCycles]);
 
   useEffect(() => {
     if (!coachId && !identityLoading) navigate("/login");
@@ -1524,6 +1565,72 @@ function Invoices() {
     return groups;
   }, {});
 
+  // What a schedule is stored as, and the anchor it counts from: kept while
+  // the schedule is unchanged, so saving other settings doesn't restart it.
+  function storedSchedule(
+    choice: string, every: string, unit: ScheduleUnit, day: string, dayOfMonth: string,
+    saved: { frequency?: string; every?: number; day?: number; dayOfMonth?: number; anchor?: string | null },
+  ) {
+    const frequency = choice === "custom" ? (unit === "month" ? "monthly" : "weekly") : choice;
+    const count = choice === "custom" ? Number(every) : 1;
+    const unchanged = saved.frequency === frequency && (saved.every || 1) === count
+      && saved.day === Number(day) && saved.dayOfMonth === Number(dayOfMonth);
+    const anchor = count > 1 ? (unchanged && saved.anchor ? saved.anchor : localNow(invoiceTimezone).date) : null;
+    return { frequency, every: count, anchor };
+  }
+
+  const generationSchedule = () => storedSchedule(
+    invoiceGenerationFrequency, invoiceGenerationEvery, invoiceGenerationUnit,
+    invoiceGenerationDay, invoiceGenerationDayOfMonth,
+    {
+      frequency: invoiceSettingsData?.invoice_generation_frequency,
+      every: scheduleCycles?.invoice_generation_every,
+      day: invoiceSettingsData?.invoice_generation_day,
+      dayOfMonth: invoiceSettingsData?.invoice_generation_day_of_month,
+      anchor: scheduleCycles?.invoice_generation_anchor,
+    },
+  );
+
+  const autoSchedule = () => storedSchedule(
+    autoInvoiceFrequency, autoInvoiceEvery, autoInvoiceUnit, autoInvoiceDay, autoInvoiceDayOfMonth,
+    {
+      frequency: invoiceSettingsData?.auto_invoice_frequency,
+      every: scheduleCycles?.auto_invoice_every,
+      day: invoiceSettingsData?.auto_invoice_day,
+      dayOfMonth: invoiceSettingsData?.auto_invoice_day_of_month,
+      anchor: scheduleCycles?.auto_invoice_anchor,
+    },
+  );
+
+  function nextRunLabel(stored: { every: number; anchor: string | null }, unit: ScheduleUnit, day: string, dayOfMonth: string, time: string) {
+    const now = localNow(invoiceTimezone);
+    const next = nextRunDate(
+      { unit, every: stored.every, day: Number(day), dayOfMonth: Number(dayOfMonth), anchor: stored.anchor, time },
+      now.date,
+      now.time,
+    );
+    return next ? `Next: ${formatRunDate(next)}` : "";
+  }
+
+  function everyPicker(every: string, setEvery: (v: string) => void, unit: ScheduleUnit, setUnit: (v: ScheduleUnit) => void) {
+    return (
+      <div className="input-block">
+        <label>Repeat every</label>
+        <div className="invoice-settings-every">
+          <select aria-label="Number of weeks or months" value={every} onChange={(e) => setEvery(e.target.value)}>
+            {Array.from({ length: MAX_EVERY - 1 }, (_, i) => i + 2).map((n) => (
+              <option key={n} value={String(n)}>{n}</option>
+            ))}
+          </select>
+          <select aria-label="Weeks or months" value={unit} onChange={(e) => setUnit(e.target.value as ScheduleUnit)}>
+            <option value="week">weeks</option>
+            <option value="month">months</option>
+          </select>
+        </div>
+      </div>
+    );
+  }
+
   async function handleSaveInvoiceSettings(e: any) {
     e.preventDefault();
 
@@ -1531,20 +1638,29 @@ function Invoices() {
 
     setSavingInvoiceSettings(true);
 
+    const generation = generationSchedule();
+    const auto = autoSchedule();
+
     const { error } = await supabase
       .from("coaches")
       .update({
-        invoice_generation_frequency: invoiceGenerationFrequency,
+        invoice_generation_frequency: generation.frequency,
         invoice_generation_day: Number(invoiceGenerationDay),
         invoice_generation_day_of_month: Number(invoiceGenerationDayOfMonth),
         invoice_generation_time: invoiceGenerationTime,
         invoice_review_day: Number(invoiceReviewDay),
         invoice_review_time: invoiceReviewTime,
         auto_invoice_enabled: autoInvoiceEnabled,
-        auto_invoice_frequency: autoInvoiceFrequency,
+        auto_invoice_frequency: auto.frequency,
         auto_invoice_day: Number(autoInvoiceDay),
         auto_invoice_day_of_month: Number(autoInvoiceDayOfMonth),
         auto_invoice_time: autoInvoiceTime,
+        ...(customScheduleAvailable && {
+          invoice_generation_every: generation.every,
+          invoice_generation_anchor: generation.anchor,
+          auto_invoice_every: auto.every,
+          auto_invoice_anchor: auto.anchor,
+        }),
       })
       .eq("id", coachId);
 
@@ -2765,10 +2881,15 @@ function Invoices() {
                     >
                       <option value="weekly">Weekly</option>
                       <option value="monthly">Monthly</option>
+                      {customScheduleAvailable && <option value="custom">Custom</option>}
                     </select>
                   </div>
 
-                  {invoiceGenerationFrequency === "monthly" ? (
+                  {invoiceGenerationFrequency === "custom" &&
+                    everyPicker(invoiceGenerationEvery, setInvoiceGenerationEvery, invoiceGenerationUnit, setInvoiceGenerationUnit)}
+
+                  {invoiceGenerationFrequency === "monthly" ||
+                  (invoiceGenerationFrequency === "custom" && invoiceGenerationUnit === "month") ? (
                     <div className="input-block">
                       <label>Day of month</label>
                       <select
@@ -2806,6 +2927,12 @@ function Invoices() {
                       onChange={(e) => setInvoiceGenerationTime(e.target.value)}
                     />
                   </div>
+
+                  {invoiceGenerationFrequency === "custom" && (
+                    <p className="invoice-settings-next">
+                      {nextRunLabel(generationSchedule(), invoiceGenerationUnit, invoiceGenerationDay, invoiceGenerationDayOfMonth, invoiceGenerationTime)}
+                    </p>
+                  )}
                 </section>
 
                 <section className="invoice-settings-section">
@@ -2814,6 +2941,11 @@ function Invoices() {
                     Choose when Billio should notify you that invoices are ready to
                     review.
                   </p>
+                  {invoiceGenerationFrequency === "custom" && (
+                    <p className="invoice-settings-next invoice-settings-review-note">
+                      With a custom schedule, you'll get it once after each run.
+                    </p>
+                  )}
 
                   <div className="input-block">
                     <label>Day</label>
@@ -2871,10 +3003,15 @@ function Invoices() {
                           <option value="weekly">Weekly</option>
                           <option value="biweekly">Bi-weekly</option>
                           <option value="monthly">Monthly</option>
+                          {customScheduleAvailable && <option value="custom">Custom</option>}
                         </select>
                       </div>
 
-                      {autoInvoiceFrequency === "weekly" ? (
+                      {autoInvoiceFrequency === "custom" &&
+                        everyPicker(autoInvoiceEvery, setAutoInvoiceEvery, autoInvoiceUnit, setAutoInvoiceUnit)}
+
+                      {autoInvoiceFrequency === "weekly" ||
+                      (autoInvoiceFrequency === "custom" && autoInvoiceUnit === "week") ? (
                         <div className="input-block">
                           <label>Day</label>
                           <select
@@ -2915,6 +3052,12 @@ function Invoices() {
                           onChange={(e) => setAutoInvoiceTime(e.target.value)}
                         />
                       </div>
+
+                      {autoInvoiceFrequency === "custom" && (
+                        <p className="invoice-settings-next">
+                          {nextRunLabel(autoSchedule(), autoInvoiceUnit, autoInvoiceDay, autoInvoiceDayOfMonth, autoInvoiceTime)}
+                        </p>
+                      )}
                     </>
                   )}
                 </section>

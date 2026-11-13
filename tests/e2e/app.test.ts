@@ -778,7 +778,7 @@ const CONNECT_JS_STUB = `
   const setters = ["setOnLoadError", "setOnLoaderStart", "setFullTermsOfServiceUrl", "setRecipientTermsOfServiceUrl",
     "setPrivacyPolicyUrl", "setSkipTermsOfServiceCollection", "setCollectionOptions", "setOnStepChange",
     "setOnSectionOpen", "setOnNotificationsChange", "setDefaultFilters"];
-  for (const tag of ["account-onboarding", "account-management", "notification-banner", "balances", "payments", "payouts-list"]) {
+  for (const tag of ["account-onboarding", "account-management", "notification-banner", "balances", "payments", "payouts-list", "documents"]) {
     class Stub extends HTMLElement {
       connectedCallback() { this.textContent = "stub " + tag; }
       setConnector() {}
@@ -924,7 +924,7 @@ test("An active coach sees their balance, payments, withdrawals and total receiv
     body.action === "session" ? { client_secret: "cs_e2e" } : connectStatus("active");
   const { page } = await openPayments(fake);
 
-  for (const tag of ["balances", "payments", "payouts-list", "account-management"]) {
+  for (const tag of ["balances", "payments", "payouts-list", "account-management", "documents"]) {
     await page.locator(`stripe-connect-${tag}`).waitFor();
   }
   const received = await page.locator(".payments-received").innerText();

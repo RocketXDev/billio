@@ -16,6 +16,7 @@ import {
 import type { LoadError, StripeConnectInstance } from "@stripe/connect-js";
 import {
   ConnectAccountManagement,
+  ConnectDocuments,
   ConnectAccountOnboarding,
   ConnectBalances,
   ConnectComponentsProvider,
@@ -217,6 +218,11 @@ export default function Payments() {
           <div className="ref-card payments-embed">
             <h2 className="ref-card-title">Account and bank details</h2>
             <ConnectAccountManagement onLoadError={onComponentError} />
+          </div>
+          {/* Stripe requires a page with this component before live mode works. */}
+          <div className="ref-card payments-embed">
+            <h2 className="ref-card-title">Documents</h2>
+            <ConnectDocuments onLoadError={onComponentError} />
           </div>
         </>
       )}

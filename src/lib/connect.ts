@@ -47,11 +47,30 @@ const invokeConnect = <T,>(body: Record<string, unknown>) => invokeFunction<T>("
 export const fetchConnectStatus = (refresh = false) =>
   invokeConnect<ConnectStatus>({ action: "status", refresh });
 
-// For the More row: any failure just means the row stays hidden.
-export async function fetchConnectAvailable() {
+// The server's last answer for this coach on this device, so More can show
+// (or keep hiding) its row at once instead of waiting for the check.
+const availableKey = (coachId: string) => `billio_payments_available_${coachId}`;
+
+export function rememberedConnectAvailable(coachId: string): boolean | undefined {
   try {
-    const status = await fetchConnectStatus();
-    return status.available === true;
+    const saved = localStorage.getItem(availableKey(coachId));
+    return saved === null ? undefined : saved === "1";
+  } catch {
+    return undefined;
+  }
+}
+
+// For the More row: any failure just means the row stays hidden. Only a real
+// answer is remembered, so a dropped connection doesn't hide it next time.
+export async function fetchConnectAvailable(coachId: string) {
+  try {
+    const available = (await fetchConnectStatus()).available === true;
+    try {
+      localStorage.setItem(availableKey(coachId), available ? "1" : "0");
+    } catch {
+      // Storage blocked (private mode): the check still works, just not remembered.
+    }
+    return available;
   } catch {
     return false;
   }

@@ -1021,6 +1021,38 @@ test("Accept Payments sits right under Group Lessons and can't be pinned", async
   assert.equal(await page.locator(".more-list-item", { hasText: "Payments" }).count(), 0, "not in Account any more");
 });
 
+test("Accept Payments shows on More at once, without waiting for the server", async () => {
+  const fake = seedWorld();
+  fake.functionResponses["connect-account"] = async () => {
+    await new Promise((resolve) => setTimeout(resolve, 4000));
+    return connectStatus("not_started");
+  };
+  app = await openApp(fake, "/more");
+  const { page } = app;
+  await page.locator(".more-card", { hasText: "Accept Payments" }).waitFor({ timeout: 2500 });
+});
+
+test("A coach the server turned down doesn't see Accept Payments flash on the next visit", async () => {
+  const fake = seedWorld();
+  fake.functionResponses["connect-account"] = () => ({ available: false });
+  app = await openApp(fake, "/more");
+  const { page, navigate } = app;
+  await waitFor(() => connectCalls(fake, "status").length > 0, "status asked");
+  await waitFor(() => fake.requests("POST", "fn:connect-account").length > 0, "answered");
+  await page.waitForTimeout(300);
+  fake.functionResponses["connect-account"] = async () => {
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    return { available: false };
+  };
+  await navigate("/settings");
+  await page.evaluate(() => { location.href = "/more"; });
+  await page.locator(".more-list-item", { hasText: "Settings" }).waitFor();
+  for (let i = 0; i < 10; i++) {
+    assert.equal(await page.locator(".more-card", { hasText: "Accept Payments" }).count(), 0, "never shown");
+    await page.waitForTimeout(150);
+  }
+});
+
 test("Input zoom is off on Accept Payments only", async () => {
   const fake = seedWorld();
   fake.functionResponses["connect-account"] = () => connectStatus("not_started");

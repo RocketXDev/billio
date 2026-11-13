@@ -27,7 +27,7 @@ import { useDashboardWidgets } from "../../hooks/useDashboardWidgets";
 import { getDashboardTools, type DashboardTool } from "../../lib/dashboardTools";
 import { useLessonTerm } from "../../hooks/useLessonTerm";
 import { useCoachIdentity } from "../../hooks/useCoachIdentity";
-import { connectStatusKey, fetchConnectAvailable, paymentsEnabledFor } from "../../lib/connect";
+import { connectStatusKey, fetchConnectAvailable, paymentsEnabledFor, rememberedConnectAvailable } from "../../lib/connect";
 
 const PAYMENTS_TOOL: DashboardTool = {
   slug: "payments",
@@ -44,14 +44,20 @@ export default function More() {
   const term = useLessonTerm();
   const DASHBOARD_TOOLS = getDashboardTools(term);
   const { coachId } = useCoachIdentity();
+  const paymentsEnabled = paymentsEnabledFor(coachId);
   const { data: paymentsAvailable } = useQuery({
     queryKey: connectStatusKey(coachId),
-    queryFn: fetchConnectAvailable,
-    enabled: paymentsEnabledFor(coachId),
+    queryFn: () => fetchConnectAvailable(coachId),
+    enabled: paymentsEnabled,
+    // Coaches on the payments list see the row at once while the server
+    // confirms; one it turned down before stays hidden.
+    initialData: () => rememberedConnectAvailable(coachId) ?? true,
+    initialDataUpdatedAt: 0,
   });
+  const showPayments = paymentsEnabled && paymentsAvailable;
 
   const tools = DASHBOARD_TOOLS.flatMap((tool) =>
-    tool.slug === "group-lessons" && paymentsAvailable ? [tool, PAYMENTS_TOOL] : [tool]
+    tool.slug === "group-lessons" && showPayments ? [tool, PAYMENTS_TOOL] : [tool]
   );
 
   const [showMoreTutorial, setShowMoreTutorial] = useState(false);

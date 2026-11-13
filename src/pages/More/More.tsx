@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   FaCog,
+  FaPlayCircle,
   FaCrown,
   FaUser,
   FaHeadset,
@@ -221,6 +222,9 @@ export default function More() {
           )}
           <Link to="/settings" className="more-list-item">
             <FaCog /><span>Settings</span><FaChevronRight />
+          </Link>
+          <Link to="/tutorials" className="more-list-item">
+            <FaPlayCircle /><span>Tutorials</span><FaChevronRight />
           </Link>
           <Link to="/upgrade" className="more-list-item">
             <FaCrown /><span>Subscription</span><FaChevronRight />

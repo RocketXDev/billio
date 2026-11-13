@@ -1,0 +1,246 @@
+/* Tutorials page. Header, hero and footer reuse the Blog page's classes. */
+
+.tut-body {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 8px 16px 56px;
+}
+
+.tut-section {
+  margin-top: 32px;
+}
+
+.tut-section-title {
+  margin: 0 0 14px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--main-text);
+}
+
+.tut-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+@media (min-width: 640px) {
+  .tut-body { padding: 16px 24px 72px; }
+  .tut-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+}
+
+@media (min-width: 1000px) {
+  .tut-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 22px; }
+}
+
+/* The global button style sets a width, height and purple fill: undo it. */
+.tut-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--main-text);
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tut-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.tut-card:focus-visible {
+  outline: 3px solid var(--shadow);
+  outline-offset: 2px;
+}
+
+.tut-thumb {
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  background: var(--accent-tint);
+}
+
+.tut-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+  display: block;
+}
+
+.tut-play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 52px;
+  height: 52px;
+  margin: -26px 0 0 -26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(59, 51, 217, 0.92);
+  color: #ffffff;
+  font-size: 17px;
+  box-shadow: var(--glow);
+}
+
+.tut-play svg {
+  margin-left: 3px;
+}
+
+.tut-length {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.78);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tut-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 12px 14px;
+}
+
+.tut-card-body strong {
+  font-size: 15px;
+  line-height: 1.3;
+  font-weight: 700;
+}
+
+.tut-card-body > span {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--secondary-text);
+}
+
+.tut-cta {
+  margin-top: 48px;
+  padding: 32px 20px;
+  text-align: center;
+  border-radius: 24px;
+  background: linear-gradient(160deg, var(--ink-deep), var(--ink) 55%, var(--primary-purple));
+  color: #ffffff;
+}
+
+.tut-cta h2 {
+  margin: 0 0 8px;
+  font-size: 26px;
+}
+
+.tut-cta p {
+  margin: 0 0 20px;
+  color: #c7d2fe;
+  font-size: 15px;
+}
+
+.tut-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 26px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--primary-purple);
+  font-weight: 700;
+  font-size: 15px;
+  text-decoration: none;
+}
+
+/* ── Player ── */
+.tut-player-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.tut-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: min(100%, calc((100svh - 150px) * 390 / 844));
+}
+
+.tut-player-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  color: #ffffff;
+}
+
+.tut-player-head strong {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.tut-player-close {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.tut-video {
+  width: 100%;
+  aspect-ratio: 390 / 844;
+  border-radius: 20px;
+  background: #000000;
+  box-shadow: var(--shadow-lg);
+}
+
+.tut-player-next {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: auto;
+  margin: 0;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 14px;
+  background: var(--primary-purple);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}

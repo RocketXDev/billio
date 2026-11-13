@@ -1280,3 +1280,55 @@ test("Invoice settings: no Custom, and saving still works, before the SQL is run
   assert.equal(await popup(page).count(), 0, "no error popup");
 });
 
+// ── Tutorials ───────────────────────────────────────────────────────────────
+
+test("Tutorials: every video is listed, and opening one plays it until closed", async () => {
+  const fake = seedWorld();
+  app = await openApp(fake, "/tutorials");
+  const { page } = app;
+  await page.getByRole("heading", { name: "See how Billio works." }).waitFor();
+  assert.equal(await page.locator(".tut-card").count(), 14);
+  assert.equal(await page.locator(".blog-header-actions").count(), 0, "no Login / Get Started for a signed-in coach");
+
+  await page.getByRole("button", { name: "Play Adding a lesson" }).click();
+  const dialog = page.getByRole("dialog", { name: "Adding a lesson" });
+  await dialog.waitFor();
+  assert.match(String(await dialog.locator("video").getAttribute("src")), /^\/media\/tutorials\/01-add-a-lesson\.mp4\?v=\d+$/);
+  assert.match(page.url(), /#01-add-a-lesson$/, "the open video can be shared by link");
+
+  await dialog.getByRole("button", { name: /^Next: Repeating lessons/ }).click();
+  await page.getByRole("dialog", { name: "Repeating lessons" }).waitFor();
+  await page.keyboard.press("Escape");
+  await page.getByRole("dialog").waitFor({ state: "detached" });
+  assert.doesNotMatch(page.url(), /#/);
+});
+
+test("Tutorials: a shared link opens that video, and visitors see sign-up", async () => {
+  const fake = seedWorld();
+  app = await openApp(fake, "/tutorials#09-automatic-invoices", { storage: { "sb-supabase-auth-token": null } });
+  const { page } = app;
+  await page.getByRole("dialog", { name: "Automatic invoices" }).waitFor();
+  await page.keyboard.press("Escape");
+  await page.locator(".blog-header-actions").getByRole("link", { name: "Get Started" }).waitFor();
+});
+
+test("Tutorials sits right under Settings in More", async () => {
+  const fake = seedWorld();
+  app = await openApp(fake, "/more");
+  const { page } = app;
+  await page.locator(".more-list-item", { hasText: "Settings" }).waitFor();
+  const items = await page.locator(".more-list-item span:first-of-type").allInnerTexts();
+  assert.equal(items[items.indexOf("Settings") + 1], "Tutorials");
+  await page.locator(".more-list-item", { hasText: "Tutorials" }).click();
+  await page.getByRole("heading", { name: "See how Billio works." }).waitFor();
+});
+
+test("The landing page links to the tutorials", async () => {
+  const fake = seedWorld();
+  app = await openApp(fake, "/", { storage: { "sb-supabase-auth-token": null } });
+  const { page } = app;
+  await page.locator(".landing-footer").getByRole("link", { name: "Tutorials" }).waitFor({ state: "attached" });
+  await page.getByRole("link", { name: /Watch the video tutorials/ }).click();
+  await page.getByRole("heading", { name: "See how Billio works." }).waitFor();
+});
+

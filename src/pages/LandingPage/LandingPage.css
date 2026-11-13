@@ -2143,3 +2143,35 @@
   /* Screenshots: section's 20px padding provides the edge gap for cards.
      No overflow: hidden here — that would block the row's own scroll context. */
 }
+
+/* Tutorials link in the nav: only where there's room beside Login and Get Started. */
+.landing-nav-tutorials {
+  display: none;
+}
+
+@media (min-width: 600px) {
+  .landing-nav-tutorials {
+    display: inline-block;
+  }
+}
+
+.landing-steps-cta {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.landing-tutorials-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  color: var(--primary-purple);
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.landing-tutorials-link:hover {
+  text-decoration: underline;
+}

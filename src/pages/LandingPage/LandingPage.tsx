@@ -214,6 +214,9 @@ export default function LandingPage() {
               <img src="./logo-white.png" alt="Billio" />
             </div>
             <div className="landing-nav-buttons">
+              <Link to="/tutorials" className="landing-login-btn landing-nav-tutorials">
+                Tutorials
+              </Link>
               <Link to="/login" className="landing-login-btn">
                 Login
               </Link>
@@ -448,6 +451,12 @@ export default function LandingPage() {
             data-track="landing_workflow_start_click"
           >
             Start Tracking Lessons Free <FaArrowRight className="landing-arrow" />
+          </Link>
+        </div>
+
+        <div className="landing-steps-cta reveal">
+          <Link to="/tutorials" className="landing-tutorials-link" data-track="landing_workflow_tutorials_click">
+            Watch the video tutorials <FaArrowRight />
           </Link>
         </div>
       </section>
@@ -736,6 +745,7 @@ export default function LandingPage() {
         <div className="landing-footer-links">
           <Link to="/about">About</Link>
           <Link to="/blog">Blog</Link>
+          <Link to="/tutorials">Tutorials</Link>
           <Link to="/privacy">Privacy Policy</Link>
           <Link to="/terms">Terms of Service</Link>
           <Link to="/sms-opt-in">SMS Info</Link>

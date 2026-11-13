@@ -41,3 +41,4 @@ import "../pages/EarningsDashboard/EarningsDashboard.css";
 import "../pages/PdfInvoice/PdfInvoice.css";
 import "../components/PaymentOptions/PaymentOptions.css";
 import "../pages/Payments/Payments.css";
+import "../pages/Tutorials/Tutorials.css";

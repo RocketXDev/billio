@@ -30,6 +30,7 @@ const More = lazyPage(() => import("./pages/More/More"));
 const CoachingTimer = lazyPage(() => import("./pages/CoachingTimer/CoachingTimer"));
 const AiAssistant = lazyPage(() => import("./pages/AiAssistant/AiAssistant"));
 const About = lazyPage(() => import("./pages/About/About"));
+const Tutorials = lazyPage(() => import("./pages/Tutorials/Tutorials"));
 const BlogIndex = lazyPage(() => import("./pages/Blog/BlogIndex"));
 const BlogPost = lazyPage(() => import("./pages/Blog/BlogPost"));
 const Settings = lazyPage(() => import("./pages/Settings/Settings"));
@@ -64,6 +65,10 @@ const PAGE_META: Record<string, { title: string; description: string }> = {
   "/blog": {
     title: "Blog | Billio",
     description: "Scheduling, billing, and admin advice for coaches, tutors, instructors, and music educators — from the team building Billio.",
+  },
+  "/tutorials": {
+    title: "Tutorials | Billio",
+    description: "Short video tutorials showing how to schedule lessons, send invoices and get paid with Billio.",
   },
   "/support": {
     title: "Support | Billio",
@@ -204,6 +209,7 @@ function App() {
       <Route path="/sms-opt-in" element={<SmsOptIn />} />
       <Route path="/support" element={<Support />} />
       <Route path="/about" element={<About />} />
+      <Route path="/tutorials" element={<Tutorials />} />
       <Route path="/blog" element={<BlogIndex />} />
       <Route path="/blog/:slug" element={<BlogPost />} />
       <Route path="/mark-invoice-paid" element={<MarkInvoicePaid />} />

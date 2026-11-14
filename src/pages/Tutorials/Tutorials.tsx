@@ -59,7 +59,7 @@ export default function Tutorials() {
           <span className="blog-label">Tutorials</span>
           <h1 className="blog-hero-title">See how Billio works.</h1>
           <p className="blog-hero-subtitle">
-            Short videos for everything from your first lesson to getting paid. Most take under 30 seconds.
+            Short videos for everything from your first lesson to getting paid. Each one takes under a minute.
           </p>
         </div>
       </section>
